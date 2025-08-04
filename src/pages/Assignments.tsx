@@ -5,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, Clock, Calendar, AlertTriangle } from "lucide-react";
+import { AssignmentModeBanner } from "@/components/ui/assignment-mode-banner";
+import { useAssignmentMode } from "@/hooks/useAssignmentMode";
 
 const Assignments = () => {
+  const { isAppManaged, isUpstreamManaged } = useAssignmentMode();
+  
   // Mock data - would come from app database
   const assignments = [
     {
@@ -47,17 +51,29 @@ const Assignments = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Assignment Mode Banner */}
+        <div className="mb-6">
+          <AssignmentModeBanner />
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentor-Mentee Assignments</h1>
-              <p className="text-gray-600">Manage mentoring relationships and track progress</p>
+              <p className="text-gray-600">
+                {isUpstreamManaged 
+                  ? "View assignments synchronized from the external system"
+                  : "Manage mentoring relationships and track progress"
+                }
+              </p>
             </div>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Assignment
-            </Button>
+            {isAppManaged && (
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Assignment
+              </Button>
+            )}
           </div>
         </div>
 
@@ -144,6 +160,8 @@ interface AssignmentsListProps {
 }
 
 const AssignmentsList = ({ assignments }: AssignmentsListProps) => {
+  const { isAppManaged } = useAssignmentMode();
+  
   return (
     <div className="grid gap-6">
       {assignments.map((assignment) => (
@@ -225,7 +243,9 @@ const AssignmentsList = ({ assignments }: AssignmentsListProps) => {
               </div>
               <div className="space-x-2">
                 <Button variant="outline" size="sm">View Details</Button>
-                <Button variant="outline" size="sm">Edit Assignment</Button>
+                {isAppManaged && (
+                  <Button variant="outline" size="sm">Edit Assignment</Button>
+                )}
               </div>
             </div>
           </CardContent>

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { AlertCircle, CheckCircle, Clock, Database, Settings, Shield, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { AssignmentModeSettings } from "@/components/AssignmentModeSettings";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -300,8 +301,8 @@ const Admin = () => {
                 <CardTitle>System Settings</CardTitle>
                 <CardDescription>Configure system-wide preferences</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Settings panel coming soon...</p>
+              <CardContent className="space-y-6">
+                <AssignmentModeSettings />
               </CardContent>
             </Card>
           </TabsContent>
