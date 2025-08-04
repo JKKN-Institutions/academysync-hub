@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Clock, ExternalLink, Filter, GraduationCap } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const StudentsDirectory = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
 
   // Mock data - would come from People API
@@ -89,7 +91,11 @@ const StudentsDirectory = () => {
         {/* Students Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={student.id} 
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/student/${student.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-center space-x-4">
                   <Avatar className="w-12 h-12">
