@@ -8,6 +8,7 @@ import { AlertCircle, Settings2, Shield, Database } from 'lucide-react';
 import { useAssignmentMode, AssignmentMode } from '@/hooks/useAssignmentMode';
 import { FormSkeleton } from '@/components/ui/loading-skeleton';
 import { ErrorState } from '@/components/ui/error-state';
+import { DemoModeSettings } from '@/components/DemoModeSettings';
 
 export const AssignmentModeSettings: React.FC = () => {
   const { mode, loading, error, updateMode, isAppManaged, isUpstreamManaged } = useAssignmentMode();
@@ -106,6 +107,8 @@ export const AssignmentModeSettings: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      <DemoModeSettings />
     </div>
   );
 };

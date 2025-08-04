@@ -1,46 +1,22 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Clock, ExternalLink, Filter, GraduationCap } from "lucide-react";
+import { Search, Filter, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getDemoStudents } from "@/data/demoData";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { DemoModeBanner } from "@/components/ui/demo-mode-banner";
 
 const StudentsDirectory = () => {
-  const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
-  // Mock data - would come from People API
-  const students = [
-    {
-      id: "ext_101",
-      name: "Alex Chen",
-      program: "Computer Science - MS",
-      year: "2nd Year",
-      email: "alex.chen@student.university.edu",
-      interests: ["Machine Learning", "Web Development", "Data Analysis"],
-      gpa: "3.85",
-      mentorAssigned: true,
-      mentorName: "Dr. Sarah Johnson",
-      lastSync: "2024-01-04 09:15:00",
-      status: "Active"
-    },
-    {
-      id: "ext_102",
-      name: "Maria Rodriguez", 
-      program: "Engineering - BS",
-      year: "3rd Year",
-      email: "maria.rodriguez@student.university.edu",
-      interests: ["Systems Design", "Project Management", "Innovation"],
-      gpa: "3.92",
-      mentorAssigned: false,
-      mentorName: null,
-      lastSync: "2024-01-04 09:15:00",
-      status: "Active"
-    }
-  ];
+  // Use demo data if demo mode is enabled, otherwise use empty array (would be replaced with API call)
+  const students = isDemoMode ? getDemoStudents() : [];
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,29 +27,29 @@ const StudentsDirectory = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Demo Mode Banner */}
+        <DemoModeBanner />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Students Directory</h1>
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600">Browse student profiles and academic information</p>
-            <div className="flex items-center text-sm text-gray-500">
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Data source: People API
-              <Clock className="w-4 h-4 ml-4 mr-1" />
-              Last Sync: Today 09:15 AM
-            </div>
-          </div>
+          <p className="text-gray-600">
+            {isDemoMode 
+              ? "Browse demo students with safe training data"
+              : "Browse students from the People Directory API"
+            }
+          </p>
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-6">
+        <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search by name, program, or interests..."
+                    placeholder={isDemoMode ? "Search demo students..." : "Search students..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -90,94 +66,102 @@ const StudentsDirectory = () => {
 
         {/* Students Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
-            <Card 
-              key={student.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => navigate(`/student/${student.id}`)}
-            >
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={`/placeholder-avatar-${student.id}.jpg`} />
-                    <AvatarFallback>{student.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{student.name}</CardTitle>
-                    <CardDescription>{student.program}</CardDescription>
-                    <div className="flex items-center mt-1">
-                      <GraduationCap className="w-3 h-3 mr-1 text-gray-400" />
-                      <span className="text-xs text-gray-500">{student.year}</span>
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        ID: {student.id}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
+          {filteredStudents.length === 0 ? (
+            <Card className="text-center py-12">
               <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Contact</p>
-                    <p className="text-sm text-gray-600 truncate">{student.email}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Academic Standing</p>
-                    <div className="flex items-center space-x-4">
-                      <span className="text-sm text-gray-600">GPA: <span className="font-medium text-blue-600">{student.gpa}</span></span>
-                      <Badge variant={student.status === "Active" ? "default" : "secondary"} className="text-xs">
-                        {student.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">Interests</p>
-                    <div className="flex flex-wrap gap-1">
-                      {student.interests.map((interest, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {interest}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-2">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Mentor Assignment</p>
-                    {student.mentorAssigned ? (
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-green-700">{student.mentorName}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                        <span className="text-sm text-yellow-700">Unassigned</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-gray-500 border-t pt-2">
-                    <div className="flex items-center">
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      People API • Last sync: {new Date(student.lastSync).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500 text-lg">
+                  {isDemoMode ? "No demo students found" : "No students found"}
+                </p>
+                <p className="text-gray-400 mt-2">
+                  {searchTerm 
+                    ? `No students match "${searchTerm}". Try adjusting your search.`
+                    : isDemoMode 
+                      ? "Demo mode is active but no demo students are available."
+                      : "No students have been synced from the People API yet."
+                  }
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          ) : (
+            filteredStudents.map((student) => (
+              <Card 
+                key={student.id} 
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => navigate(`/student/${student.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={student.avatar} alt={student.name} />
+                      <AvatarFallback>
+                        {student.name.split(' ').map((n: string) => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{student.name}</CardTitle>
+                      <CardDescription>{student.program} • Year {student.semesterYear}</CardDescription>
+                      {isDemoMode && (
+                        <Badge variant="outline" className="text-blue-600 border-blue-200 text-xs">
+                          Demo Data
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1">Contact</p>
+                      <p className="text-sm text-gray-600">{student.email}</p>
+                    </div>
 
-        {filteredStudents.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <p className="text-gray-500 text-lg">No students found matching your search criteria.</p>
-              <p className="text-gray-400 mt-2">Try adjusting your search terms or filters.</p>
-            </CardContent>
-          </Card>
-        )}
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1">Academic Standing</p>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-sm text-gray-600">GPA: <span className="font-medium text-blue-600">{student.gpa}</span></span>
+                        <Badge variant={student.status === "active" ? "default" : "secondary"} className="text-xs">
+                          {student.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-2">Interests</p>
+                      <div className="flex flex-wrap gap-1">
+                        {student.interests.map((interest: string, index: number) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {interest}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-2">
+                      <p className="text-sm font-medium text-gray-600 mb-1">Mentor Assignment</p>
+                      {student.mentor ? (
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span className="text-sm text-green-700">{student.mentor}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
+                          <span className="text-sm text-yellow-700">Unassigned</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="text-xs text-gray-500 border-t pt-2">
+                      <span>ID: {student.rollNo}</span>
+                      {isDemoMode && <span className="ml-2">• Demo Data</span>}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
