@@ -11,6 +11,7 @@ import Assignments from "./pages/Assignments";
 import Admin from "./pages/Admin";
 import Student360 from "./pages/Student360";
 import SessionDetail from "./pages/SessionDetail";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +35,7 @@ const App = () => (
           <Route path="/goals" element={<div className="p-8">Goals & Plans - Coming Soon</div>} />
           <Route path="/meetings" element={<div className="p-8">Meeting Logs - Coming Soon</div>} />
           <Route path="/qna" element={<div className="p-8">Q&A - Coming Soon</div>} />
-          <Route path="/reports" element={<div className="p-8">Reports - Coming Soon</div>} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/alerts" element={<div className="p-8">Alerts - Coming Soon</div>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
