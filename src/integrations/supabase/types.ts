@@ -95,6 +95,128 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_versions: {
+        Row: {
+          action_plan: string | null
+          area_of_focus: string
+          change_summary: string | null
+          changed_at: string
+          changed_by: string | null
+          goal_id: string
+          id: string
+          knowledge_how: string | null
+          knowledge_what: string | null
+          previous_values: Json | null
+          skills_how: string | null
+          skills_what: string | null
+          smart_goal_text: string
+          status: Database["public"]["Enums"]["goal_status"]
+          target_date: string | null
+          version_number: number
+        }
+        Insert: {
+          action_plan?: string | null
+          area_of_focus: string
+          change_summary?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          goal_id: string
+          id?: string
+          knowledge_how?: string | null
+          knowledge_what?: string | null
+          previous_values?: Json | null
+          skills_how?: string | null
+          skills_what?: string | null
+          smart_goal_text: string
+          status: Database["public"]["Enums"]["goal_status"]
+          target_date?: string | null
+          version_number: number
+        }
+        Update: {
+          action_plan?: string | null
+          area_of_focus?: string
+          change_summary?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          goal_id?: string
+          id?: string
+          knowledge_how?: string | null
+          knowledge_what?: string | null
+          previous_values?: Json | null
+          skills_how?: string | null
+          skills_what?: string | null
+          smart_goal_text?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          target_date?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_versions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          action_plan: string | null
+          area_of_focus: string
+          created_at: string
+          created_by: string | null
+          id: string
+          knowledge_how: string | null
+          knowledge_what: string | null
+          session_id: string | null
+          skills_how: string | null
+          skills_what: string | null
+          smart_goal_text: string
+          status: Database["public"]["Enums"]["goal_status"]
+          student_external_id: string
+          target_date: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          action_plan?: string | null
+          area_of_focus: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          knowledge_how?: string | null
+          knowledge_what?: string | null
+          session_id?: string | null
+          skills_how?: string | null
+          skills_what?: string | null
+          smart_goal_text: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          student_external_id: string
+          target_date?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          action_plan?: string | null
+          area_of_focus?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          knowledge_how?: string | null
+          knowledge_what?: string | null
+          session_id?: string | null
+          skills_how?: string | null
+          skills_what?: string | null
+          smart_goal_text?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          student_external_id?: string
+          target_date?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           description: string | null
@@ -131,6 +253,7 @@ export type Database = {
     }
     Enums: {
       assignment_mode: "app_managed" | "upstream_managed"
+      goal_status: "proposed" | "in_progress" | "completed" | "archived"
       mentor_role: "primary" | "co_mentor"
     }
     CompositeTypes: {
@@ -260,6 +383,7 @@ export const Constants = {
   public: {
     Enums: {
       assignment_mode: ["app_managed", "upstream_managed"],
+      goal_status: ["proposed", "in_progress", "completed", "archived"],
       mentor_role: ["primary", "co_mentor"],
     },
   },
