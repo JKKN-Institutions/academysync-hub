@@ -1,3 +1,4 @@
+// Loading skeleton components for the mentoring platform
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';

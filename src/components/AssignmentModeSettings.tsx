@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/error-state';
 import { DemoModeSettings } from '@/components/DemoModeSettings';
 
 export const AssignmentModeSettings: React.FC = () => {
+  console.log('AssignmentModeSettings component loading - v2...');
   const { mode, loading, error, updateMode, isAppManaged, isUpstreamManaged } = useAssignmentMode();
 
   const handleModeChange = (newMode: string) => {
