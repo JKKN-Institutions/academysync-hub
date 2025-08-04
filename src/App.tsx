@@ -10,6 +10,7 @@ import StudentsDirectory from "./pages/StudentsDirectory";
 import Assignments from "./pages/Assignments";
 import Admin from "./pages/Admin";
 import Student360 from "./pages/Student360";
+import SessionDetail from "./pages/SessionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/student/:studentId" element={<Student360 />} />
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/session/:sessionId" element={<SessionDetail />} />
           {/* Placeholder routes for remaining pages */}
           <Route path="/counseling" element={<div className="p-8">Counseling Sessions - Coming Soon</div>} />
           <Route path="/goals" element={<div className="p-8">Goals & Plans - Coming Soon</div>} />
