@@ -1,1 +1,9 @@
 project_id = "pbzndbvxjdvfmgoonxee"
+
+[auth]
+enabled = true
+external_url = "https://pbzndbvxjdvfmgoonxee.supabase.co"
+site_url = "https://fc7e4294-9481-4401-8e77-f1b15efcab0a.lovableproject.com"
+
+[functions.people-webhook]
+verify_jwt = false
