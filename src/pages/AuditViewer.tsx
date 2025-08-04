@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Download, Search, Filter, Eye, Shield, Trash2, Edit, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import Navigation from '@/components/Navigation';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import type { DateRange } from 'react-day-picker';
@@ -196,23 +196,17 @@ const AuditViewer = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen">
-        <Navigation />
-        <div className="flex-1 p-8 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading audit logs...</p>
-          </div>
+      <div className="flex-1 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading audit logs...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Navigation />
-      
-      <div className="flex-1 p-8">
+    <div className="p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div>
@@ -415,7 +409,6 @@ const AuditViewer = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 };

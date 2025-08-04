@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import Navigation from "@/components/Navigation";
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import type { DateRange } from "react-day-picker";
 
@@ -88,10 +88,7 @@ const Reports = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Navigation />
-      
-      <div className="flex-1 p-8">
+    <div className="p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div>
@@ -515,7 +512,6 @@ const Reports = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </div>
     </div>
   );
 };

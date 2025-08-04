@@ -17,6 +17,7 @@ import Reports from "./pages/Reports";
 import AuditViewer from "./pages/AuditViewer";
 import Help from "./pages/Help";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,82 +31,76 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/mentors" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
-                <MentorsDirectory />
-              </ProtectedRoute>
-            } />
-            <Route path="/students" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                <StudentsDirectory />
-              </ProtectedRoute>
-            } />
-            <Route path="/student/:studentId" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                <Student360 />
-              </ProtectedRoute>
-            } />
-            <Route path="/assignments" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
-                <Assignments />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <Admin />
-              </ProtectedRoute>
-            } />
-            <Route path="/session/:sessionId" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                <SessionDetail />
-              </ProtectedRoute>
-            } />
-            <Route path="/reports" element={
-              <ProtectedRoute requiredRoles={['admin', 'dept_lead']}>
-                <Reports />
-              </ProtectedRoute>
-            } />
-            <Route path="/audit" element={
-              <ProtectedRoute requiredRoles={['admin']}>
-                <AuditViewer />
-              </ProtectedRoute>
-            } />
-            <Route path="/help" element={
-              <ProtectedRoute>
-                <Help />
-              </ProtectedRoute>
-            } />
-            {/* Placeholder routes for remaining pages */}
-            <Route path="/counseling" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                <div className="p-8">Counseling Sessions - Coming Soon</div>
-              </ProtectedRoute>
-            } />
-            <Route path="/goals" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                <div className="p-8">Goals & Plans - Coming Soon</div>
-              </ProtectedRoute>
-            } />
-            <Route path="/meetings" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor']}>
-                <div className="p-8">Meeting Logs - Coming Soon</div>
-              </ProtectedRoute>
-            } />
-            <Route path="/qna" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                <div className="p-8">Q&A - Coming Soon</div>
-              </ProtectedRoute>
-            } />
-            <Route path="/alerts" element={
-              <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
-                <div className="p-8">Alerts - Coming Soon</div>
-              </ProtectedRoute>
-            } />
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/" element={<Index />} />
+              <Route path="/mentors" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
+                  <MentorsDirectory />
+                </ProtectedRoute>
+              } />
+              <Route path="/students" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
+                  <StudentsDirectory />
+                </ProtectedRoute>
+              } />
+              <Route path="/student/:studentId" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
+                  <Student360 />
+                </ProtectedRoute>
+              } />
+              <Route path="/assignments" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
+                  <Assignments />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute requiredRoles={['admin']}>
+                  <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/session/:sessionId" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
+                  <SessionDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/reports" element={
+                <ProtectedRoute requiredRoles={['admin', 'dept_lead']}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              <Route path="/audit" element={
+                <ProtectedRoute requiredRoles={['admin']}>
+                  <AuditViewer />
+                </ProtectedRoute>
+              } />
+              <Route path="/help" element={<Help />} />
+              {/* Placeholder routes for remaining pages */}
+              <Route path="/counseling" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
+                  <div className="p-8">Counseling Sessions - Coming Soon</div>
+                </ProtectedRoute>
+              } />
+              <Route path="/goals" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
+                  <div className="p-8">Goals & Plans - Coming Soon</div>
+                </ProtectedRoute>
+              } />
+              <Route path="/meetings" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor']}>
+                  <div className="p-8">Meeting Logs - Coming Soon</div>
+                </ProtectedRoute>
+              } />
+              <Route path="/qna" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
+                  <div className="p-8">Q&A - Coming Soon</div>
+                </ProtectedRoute>
+              } />
+              <Route path="/alerts" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
+                  <div className="p-8">Alerts - Coming Soon</div>
+                </ProtectedRoute>
+              } />
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
