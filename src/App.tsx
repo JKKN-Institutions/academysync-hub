@@ -15,6 +15,7 @@ import Student360 from "./pages/Student360";
 import SessionDetail from "./pages/SessionDetail";
 import Reports from "./pages/Reports";
 import AuditViewer from "./pages/AuditViewer";
+import Help from "./pages/Help";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -72,6 +73,11 @@ const App = () => (
             <Route path="/audit" element={
               <ProtectedRoute requiredRoles={['admin']}>
                 <AuditViewer />
+              </ProtectedRoute>
+            } />
+            <Route path="/help" element={
+              <ProtectedRoute>
+                <Help />
               </ProtectedRoute>
             } />
             {/* Placeholder routes for remaining pages */}
