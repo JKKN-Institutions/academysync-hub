@@ -95,6 +95,57 @@ export type Database = {
         }
         Relationships: []
       }
+      counseling_sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_time: string | null
+          id: string
+          location: string | null
+          name: string
+          priority: string | null
+          rejection_reason: string | null
+          session_date: string
+          session_type: string
+          start_time: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          priority?: string | null
+          rejection_reason?: string | null
+          session_date: string
+          session_type?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          priority?: string | null
+          rejection_reason?: string | null
+          session_date?: string
+          session_type?: string
+          start_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       goal_versions: {
         Row: {
           action_plan: string | null
@@ -215,7 +266,100 @@ export type Database = {
           updated_at?: string
           version_number?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_goals_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_logs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expected_outcome_next: string | null
+          focus_of_meeting: string
+          id: string
+          next_session_datetime: string | null
+          next_steps: string | null
+          problems_encountered: string | null
+          resolutions_discussed: string | null
+          session_id: string
+          updated_at: string
+          updates_from_previous: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expected_outcome_next?: string | null
+          focus_of_meeting: string
+          id?: string
+          next_session_datetime?: string | null
+          next_steps?: string | null
+          problems_encountered?: string | null
+          resolutions_discussed?: string | null
+          session_id: string
+          updated_at?: string
+          updates_from_previous?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expected_outcome_next?: string | null
+          focus_of_meeting?: string
+          id?: string
+          next_session_datetime?: string | null
+          next_steps?: string | null
+          problems_encountered?: string | null
+          resolutions_discussed?: string | null
+          session_id?: string
+          updated_at?: string
+          updates_from_previous?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_meeting_logs_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_participants: {
+        Row: {
+          created_at: string
+          id: string
+          participation_status: string | null
+          session_id: string
+          student_external_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participation_status?: string | null
+          session_id: string
+          student_external_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participation_status?: string | null
+          session_id?: string
+          student_external_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_settings: {
         Row: {

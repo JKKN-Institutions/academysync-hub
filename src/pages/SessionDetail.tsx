@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { MeetingLog } from "@/components/MeetingLog";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -160,6 +161,9 @@ const SessionDetail = () => {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<'completed' | 'rejected'>('completed');
   const [rejectionReason, setRejectionReason] = useState("");
+  
+  // Meeting log state
+  const [isMeetingLogComplete, setIsMeetingLogComplete] = useState(false);
 
   const handleAddQuestion = async () => {
     if (!newQuestion.trim()) return;
@@ -185,11 +189,11 @@ const SessionDetail = () => {
   };
 
   const handleStatusChange = async () => {
-    // Validation for completion
-    if (newStatus === 'completed' && !notes.trim() && session.qna_entries.length === 0) {
+    // Validation for completion - require Meeting Log to be complete
+    if (newStatus === 'completed' && !isMeetingLogComplete) {
       toast({
         title: "Cannot complete session",
-        description: "Please add at least one note or Q&A entry before completing the session.",
+        description: "Please complete the Meeting Log with focus and next session date/time before completing the session.",
         variant: "destructive",
       });
       return;
@@ -303,10 +307,11 @@ const SessionDetail = () => {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="qna">Q&A</TabsTrigger>
+            <TabsTrigger value="meeting-log">Meeting Log</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
             <TabsTrigger value="status">Status</TabsTrigger>
           </TabsList>
@@ -542,6 +547,22 @@ const SessionDetail = () => {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Meeting Log Tab */}
+          <TabsContent value="meeting-log">
+            <MeetingLog
+              sessionId={session.id}
+              onMeetingLogUpdate={setIsMeetingLogComplete}
+              onScheduleNext={(nextSessionData) => {
+                // Handle schedule next session
+                toast({
+                  title: "Next session scheduled",
+                  description: `Session scheduled for ${nextSessionData.session_date} at ${nextSessionData.start_time}`,
+                });
+                // In real implementation, this would create a new session record
+              }}
+            />
           </TabsContent>
 
           {/* Attachments Tab */}
