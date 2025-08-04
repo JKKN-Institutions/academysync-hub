@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Login from "./pages/Login";
 import MentorsDirectory from "./pages/MentorsDirectory";
 import StudentsDirectory from "./pages/StudentsDirectory";
 import Assignments from "./pages/Assignments";
@@ -27,7 +28,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
             <Route path="/mentors" element={
               <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
                 <MentorsDirectory />
