@@ -14,7 +14,114 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          mentor_external_id: string
+          notes: string | null
+          role: Database["public"]["Enums"]["mentor_role"]
+          status: string
+          student_external_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          mentor_external_id: string
+          notes?: string | null
+          role?: Database["public"]["Enums"]["mentor_role"]
+          status?: string
+          student_external_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          mentor_external_id?: string
+          notes?: string | null
+          role?: Database["public"]["Enums"]["mentor_role"]
+          status?: string
+          student_external_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          details: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          timestamp: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          details?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          timestamp?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          details?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +130,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      assignment_mode: "app_managed" | "upstream_managed"
+      mentor_role: "primary" | "co_mentor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +258,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      assignment_mode: ["app_managed", "upstream_managed"],
+      mentor_role: ["primary", "co_mentor"],
+    },
   },
 } as const
