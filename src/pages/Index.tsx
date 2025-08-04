@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 
 const Index = () => {
   // Mock user role - in real app this would come from auth context
-  const userRole = "mentor"; // admin, mentor, mentee, dept_lead
+  const userRole = "admin"; // admin, mentor, mentee, dept_lead
 
   const quickActions = [
     { icon: Users, label: "My Assignments", href: "/assignments", roles: ["mentor", "mentee"] },
