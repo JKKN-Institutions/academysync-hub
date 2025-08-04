@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
-  // Mock user role - in real app this would come from auth context
-  const userRole = "admin"; // admin, mentor, mentee, dept_lead
+  const { user } = useAuth();
+  
+  // Default to admin if no user (for development)
+  const userRole = user?.role || "admin";
 
   const quickActions = [
     { icon: Users, label: "My Assignments", href: "/assignments", roles: ["mentor", "mentee"] },
@@ -50,8 +53,8 @@ const Index = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, Dr. Sarah Johnson</h2>
-          <p className="text-lg text-gray-600">Mentor • Computer Science Department</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.displayName || 'User'}</h2>
+          <p className="text-lg text-gray-600">{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} • {user?.department || 'Department'}</p>
           <div className="flex items-center mt-2 text-sm text-gray-500">
             <Shield className="w-4 h-4 mr-1" />
             Role: {userRole.charAt(0).toUpperCase() + userRole.slice(1)}

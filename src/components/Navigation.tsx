@@ -13,16 +13,18 @@ import {
   GraduationCap,
   ClipboardList,
   MessageSquare,
-  Home
+  Home,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import type { UserRole } from "@/contexts/AuthContext";
 
-interface NavigationProps {
-  userRole: "admin" | "mentor" | "mentee" | "dept_lead";
-}
-
-const Navigation = ({ userRole }: NavigationProps) => {
+const Navigation = () => {
+  const { user } = useAuth();
   const location = useLocation();
+
+  if (!user) return null;
 
   const navigationItems = [
     { icon: Home, label: "Dashboard", href: "/", roles: ["admin", "mentor", "mentee", "dept_lead"] },
@@ -36,11 +38,12 @@ const Navigation = ({ userRole }: NavigationProps) => {
     { icon: MessageSquare, label: "Q&A", href: "/qna", roles: ["admin", "mentor", "mentee"] },
     { icon: BarChart3, label: "Reports", href: "/reports", roles: ["admin", "dept_lead"] },
     { icon: Bell, label: "Alerts", href: "/alerts", roles: ["admin", "mentor", "mentee", "dept_lead"] },
+    { icon: Shield, label: "Audit Logs", href: "/audit", roles: ["admin"] },
     { icon: Settings, label: "Admin", href: "/admin", roles: ["admin"] },
   ];
 
   const filteredItems = navigationItems.filter(item => 
-    item.roles.includes(userRole)
+    item.roles.includes(user.role as UserRole)
   );
 
   return (
@@ -48,6 +51,11 @@ const Navigation = ({ userRole }: NavigationProps) => {
       <div className="p-4 border-b">
         <h2 className="font-bold text-lg text-gray-800">AcademySync Hub</h2>
         <p className="text-sm text-gray-600">Mentoring Platform</p>
+        <div className="mt-2 flex items-center gap-2">
+          <div className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
+          </div>
+        </div>
       </div>
       
       <div className="p-4">

@@ -89,7 +89,7 @@ const Reports = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Navigation userRole="admin" />
+      <Navigation />
       
       <div className="flex-1 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
