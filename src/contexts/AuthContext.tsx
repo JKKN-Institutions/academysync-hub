@@ -82,17 +82,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('role, display_name, department, external_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        // Mock user data - in real app this would come from profiles table
+        const profile = await fetchUserProfile(session.user.id);
         setUser({
           ...session.user,
-          role: 'admin', // This would be fetched from user profile
-          displayName: 'Dr. Sarah Johnson',
-          department: 'Computer Science',
-          externalId: 'staff_001'
+          role: profile?.role as UserRole || 'mentee',
+          displayName: profile?.display_name || session.user.email || 'Unknown User',
+          department: profile?.department,
+          externalId: profile?.external_id
         });
       }
       setLoading(false);
@@ -102,14 +122,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          // Mock user data - in real app this would come from profiles table
-          setUser({
-            ...session.user,
-            role: 'admin',
-            displayName: 'Dr. Sarah Johnson', 
-            department: 'Computer Science',
-            externalId: 'staff_001'
-          });
+          // Defer profile fetching to avoid deadlock
+          setTimeout(async () => {
+            const profile = await fetchUserProfile(session.user.id);
+            setUser({
+              ...session.user,
+              role: profile?.role as UserRole || 'mentee',
+              displayName: profile?.display_name || session.user.email || 'Unknown User',
+              department: profile?.department,
+              externalId: profile?.external_id
+            });
+          }, 0);
         } else {
           setUser(null);
         }
