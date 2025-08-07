@@ -10,22 +10,19 @@ const Layout = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
+      <AppSidebar />
+      <SidebarInset>
+        {/* Global header with sidebar trigger */}
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4">
+          <SidebarTrigger className="-ml-1" />
+          <div className="flex-1" />
+        </header>
         
-        <SidebarInset className="flex-1">
-          {/* Global header with sidebar trigger */}
-          <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="flex-1" />
-          </header>
-          
-          {/* Main content area */}
-          <div className="flex-1 overflow-auto">
-            <Outlet />
-          </div>
-        </SidebarInset>
-      </div>
+        {/* Main content area */}
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 };
