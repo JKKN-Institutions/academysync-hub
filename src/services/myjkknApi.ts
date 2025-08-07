@@ -103,19 +103,30 @@ const makeApiRequest = async <T>(
 // Fetch students from myjkkn API
 export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
   try {
-    const response = await makeApiRequest<MyjkknApiResponse<MyjkknStudent[]>>(
+    const response = await makeApiRequest<{data: any[]}>(
       '/api-management/students'
     );
 
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to fetch students');
+    // The API returns {data: [...]} format, not {success: true, data: [...]}
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error('Invalid response format from API');
     }
 
     // Transform API response to match our expected format
     return response.data.map(student => ({
-      ...student,
-      id: student.studentId || student.id,
-      avatar: student.avatar || `https://images.unsplash.com/photo-1441057206919-63d19fac2369?w=400&h=400&fit=crop&crop=face`,
+      id: student.id,
+      studentId: student.id,
+      rollNo: student.roll_number,
+      name: student.first_name + (student.last_name ? ` ${student.last_name}` : ''),
+      email: student.student_email,
+      program: student.program?.program_name || 'Unknown Program',
+      semesterYear: 1, // Default since not available in API
+      status: student.status as 'active' | 'inactive',
+      department: student.department?.department_name,
+      avatar: student.student_photo_url || undefined,
+      gpa: undefined,
+      mentor: null,
+      interests: []
     }));
   } catch (error) {
     console.error('Error fetching students:', error);
