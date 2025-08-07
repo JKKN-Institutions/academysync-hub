@@ -155,9 +155,9 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className={isCollapsed ? "w-16" : "w-80"} collapsible="icon">
+    <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-4">
+        <div className="flex items-center gap-2 px-3 py-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <GraduationCap className="h-4 w-4" />
           </div>
@@ -169,7 +169,7 @@ export function AppSidebar() {
           )}
         </div>
         {!isCollapsed && user && (
-          <div className="px-3 pb-4">
+          <div className="px-3 pb-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
                 {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
