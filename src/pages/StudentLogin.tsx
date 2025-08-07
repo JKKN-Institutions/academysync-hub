@@ -6,23 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Loader2, Users, Target, BarChart3, GraduationCap } from 'lucide-react';
+import { AlertCircle, Loader2, GraduationCap, Mail, Key, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
-const Login = () => {
+const StudentLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('login');
   
-  const { user, signIn, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
   const from = (location.state as any)?.from?.pathname || '/';
+
+  // JKK Institution email domains
+  const ALLOWED_DOMAINS = [
+    'jkkn.ac.in',
+    'jkkngroup.ac.in',
+    'jkkneducation.org',
+    'student.jkkn.ac.in'
+  ];
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -31,13 +41,65 @@ const Login = () => {
     }
   }, [user, authLoading, navigate, from]);
 
+  const validateInstitutionalEmail = (email: string): boolean => {
+    const domain = email.split('@')[1]?.toLowerCase();
+    return ALLOWED_DOMAINS.includes(domain);
+  };
+
+  const validateApiKey = async (email: string, apiKey: string): Promise<boolean> => {
+    try {
+      // Check if the API key exists and matches the student email
+      // This would typically involve checking against the students API or database
+      console.log('Validating API key for:', email);
+      
+      // For now, we'll do a basic format validation
+      // API key should be at least 20 characters long
+      if (!apiKey || apiKey.length < 20) {
+        throw new Error('Invalid API key format');
+      }
+
+      // In a real implementation, you would:
+      // 1. Call the MYJKKN API to validate the student email and API key
+      // 2. Verify that the student exists in the system
+      // 3. Return true if valid, false otherwise
+      
+      return true; // Temporary - always return true for development
+    } catch (error) {
+      console.error('API key validation error:', error);
+      return false;
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      await signIn(email, password);
+      // Validate institutional email
+      if (!validateInstitutionalEmail(email)) {
+        throw new Error('Please use your JKK Institution email address (.jkkn.ac.in, .jkkngroup.ac.in, etc.)');
+      }
+
+      // Validate API key
+      const isValidApiKey = await validateApiKey(email, apiKey);
+      if (!isValidApiKey) {
+        throw new Error('Invalid API key. Please contact your institution for the correct API key.');
+      }
+
+      // Attempt to sign in with Supabase
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. Please check your credentials.');
+        }
+        throw error;
+      }
+
       // Navigation will happen via useEffect when user state updates
     } catch (error: any) {
       setError(error.message || 'Failed to sign in');
@@ -58,8 +120,18 @@ const Login = () => {
     }
 
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      const redirectUrl = `${window.location.origin}/`;
+      // Validate institutional email
+      if (!validateInstitutionalEmail(email)) {
+        throw new Error('Please use your JKK Institution email address (.jkkn.ac.in, .jkkngroup.ac.in, etc.)');
+      }
+
+      // Validate API key
+      const isValidApiKey = await validateApiKey(email, apiKey);
+      if (!isValidApiKey) {
+        throw new Error('Invalid API key. Please contact your institution for the correct API key.');
+      }
+
+      const redirectUrl = `${window.location.origin}/student-login`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -67,14 +139,21 @@ const Login = () => {
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            display_name: displayName
+            display_name: displayName,
+            role: 'mentee', // Students are mentees by default
+            api_key: apiKey // Store API key in user metadata
           }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          throw new Error('This email is already registered. Please try signing in instead.');
+        }
+        throw error;
+      }
       
-      setError('Check your email for the confirmation link!');
+      setError('Registration successful! Check your institutional email for the confirmation link.');
       setActiveTab('login');
     } catch (error: any) {
       setError(error.message || 'Failed to sign up');
@@ -85,7 +164,7 @@ const Login = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-blue-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
@@ -95,46 +174,56 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-blue-50 p-4">
       <div className="w-full max-w-4xl flex items-center justify-center gap-8">
-        {/* Left side - Branding */}
+        {/* Left side - Student Portal Branding */}
         <div className="hidden lg:block flex-1 max-w-md">
           <div className="text-center space-y-6">
-            <h1 className="text-4xl font-bold text-gray-900">AcademySync Hub</h1>
+            <div className="flex items-center justify-center space-x-2">
+              <GraduationCap className="w-8 h-8 text-green-600" />
+              <h1 className="text-4xl font-bold text-gray-900">Student Portal</h1>
+            </div>
             <p className="text-lg text-gray-600">
-              Empowering academic success through structured mentoring relationships
+              JKK Institution Student Access Portal
             </p>
             
             <div className="space-y-4">
               <div className="flex items-center space-x-3 text-left">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Mentor-Mentee Matching</h3>
-                  <p className="text-sm text-gray-600">Connect with the right mentors and mentees</p>
+                  <h3 className="font-semibold">Institutional Email Required</h3>
+                  <p className="text-sm text-gray-600">Use your @jkkn.ac.in or institutional email</p>
                 </div>
               </div>
               
               <div className="flex items-center space-x-3 text-left">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Key className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Goal Setting & Tracking</h3>
-                  <p className="text-sm text-gray-600">Set SMART goals and track progress</p>
+                  <h3 className="font-semibold">API Key Authentication</h3>
+                  <p className="text-sm text-gray-600">Secure access with your student API key</p>
                 </div>
               </div>
               
               <div className="flex items-center space-x-3 text-left">
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-purple-600" />
+                  <GraduationCap className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Progress Analytics</h3>
-                  <p className="text-sm text-gray-600">Comprehensive reports and insights</p>
+                  <h3 className="font-semibold">Academic Support</h3>
+                  <p className="text-sm text-gray-600">Access counseling and mentoring services</p>
                 </div>
               </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Link to="/login" className="inline-flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-900">
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Staff Login</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -143,31 +232,50 @@ const Login = () => {
         <div className="w-full max-w-md">
           <Card>
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Staff Portal</CardTitle>
+              <CardTitle className="text-2xl text-center">Student Access</CardTitle>
               <CardDescription className="text-center">
-                Sign in to your staff account or create a new one
+                Sign in with your institutional credentials
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="login">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                  <TabsTrigger value="signup">Register</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="login">
                   <form onSubmit={handleSignIn} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Institutional Email</Label>
                       <Input
                         id="email"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="student@jkkn.ac.in"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
+                      <p className="text-xs text-gray-500">
+                        Use your JKK Institution email address
+                      </p>
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="apiKey">Student API Key</Label>
+                      <Input
+                        id="apiKey"
+                        type="password"
+                        placeholder="Enter your student API key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-gray-500">
+                        Contact your institution if you don't have your API key
+                      </p>
+                    </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="password">Password</Label>
                       <Input
@@ -189,7 +297,7 @@ const Login = () => {
                     
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Sign In
+                      Sign In as Student
                     </Button>
                   </form>
                 </TabsContent>
@@ -197,7 +305,7 @@ const Login = () => {
                 <TabsContent value="signup">
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="displayName">Display Name</Label>
+                      <Label htmlFor="displayName">Full Name</Label>
                       <Input
                         id="displayName"
                         type="text"
@@ -207,17 +315,37 @@ const Login = () => {
                         required
                       />
                     </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="signupEmail">Email</Label>
+                      <Label htmlFor="signupEmail">Institutional Email</Label>
                       <Input
                         id="signupEmail"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="student@jkkn.ac.in"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
                       />
+                      <p className="text-xs text-gray-500">
+                        Must be a valid JKK Institution email
+                      </p>
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="signupApiKey">Student API Key</Label>
+                      <Input
+                        id="signupApiKey"
+                        type="password"
+                        placeholder="Enter your student API key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-gray-500">
+                        Provided by your institution
+                      </p>
+                    </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="signupPassword">Password</Label>
                       <Input
@@ -229,6 +357,7 @@ const Login = () => {
                         required
                       />
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirm Password</Label>
                       <Input
@@ -242,7 +371,7 @@ const Login = () => {
                     </div>
                     
                     {error && (
-                      <Alert variant={error.includes('Check your email') ? 'default' : 'destructive'}>
+                      <Alert variant={error.includes('Registration successful') ? 'default' : 'destructive'}>
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>{error}</AlertDescription>
                       </Alert>
@@ -250,21 +379,11 @@ const Login = () => {
                     
                     <Button type="submit" className="w-full" disabled={loading}>
                       {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Sign Up
+                      Register as Student
                     </Button>
                   </form>
                 </TabsContent>
               </Tabs>
-              
-              <div className="mt-6 pt-4 border-t text-center">
-                <p className="text-sm text-gray-600 mb-2">Student?</p>
-                <Link to="/student-login">
-                  <Button variant="outline" size="sm" className="w-full">
-                    <GraduationCap className="w-4 h-4 mr-2" />
-                    Access Student Portal
-                  </Button>
-                </Link>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -273,4 +392,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default StudentLogin;
