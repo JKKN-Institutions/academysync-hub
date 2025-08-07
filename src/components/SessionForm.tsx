@@ -330,7 +330,6 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                         <SelectValue placeholder="Select an institution" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Institutions</SelectItem>
                         {institutions.map(institution => (
                           <SelectItem key={institution.id} value={institution.id}>
                             {institution.institution_name}
@@ -352,7 +351,6 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                         <SelectValue placeholder="Select a department" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All Departments</SelectItem>
                         {filteredDepartments.map(department => (
                           <SelectItem key={department.id} value={department.id}>
                             {department.department_name}
@@ -363,7 +361,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </div>
 
                   {/* Students by Institution/Department */}
-                  {(selectedInstitution || selectedDepartment) && (
+                  {selectedInstitution && (
                     <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
                       {getStudentsByInstitutionAndDepartment().map(student => (
                         <div
