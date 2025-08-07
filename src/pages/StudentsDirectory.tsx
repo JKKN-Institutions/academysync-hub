@@ -37,11 +37,11 @@ const StudentsDirectory = () => {
       ));
 
     // Match by institution name
-    const matchesInstitution = !selectedInstitution || 
+    const matchesInstitution = !selectedInstitution || selectedInstitution === "all" || 
       institutions.find(inst => inst.id === selectedInstitution)?.institution_name === student.program;
     
     // Match by department name
-    const matchesDepartment = !selectedDepartment || 
+    const matchesDepartment = !selectedDepartment || selectedDepartment === "all" || 
       departments.find(dept => dept.id === selectedDepartment)?.department_name === student.department;
 
     return matchesSearch && matchesInstitution && matchesDepartment;
@@ -126,7 +126,7 @@ const StudentsDirectory = () => {
                       <SelectValue placeholder="All Institutions" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Institutions</SelectItem>
+                      <SelectItem value="all">All Institutions</SelectItem>
                       {institutions.map(institution => (
                         <SelectItem key={institution.id} value={institution.id}>
                           {institution.institution_name}
@@ -143,7 +143,7 @@ const StudentsDirectory = () => {
                       <SelectValue placeholder="Department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Departments</SelectItem>
+                      <SelectItem value="all">All Departments</SelectItem>
                       {filteredDepartments.map(department => (
                         <SelectItem key={department.id} value={department.id}>
                           {department.department_name}
@@ -173,18 +173,18 @@ const StudentsDirectory = () => {
                       </button>
                     </Badge>
                   )}
-                  {selectedInstitution && (
+                  {selectedInstitution && selectedInstitution !== "all" && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       Institution: {institutions.find(inst => inst.id === selectedInstitution)?.institution_name}
-                      <button onClick={() => setSelectedInstitution("")} className="ml-1 hover:bg-gray-200 rounded">
+                      <button onClick={() => setSelectedInstitution("all")} className="ml-1 hover:bg-gray-200 rounded">
                         ×
                       </button>
                     </Badge>
                   )}
-                  {selectedDepartment && (
+                  {selectedDepartment && selectedDepartment !== "all" && (
                     <Badge variant="secondary" className="flex items-center gap-1">
                       Department: {departments.find(dept => dept.id === selectedDepartment)?.department_name}
-                      <button onClick={() => setSelectedDepartment("")} className="ml-1 hover:bg-gray-200 rounded">
+                      <button onClick={() => setSelectedDepartment("all")} className="ml-1 hover:bg-gray-200 rounded">
                         ×
                       </button>
                     </Badge>
