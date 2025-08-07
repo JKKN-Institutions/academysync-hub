@@ -16,6 +16,7 @@ import { FormSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip, MentoringStage } from "@/components/ui/etiquette-tip";
 import { useStudentsData } from "@/hooks/useStudentsData";
+import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -33,6 +34,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   initialData
 }) => {
   const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
+  const { departments, loading: departmentsLoading } = useDepartmentsData();
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',

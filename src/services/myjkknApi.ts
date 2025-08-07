@@ -29,6 +29,16 @@ export interface MyjkknStaff {
   avatar?: string;
 }
 
+export interface MyjkknDepartment {
+  id: string;
+  department_name: string;
+  description?: string;
+  status: 'active' | 'inactive';
+  institution_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface MyjkknApiResponse<T> {
   success: boolean;
   data: T;
@@ -223,6 +233,34 @@ export const fetchStaffById = async (staffId: string): Promise<MyjkknStaff | nul
   } catch (error) {
     console.error('Error fetching staff:', error);
     return null;
+  }
+};
+
+// Fetch departments from myjkkn API
+export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
+  try {
+    const response = await makeApiRequest<{data: any[]}>(
+      '/api-management/organizations/departments'
+    );
+
+    // The API returns {data: [...]} format
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error('Invalid response format from API');
+    }
+
+    // Transform API response to match our expected format
+    return response.data.map(department => ({
+      id: department.id,
+      department_name: department.department_name,
+      description: department.description,
+      status: department.status as 'active' | 'inactive',
+      institution_id: department.institution_id,
+      created_at: department.created_at,
+      updated_at: department.updated_at
+    }));
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    throw error;
   }
 };
 
