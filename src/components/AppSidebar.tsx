@@ -67,66 +67,66 @@ export function AppSidebar() {
     {
       label: "Dashboard",
       icon: Home,
-      roles: ["admin", "mentor", "mentee", "dept_lead"],
+      roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
-        { title: "Overview", url: "/", icon: Activity, roles: ["admin", "mentor", "mentee", "dept_lead"], description: "Main dashboard" },
+        { title: "Overview", url: "/", icon: Activity, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Main dashboard" },
       ]
     },
     {
       label: "People Management",
       icon: Users,
-      roles: ["admin", "mentor", "mentee", "dept_lead"],
+      roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
-        { title: "Mentors Directory", url: "/mentors", icon: Users, roles: ["admin", "mentee", "dept_lead"], description: "Browse mentor profiles" },
-        { title: "Students Directory", url: "/students", icon: GraduationCap, roles: ["admin", "mentor", "dept_lead"], description: "Browse student profiles" },
-        { title: "Student 360", url: "/student360", icon: UserCircle, roles: ["admin", "mentor", "dept_lead"], description: "Detailed student view" },
-        { title: "Assignments", url: "/assignments", icon: ClipboardList, roles: ["admin", "mentor", "mentee", "dept_lead"], description: "Mentor-student assignments" },
+        { title: "Mentors Directory", url: "/mentors", icon: Users, roles: ["admin", "super_admin", "mentee", "dept_lead"], description: "Browse mentor profiles" },
+        { title: "Students Directory", url: "/students", icon: GraduationCap, roles: ["admin", "super_admin", "mentor", "dept_lead"], description: "Browse student profiles" },
+        { title: "Student 360", url: "/student360", icon: UserCircle, roles: ["admin", "super_admin", "mentor", "dept_lead"], description: "Detailed student view" },
+        { title: "Assignments", url: "/assignments", icon: ClipboardList, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Mentor-student assignments" },
       ]
     },
     {
       label: "Mentoring Activities",
       icon: Calendar,
-      roles: ["admin", "mentor", "mentee"],
+      roles: ["admin", "super_admin", "mentor", "mentee"],
       items: [
-        { title: "Counseling Sessions", url: "/counseling", icon: Calendar, roles: ["admin", "mentor", "mentee"], description: "Schedule and manage sessions" },
-        { title: "Goals & Action Plans", url: "/goals", icon: Target, roles: ["admin", "mentor", "mentee"], description: "Track development goals" },
-        { title: "Meeting Logs", url: "/meetings", icon: FileText, roles: ["admin", "mentor"], description: "Session documentation" },
-        { title: "Q&A Exchange", url: "/qna", icon: MessageSquare, roles: ["admin", "mentor", "mentee"], description: "Questions and answers" },
+        { title: "Counseling Sessions", url: "/counseling", icon: Calendar, roles: ["admin", "super_admin", "mentor", "mentee"], description: "Schedule and manage sessions" },
+        { title: "Goals & Action Plans", url: "/goals", icon: Target, roles: ["admin", "super_admin", "mentor", "mentee"], description: "Track development goals" },
+        { title: "Meeting Logs", url: "/meetings", icon: FileText, roles: ["admin", "super_admin", "mentor"], description: "Session documentation" },
+        { title: "Q&A Exchange", url: "/qna", icon: MessageSquare, roles: ["admin", "super_admin", "mentor", "mentee"], description: "Questions and answers" },
       ]
     },
     {
       label: "Analytics & Insights",
       icon: BarChart3,
-      roles: ["admin", "dept_lead"],
+      roles: ["admin", "super_admin", "dept_lead"],
       items: [
-        { title: "Reports Dashboard", url: "/reports", icon: BarChart3, roles: ["admin", "dept_lead"], description: "Performance analytics" },
-        { title: "Engagement Metrics", url: "/reports?tab=engagement", icon: TrendingUp, roles: ["admin", "dept_lead"], description: "Student engagement data" },
+        { title: "Reports Dashboard", url: "/reports", icon: BarChart3, roles: ["admin", "super_admin", "dept_lead"], description: "Performance analytics" },
+        { title: "Engagement Metrics", url: "/reports?tab=engagement", icon: TrendingUp, roles: ["admin", "super_admin", "dept_lead"], description: "Student engagement data" },
       ]
     },
     {
       label: "Notifications & Alerts",
       icon: Bell,
-      roles: ["admin", "mentor", "mentee", "dept_lead"],
+      roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
-        { title: "Alert Center", url: "/alerts", icon: Bell, roles: ["admin", "mentor", "mentee", "dept_lead"], description: "Risk and event alerts" },
+        { title: "Alert Center", url: "/alerts", icon: Bell, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Risk and event alerts" },
       ]
     },
     {
       label: "System Administration",
       icon: Settings,
-      roles: ["admin"],
+      roles: ["admin", "super_admin"],
       items: [
-        { title: "Admin Dashboard", url: "/admin", icon: Settings, roles: ["admin"], description: "System configuration" },
-        { title: "Audit Logs", url: "/audit", icon: Shield, roles: ["admin"], description: "Security and change logs" },
-        { title: "Data Sync", url: "/admin?tab=sync", icon: Database, roles: ["admin"], description: "People API integration" },
+        { title: "Admin Dashboard", url: "/admin", icon: Settings, roles: ["admin", "super_admin"], description: "System configuration" },
+        { title: "Audit Logs", url: "/audit", icon: Shield, roles: ["admin", "super_admin"], description: "Security and change logs" },
+        { title: "Data Sync", url: "/admin?tab=sync", icon: Database, roles: ["admin", "super_admin"], description: "People API integration" },
       ]
     },
     {
       label: "Help & Support",
       icon: BookOpen,
-      roles: ["admin", "mentor", "mentee", "dept_lead"],
+      roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
-        { title: "Help Center", url: "/help", icon: BookOpen, roles: ["admin", "mentor", "mentee", "dept_lead"], description: "Documentation and guides" },
+        { title: "Help Center", url: "/help", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Documentation and guides" },
       ]
     }
   ];
