@@ -129,8 +129,8 @@ const Index = () => {
                   description="No students are currently available in the system"
                 />
               ) : (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {students.slice(0, 8).map((student) => (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {students.map((student) => (
                     <Link 
                       key={student.id} 
                       to={`/student360/${student.id}`}
@@ -157,15 +157,6 @@ const Index = () => {
                       </div>
                     </Link>
                   ))}
-                  {students.length > 8 && (
-                    <div className="text-center py-2">
-                      <Link to="/students-directory">
-                        <Button variant="ghost" size="sm">
-                          View {students.length - 8} more students
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               )}
             </CardContent>
