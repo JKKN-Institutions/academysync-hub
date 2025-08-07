@@ -17,6 +17,11 @@ import SessionDetail from "./pages/SessionDetail";
 import Reports from "./pages/Reports";
 import AuditViewer from "./pages/AuditViewer";
 import Help from "./pages/Help";
+import Counseling from "./pages/Counseling";
+import Goals from "./pages/Goals";
+import Meetings from "./pages/Meetings";
+import QnA from "./pages/QnA";
+import Alerts from "./pages/Alerts";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
@@ -80,30 +85,30 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/help" element={<Help />} />
-              {/* Placeholder routes for remaining pages */}
+              {/* Main application pages */}
               <Route path="/counseling" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <div className="p-8">Counseling Sessions - Coming Soon</div>
+                  <Counseling />
                 </ProtectedRoute>
               } />
               <Route path="/goals" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <div className="p-8">Goals & Plans - Coming Soon</div>
+                  <Goals />
                 </ProtectedRoute>
               } />
               <Route path="/meetings" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor']}>
-                  <div className="p-8">Meeting Logs - Coming Soon</div>
+                  <Meetings />
                 </ProtectedRoute>
               } />
               <Route path="/qna" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <div className="p-8">Q&A - Coming Soon</div>
+                  <QnA />
                 </ProtectedRoute>
               } />
               <Route path="/alerts" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
-                  <div className="p-8">Alerts - Coming Soon</div>
+                  <Alerts />
                 </ProtectedRoute>
               } />
             </Route>
