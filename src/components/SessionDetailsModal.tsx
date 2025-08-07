@@ -62,6 +62,8 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   onClose,
   onStatusUpdate
 }) => {
+  console.log('SessionDetailsModal render:', { session: !!session, isOpen });
+  
   const [meetingLogs, setMeetingLogs] = useState<MeetingLog[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -149,7 +151,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
     }
   };
 
-  if (!session) return null;
+  if (!session || !isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
