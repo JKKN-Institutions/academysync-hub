@@ -39,8 +39,15 @@ const Index = () => {
 
   // Set up real-time notifications
   useEffect(() => {
+    console.log('🔔 Setting up real-time notifications...');
+    
     const channel = supabase
-      .channel('dashboard-notifications')
+      .channel('dashboard-notifications', {
+        config: {
+          broadcast: { self: true },
+          presence: { key: user?.id }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -49,7 +56,7 @@ const Index = () => {
           table: 'counseling_sessions'
         },
         (payload) => {
-          console.log('New session detected:', payload);
+          console.log('🆕 New session detected:', payload);
           const session = payload.new;
           
           // Create notification for session creation
@@ -63,7 +70,12 @@ const Index = () => {
             sessionData: session
           };
 
-          setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep only 10 notifications
+          console.log('📝 Adding notification:', newNotification);
+          setNotifications(prev => {
+            const updated = [newNotification, ...prev.slice(0, 9)];
+            console.log('🔢 Notifications count will be:', updated.length);
+            return updated;
+          });
           
           // Show toast notification
           toast({
@@ -81,7 +93,7 @@ const Index = () => {
           table: 'counseling_sessions'
         },
         (payload) => {
-          console.log('Session updated:', payload);
+          console.log('✏️ Session updated:', payload);
           const session = payload.new;
           const oldSession = payload.old;
           
@@ -97,6 +109,7 @@ const Index = () => {
               sessionData: session
             };
 
+            console.log('✅ Adding completion notification:', newNotification);
             setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
             
             toast({
@@ -115,7 +128,7 @@ const Index = () => {
           table: 'goals'
         },
         (payload) => {
-          console.log('New goal created:', payload);
+          console.log('🎯 New goal created:', payload);
           const goal = payload.new;
           
           const newNotification: Notification = {
@@ -128,6 +141,7 @@ const Index = () => {
             sessionData: goal
           };
 
+          console.log('🎯 Adding goal notification:', newNotification);
           setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
           
           toast({
@@ -137,18 +151,73 @@ const Index = () => {
           });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'goals'
+        },
+        (payload) => {
+          console.log('🎯 Goal updated:', payload);
+          const goal = payload.new;
+          const oldGoal = payload.old;
+          
+          // Check if status changed to completed
+          if (oldGoal.status !== 'completed' && goal.status === 'completed') {
+            const newNotification: Notification = {
+              id: `goal-completed-${goal.id}-${Date.now()}`,
+              title: 'Goal Completed',
+              message: `Goal "${goal.area_of_focus}" has been completed!`,
+              type: 'goal_completed',
+              timestamp: new Date(),
+              isRead: false,
+              sessionData: goal
+            };
+
+            console.log('🏆 Adding goal completion notification:', newNotification);
+            setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
+            
+            toast({
+              title: "🏆 Goal Completed",
+              description: newNotification.message,
+              duration: 4000,
+            });
+          }
+        }
+      )
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
+        console.log('📡 Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to realtime notifications');
+          console.log('✅ Successfully subscribed to realtime notifications');
+          // Add a test notification to verify the system works
+          const testNotification: Notification = {
+            id: `test-${Date.now()}`,
+            title: 'Notification System Ready',
+            message: 'Real-time notifications are now active',
+            type: 'session_created',
+            timestamp: new Date(),
+            isRead: false
+          };
+          setNotifications(prev => [testNotification, ...prev]);
+          
+          toast({
+            title: "🔔 Notifications Active",
+            description: "Real-time notifications are now working",
+            duration: 3000,
+          });
+        } else if (status === 'CLOSED') {
+          console.log('❌ Realtime subscription closed');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime channel error');
         }
       });
 
     return () => {
-      console.log('Cleaning up realtime subscription');
+      console.log('🧹 Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [toast]);
+  }, [toast, user?.id]);
 
   const markNotificationAsRead = (id: string) => {
     setNotifications(prev => 
