@@ -3,26 +3,49 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Users, RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentsData } from "@/hooks/useStudentsData";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
+import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 import { DemoModeBanner } from "@/components/ui/demo-mode-banner";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 
 const StudentsDirectory = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedInstitution, setSelectedInstitution] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const navigate = useNavigate();
+  
   const { students, loading, error, refetch, isDemo } = useStudentsData();
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
+  const { departments, loading: departmentsLoading } = useDepartmentsData();
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (student.interests && student.interests.some(interest => 
-      interest.toLowerCase().includes(searchTerm.toLowerCase())
-    ))
-  );
+  // Filter departments based on selected institution if needed
+  const filteredDepartments = departments;
+
+  // Filter students based on search term, institution, and department
+  const filteredStudents = students.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.program.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.interests && student.interests.some(interest => 
+        interest.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+
+    // Match by institution name
+    const matchesInstitution = !selectedInstitution || 
+      institutions.find(inst => inst.id === selectedInstitution)?.institution_name === student.program;
+    
+    // Match by department name
+    const matchesDepartment = !selectedDepartment || 
+      departments.find(dept => dept.id === selectedDepartment)?.department_name === student.department;
+
+    return matchesSearch && matchesInstitution && matchesDepartment;
+  });
 
   if (loading) {
     return (
@@ -82,27 +105,91 @@ const StudentsDirectory = () => {
         {/* Search and Filters */}
         <Card className="mb-8">
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder={isDemo ? "Search demo students..." : "Search students..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder={isDemo ? "Search users..." : "Search users..."}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
-              <Button variant="outline">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-              {!isDemo && (
-                <Button onClick={refetch} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
+
+              {/* Filters */}
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Institution Filter */}
+                <div className="flex-1">
+                  <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Institutions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Institutions</SelectItem>
+                      {institutions.map(institution => (
+                        <SelectItem key={institution.id} value={institution.id}>
+                          {institution.institution_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Department Filter */}
+                <div className="flex-1">
+                  <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Departments</SelectItem>
+                      {filteredDepartments.map(department => (
+                        <SelectItem key={department.id} value={department.id}>
+                          {department.department_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Refresh Button */}
+                {!isDemo && (
+                  <Button onClick={refetch} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                )}
+              </div>
+
+              {/* Active Filters */}
+              {(selectedInstitution || selectedDepartment || searchTerm) && (
+                <div className="flex flex-wrap gap-2">
+                  {searchTerm && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      Search: {searchTerm}
+                      <button onClick={() => setSearchTerm("")} className="ml-1 hover:bg-gray-200 rounded">
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {selectedInstitution && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      Institution: {institutions.find(inst => inst.id === selectedInstitution)?.institution_name}
+                      <button onClick={() => setSelectedInstitution("")} className="ml-1 hover:bg-gray-200 rounded">
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                  {selectedDepartment && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      Department: {departments.find(dept => dept.id === selectedDepartment)?.department_name}
+                      <button onClick={() => setSelectedDepartment("")} className="ml-1 hover:bg-gray-200 rounded">
+                        ×
+                      </button>
+                    </Badge>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>

@@ -23,20 +23,25 @@ import {
 } from "lucide-react";
 import { useStaffData } from "@/hooks/useStaffData";
 import { useStudentsData } from "@/hooks/useStudentsData";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
+import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 import { DemoModeBanner } from "@/components/ui/demo-mode-banner";
 
 const StaffDirectory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [selectedInstitution, setSelectedInstitution] = useState<string>("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff, isDemo } = useStaffData();
   const { students } = useStudentsData();
+  const { institutions } = useInstitutionsData();
+  const { departments } = useDepartmentsData();
 
-  // Get unique departments for filtering
-  const departments = Array.from(new Set(staff.map(member => member.department))).filter(Boolean);
+  // Filter departments based on selected institution if needed
+  const filteredDepartments = departments;
 
-  // Filter staff based on search, status, and department
+  // Filter staff based on search, status, institution, and department
   const filteredStaff = staff.filter(member => {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,7 +49,10 @@ const StaffDirectory = () => {
                          member.designation.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || member.status === statusFilter;
-    const matchesDepartment = departmentFilter === "all" || member.department === departmentFilter;
+    
+    // Match by department name
+    const matchesDepartment = !selectedDepartment || 
+      departments.find(dept => dept.id === selectedDepartment)?.department_name === member.department;
     
     return matchesSearch && matchesStatus && matchesDepartment;
   });
@@ -173,73 +181,107 @@ const StaffDirectory = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="space-y-4">
             {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search by name, email, department, or designation..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
             
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active Only</SelectItem>
-                <SelectItem value="inactive">Inactive Only</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            {/* Department Filter */}
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filters Row */}
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Institution Filter */}
+              <div className="flex-1">
+                <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Institutions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Institutions</SelectItem>
+                    {institutions.map(institution => (
+                      <SelectItem key={institution.id} value={institution.id}>
+                        {institution.institution_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Department Filter */}
+              <div className="flex-1">
+                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Departments</SelectItem>
+                    {filteredDepartments.map(department => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.department_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Status Filter */}
+              <div className="flex-1">
+                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active Only</SelectItem>
+                    <SelectItem value="inactive">Inactive Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           
           {/* Active Filters Display */}
-          <div className="flex flex-wrap gap-2">
-            {searchTerm && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                Search: {searchTerm}
-                <button onClick={() => setSearchTerm("")} className="ml-1 hover:bg-gray-200 rounded">
-                  ×
-                </button>
-              </Badge>
-            )}
-            {statusFilter !== "all" && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                Status: {statusFilter}
-                <button onClick={() => setStatusFilter("all")} className="ml-1 hover:bg-gray-200 rounded">
-                  ×
-                </button>
-              </Badge>
-            )}
-            {departmentFilter !== "all" && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                Department: {departmentFilter}
-                <button onClick={() => setDepartmentFilter("all")} className="ml-1 hover:bg-gray-200 rounded">
-                  ×
-                </button>
-              </Badge>
-            )}
-          </div>
+          {(searchTerm || statusFilter !== "all" || selectedInstitution || selectedDepartment) && (
+            <div className="flex flex-wrap gap-2">
+              {searchTerm && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Search: {searchTerm}
+                  <button onClick={() => setSearchTerm("")} className="ml-1 hover:bg-gray-200 rounded">
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {selectedInstitution && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Institution: {institutions.find(inst => inst.id === selectedInstitution)?.institution_name}
+                  <button onClick={() => setSelectedInstitution("")} className="ml-1 hover:bg-gray-200 rounded">
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {selectedDepartment && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Department: {filteredDepartments.find(dept => dept.id === selectedDepartment)?.department_name}
+                  <button onClick={() => setSelectedDepartment("")} className="ml-1 hover:bg-gray-200 rounded">
+                    ×
+                  </button>
+                </Badge>
+              )}
+              {statusFilter !== "all" && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  Status: {statusFilter}
+                  <button onClick={() => setStatusFilter("all")} className="ml-1 hover:bg-gray-200 rounded">
+                    ×
+                  </button>
+                </Badge>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
