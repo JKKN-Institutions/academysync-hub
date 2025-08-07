@@ -49,14 +49,26 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedStudents, setSelectedStudents] = useState<string[]>(formData.students);
   const [studentSearch, setStudentSearch] = useState('');
 
-  // Use real student data from API with proper property mapping
+  // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
     id: student.id,
     name: student.name,
     rollNo: student.rollNo,
     program: student.program,
-    email: student.email
+    email: student.email,
+    department: student.department || 'Unknown Department'
   })) || [];
+
+  // Group students by department for organization
+  const groupedStudents = availableStudents.reduce((acc, student) => {
+    const department = student.department;
+    
+    if (!acc[department]) {
+      acc[department] = [];
+    }
+    acc[department].push(student);
+    return acc;
+  }, {} as Record<string, typeof availableStudents>);
 
   const filteredStudents = availableStudents.filter(student =>
     student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
@@ -247,22 +259,36 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </div>
                 </div>
                 
-                {/* Student Search Results */}
+                {/* Student Search Results - Grouped by Department */}
                 {studentSearch && (
-                  <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                  <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
                     {filteredStudents.length > 0 ? (
-                      filteredStudents.map(student => (
-                        <div
-                          key={student.id}
-                          onClick={() => addStudent(student.id)}
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded"
-                        >
-                          <div>
-                            <span className="font-medium">{student.name}</span>
-                            <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
-                            <div className="text-xs text-gray-400">{student.program}</div>
+                      Object.entries(
+                        filteredStudents.reduce((acc, student) => {
+                          const dept = student.department;
+                          if (!acc[dept]) acc[dept] = [];
+                          acc[dept].push(student);
+                          return acc;
+                        }, {} as Record<string, typeof filteredStudents>)
+                      ).map(([department, students]) => (
+                        <div key={department} className="mb-3">
+                          <div className="text-xs font-semibold text-gray-600 mb-2 px-2 py-1 bg-gray-100 rounded">
+                            {department}
                           </div>
-                          <Plus className="w-4 h-4 text-green-600" />
+                          {students.map(student => (
+                            <div
+                              key={student.id}
+                              onClick={() => addStudent(student.id)}
+                              className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ml-2"
+                            >
+                              <div>
+                                <span className="font-medium">{student.name}</span>
+                                <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
+                                <div className="text-xs text-gray-400">{student.program}</div>
+                              </div>
+                              <Plus className="w-4 h-4 text-green-600" />
+                            </div>
+                          ))}
                         </div>
                       ))
                     ) : (
