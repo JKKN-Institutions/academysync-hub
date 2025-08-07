@@ -279,20 +279,20 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
       .map(department => {
         console.log('Processing department:', department);
         
-        // Extract the actual string value from the name field
+        // Extract the actual string value from the department_name field
         let departmentName = 'Unknown Department';
-        if (typeof department.name === 'string') {
-          departmentName = department.name;
-        } else if (department.name && typeof department.name === 'object') {
-          departmentName = department.name.value || department.name.text || department.name.name || 'Unknown Department';
+        if (typeof department.department_name === 'string') {
+          departmentName = department.department_name;
+        } else if (department.department_name && typeof department.department_name === 'object') {
+          departmentName = department.department_name.value || department.department_name.text || department.department_name.name || 'Unknown Department';
         }
 
-        // Extract the actual string value from the code field  
+        // Extract the actual string value from the department_code field  
         let departmentCode = departmentName; // Use name as fallback for description
-        if (typeof department.code === 'string') {
-          departmentCode = department.code;
-        } else if (department.code && typeof department.code === 'object') {
-          departmentCode = department.code.value || department.code.text || department.code.code || departmentName;
+        if (typeof department.department_code === 'string') {
+          departmentCode = department.department_code;
+        } else if (department.department_code && typeof department.department_code === 'object') {
+          departmentCode = department.department_code.value || department.department_code.text || department.department_code.code || departmentName;
         }
 
         const transformed = {
