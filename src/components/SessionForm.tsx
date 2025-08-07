@@ -104,7 +104,21 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit?.({ ...formData, students: selectedStudents });
+    
+    // Format data for Supabase integration
+    const sessionData = {
+      name: formData.name,
+      session_date: formData.date,
+      start_time: formData.startTime,
+      end_time: formData.endTime,
+      location: formData.location,
+      description: formData.description,
+      session_type: formData.type as 'one_on_one' | 'group',
+      priority: formData.priority as 'low' | 'normal' | 'high',
+      students: selectedStudents
+    };
+    
+    onSubmit?.(sessionData);
   };
 
   const addStudent = (studentId: string) => {

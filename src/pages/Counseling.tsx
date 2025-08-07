@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,47 +13,73 @@ import {
   Users,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SessionForm } from "@/components/SessionForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useCounselingSessions, CreateSessionData } from "@/hooks/useCounselingSessions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Counseling = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  const { 
+    sessions, 
+    loading, 
+    error, 
+    createSession,
+    updateSessionStatus,
+    upcomingSessions,
+    completedSessions,
+    allSessions
+  } = useCounselingSessions();
 
-  const handleSessionSubmit = (sessionData: any) => {
-    console.log('Creating new session:', sessionData);
-    // TODO: Implement actual session creation
-    setIsFormOpen(false);
+  const handleSessionSubmit = async (sessionData: CreateSessionData) => {
+    setIsCreating(true);
+    try {
+      const newSession = await createSession(sessionData);
+      if (newSession) {
+        setIsFormOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to create session:', error);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  // Mock data for counseling sessions
-  const sessions = [
-    {
-      id: "1",
-      title: "Career Guidance Session",
-      date: "2024-01-15",
-      time: "10:00 AM",
-      type: "1:1",
-      students: ["John Doe"],
-      status: "pending",
-      mentor: "Dr. Smith"
-    },
-    {
-      id: "2", 
-      title: "Academic Planning",
-      date: "2024-01-14",
-      time: "2:00 PM", 
-      type: "group",
-      students: ["Jane Smith", "Mike Johnson"],
-      status: "completed",
-      mentor: "Prof. Williams"
-    }
-  ];
+  // Filter sessions based on search term
+  const filteredAllSessions = useMemo(() => {
+    if (!searchTerm) return allSessions;
+    return allSessions.filter(session => 
+      session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.location?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allSessions, searchTerm]);
+
+  const filteredUpcomingSessions = useMemo(() => {
+    if (!searchTerm) return upcomingSessions;
+    return upcomingSessions.filter(session => 
+      session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.location?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [upcomingSessions, searchTerm]);
+
+  const filteredCompletedSessions = useMemo(() => {
+    if (!searchTerm) return completedSessions;
+    return completedSessions.filter(session => 
+      session.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      session.location?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [completedSessions, searchTerm]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -76,6 +102,62 @@ const Counseling = () => {
         return 'secondary';
     }
   };
+
+  const formatTime = (time?: string) => {
+    if (!time) return '';
+    return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString([], {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Counseling Sessions</h1>
+            <p className="text-muted-foreground">Manage and track your counseling sessions</p>
+          </div>
+          <Button disabled>
+            <Plus className="w-4 h-4 mr-2" />
+            New Session
+          </Button>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-8">
+          <h3 className="text-lg font-semibold text-destructive">Failed to Load Sessions</h3>
+          <p className="text-muted-foreground mt-2">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -101,6 +183,7 @@ const Counseling = () => {
             <SessionForm
               onSubmit={handleSessionSubmit}
               onCancel={() => setIsFormOpen(false)}
+              loading={isCreating}
             />
           </DialogContent>
         </Dialog>
@@ -140,56 +223,188 @@ const Counseling = () => {
         </TabsList>
         
         <TabsContent value="all" className="space-y-4">
-          {sessions.map((session) => (
-            <Card key={session.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{session.title}</h3>
-                      <Badge variant={getStatusColor(session.status)}>
-                        {getStatusIcon(session.status)}
-                        <span className="ml-1">{session.status}</span>
-                      </Badge>
+          {filteredAllSessions.length > 0 ? (
+            filteredAllSessions.map((session) => (
+              <Card key={session.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">{session.name}</h3>
+                        <Badge variant={getStatusColor(session.status)}>
+                          {getStatusIcon(session.status)}
+                          <span className="ml-1 capitalize">{session.status}</span>
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(session.session_date)}
+                        </div>
+                        {session.start_time && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formatTime(session.start_time)}
+                            {session.end_time && ` - ${formatTime(session.end_time)}`}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {session.session_type === 'one_on_one' ? '1:1' : 'Group'} 
+                          ({session.participants?.length || 0} student{(session.participants?.length || 0) !== 1 ? 's' : ''})
+                        </div>
+                      </div>
+                      {session.location && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Location: </span>
+                          {session.location}
+                        </div>
+                      )}
+                      {session.description && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Description: </span>
+                          {session.description}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {session.date}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {session.time}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        {session.type} ({session.students.length} student{session.students.length > 1 ? 's' : ''})
-                      </div>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">Students: </span>
-                      {session.students.join(', ')}
+                    <div className="flex gap-2">
+                      {session.status === 'pending' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => updateSessionStatus(session.id, 'completed')}
+                        >
+                          Mark Complete
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'No sessions match your search criteria' : 'No sessions found'}
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="upcoming">
-          <div className="text-center py-8 text-muted-foreground">
-            No upcoming sessions
-          </div>
+        <TabsContent value="upcoming" className="space-y-4">
+          {filteredUpcomingSessions.length > 0 ? (
+            filteredUpcomingSessions.map((session) => (
+              <Card key={session.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">{session.name}</h3>
+                        <Badge variant={getStatusColor(session.status)}>
+                          {getStatusIcon(session.status)}
+                          <span className="ml-1 capitalize">{session.status}</span>
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(session.session_date)}
+                        </div>
+                        {session.start_time && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formatTime(session.start_time)}
+                            {session.end_time && ` - ${formatTime(session.end_time)}`}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {session.session_type === 'one_on_one' ? '1:1' : 'Group'} 
+                          ({session.participants?.length || 0} student{(session.participants?.length || 0) !== 1 ? 's' : ''})
+                        </div>
+                      </div>
+                      {session.location && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Location: </span>
+                          {session.location}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => updateSessionStatus(session.id, 'completed')}
+                      >
+                        Mark Complete
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'No upcoming sessions match your search criteria' : 'No upcoming sessions'}
+            </div>
+          )}
         </TabsContent>
         
-        <TabsContent value="completed">
-          <div className="text-center py-8 text-muted-foreground">
-            No completed sessions yet
-          </div>
+        <TabsContent value="completed" className="space-y-4">
+          {filteredCompletedSessions.length > 0 ? (
+            filteredCompletedSessions.map((session) => (
+              <Card key={session.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">{session.name}</h3>
+                        <Badge variant={getStatusColor(session.status)}>
+                          {getStatusIcon(session.status)}
+                          <span className="ml-1 capitalize">{session.status}</span>
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {formatDate(session.session_date)}
+                        </div>
+                        {session.start_time && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formatTime(session.start_time)}
+                            {session.end_time && ` - ${formatTime(session.end_time)}`}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {session.session_type === 'one_on_one' ? '1:1' : 'Group'} 
+                          ({session.participants?.length || 0} student{(session.participants?.length || 0) !== 1 ? 's' : ''})
+                        </div>
+                      </div>
+                      {session.location && (
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Location: </span>
+                          {session.location}
+                        </div>
+                      )}
+                    </div>
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'No completed sessions match your search criteria' : 'No completed sessions yet'}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
