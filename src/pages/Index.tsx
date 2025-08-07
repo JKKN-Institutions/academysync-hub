@@ -9,10 +9,12 @@ import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, G
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentsData } from "@/hooks/useStudentsData";
+import { useStaffData } from "@/hooks/useStaffData";
 
 const Index = () => {
   const { user } = useAuth();
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
+  const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
   
   // Default to admin if no user (for development)
   const userRole = user?.role || "admin";
@@ -86,11 +88,11 @@ const Index = () => {
         </div>
 
         {/* Dashboard Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Students List */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+           {/* Students List */}
+           <Card className="">
+             <CardHeader>
+               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center">
                     <GraduationCap className="w-5 h-5 mr-2 text-blue-600" />
@@ -162,11 +164,86 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Quick Stats */}
+          {/* Staff List */}
+          <Card className="">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-green-600" />
+                    Staff Directory
+                  </CardTitle>
+                  <CardDescription>Faculty and staff members {isDemo && "(Demo Mode)"}</CardDescription>
+                </div>
+                <Link to="/mentors">
+                  <Button variant="outline" size="sm">
+                    View All
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {staffLoading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : staffError ? (
+                <EmptyState
+                  icon={Users}
+                  title="Failed to load staff"
+                  description={staffError}
+                  action={{
+                    label: "Retry",
+                    onClick: refetchStaff
+                  }}
+                />
+              ) : staff.length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  title="No staff found"
+                  description="No staff members are currently available in the system"
+                />
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {staff.map((member) => (
+                    <div 
+                      key={member.id} 
+                      className="flex items-center space-x-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src="/placeholder.svg" alt={member.name} />
+                        <AvatarFallback className="bg-green-100 text-green-600">
+                          {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{member.name}</p>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <span>{member.designation}</span>
+                          <span>•</span>
+                          <span>{member.department}</span>
+                        </div>
+                      </div>
+                      <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
+                        {member.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* System Overview Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Students Stats */}
           <Card>
             <CardHeader>
-              <CardTitle>System Overview</CardTitle>
-              <CardDescription>Current platform statistics</CardDescription>
+              <CardTitle>Students Overview</CardTitle>
+              <CardDescription>Current student statistics</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -182,6 +259,42 @@ const Index = () => {
                     {studentsLoading ? '...' : students.filter(s => s.status === 'active').length}
                   </span>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Staff Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Staff Overview</CardTitle>
+              <CardDescription>Current staff statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Staff</span>
+                  <span className="font-bold text-2xl text-purple-600">
+                    {staffLoading ? '...' : staff.length}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Active Staff</span>
+                  <span className="font-bold text-2xl text-green-600">
+                    {staffLoading ? '...' : staff.filter(s => s.status === 'active').length}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activity Stats */}
+          <Card>
+             <CardHeader>
+               <CardTitle>Activity Overview</CardTitle>
+               <CardDescription>Platform activity metrics</CardDescription>
+             </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">This Week's Sessions</span>
                   <span className="font-bold text-2xl text-yellow-600">7</span>

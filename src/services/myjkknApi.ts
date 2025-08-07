@@ -17,6 +17,18 @@ export interface MyjkknStudent {
   interests?: string[];
 }
 
+export interface MyjkknStaff {
+  id: string;
+  staffId: string;
+  name: string;
+  email: string;
+  department: string;
+  designation: string;
+  status: 'active' | 'inactive';
+  mobile?: string;
+  avatar?: string;
+}
+
 export interface MyjkknApiResponse<T> {
   success: boolean;
   data: T;
@@ -152,6 +164,64 @@ export const fetchStudentById = async (studentId: string): Promise<MyjkknStudent
     };
   } catch (error) {
     console.error('Error fetching student:', error);
+    return null;
+  }
+};
+
+// Fetch staff from myjkkn API
+export const fetchStaff = async (): Promise<MyjkknStaff[]> => {
+  try {
+    const response = await makeApiRequest<{data: any[]}>(
+      '/api-management/staff?limit=1000'
+    );
+
+    // The API returns {data: [...]} format
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error('Invalid response format from API');
+    }
+
+    // Transform API response to match our expected format
+    return response.data.map(staff => ({
+      id: staff.id,
+      staffId: staff.id,
+      name: staff.first_name + (staff.last_name ? ` ${staff.last_name}` : ''),
+      email: staff.email,
+      department: staff.department?.department_name || 'Unknown Department',
+      designation: staff.designation || 'Staff',
+      status: staff.status as 'active' | 'inactive',
+      mobile: staff.mobile,
+      avatar: staff.staff_photo_url || undefined
+    }));
+  } catch (error) {
+    console.error('Error fetching staff:', error);
+    throw error;
+  }
+};
+
+// Fetch single staff by ID
+export const fetchStaffById = async (staffId: string): Promise<MyjkknStaff | null> => {
+  try {
+    const response = await makeApiRequest<{data: any}>(
+      `/api-management/staff/${staffId}`
+    );
+
+    if (!response.data) {
+      throw new Error('Staff not found');
+    }
+
+    return {
+      id: response.data.id,
+      staffId: response.data.id,
+      name: response.data.first_name + (response.data.last_name ? ` ${response.data.last_name}` : ''),
+      email: response.data.email,
+      department: response.data.department?.department_name || 'Unknown Department',
+      designation: response.data.designation || 'Staff',
+      status: response.data.status as 'active' | 'inactive',
+      mobile: response.data.mobile,
+      avatar: response.data.staff_photo_url || undefined
+    };
+  } catch (error) {
+    console.error('Error fetching staff:', error);
     return null;
   }
 };
