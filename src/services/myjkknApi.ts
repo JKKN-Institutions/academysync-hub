@@ -104,7 +104,7 @@ const makeApiRequest = async <T>(
 export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
   try {
     const response = await makeApiRequest<{data: any[]}>(
-      '/api-management/students'
+      '/api-management/students?limit=1000'
     );
 
     // The API returns {data: [...]} format, not {success: true, data: [...]}
