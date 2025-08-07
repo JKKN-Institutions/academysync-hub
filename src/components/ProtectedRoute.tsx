@@ -37,7 +37,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check route access
+  // Use centralized route access control
   if (!canAccessRoute(location.pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -55,7 +55,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             <CardContent className="space-y-4">
               <div className="text-sm text-muted-foreground text-center">
                 <p><strong>Your Role:</strong> {user.role}</p>
-                <p><strong>Required:</strong> {requiredRoles.length > 0 ? requiredRoles.join(', ') : 'Special permissions'}</p>
+                <p><strong>Page:</strong> {location.pathname}</p>
               </div>
               
               <div className="flex gap-2">
@@ -83,22 +83,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
       </div>
     );
-  }
-
-  // Check specific permissions if provided
-  if (requiredPermissions.length > 0) {
-    const hasAllPermissions = requiredPermissions.every(permission => 
-      user.role && ['admin'].includes(user.role) // Admin bypass for now
-    );
-    
-    if (!hasAllPermissions) {
-      return <Navigate to={fallbackPath} replace />;
-    }
-  }
-
-  // Check specific roles if provided
-  if (requiredRoles.length > 0 && user.role && !requiredRoles.includes(user.role)) {
-    return <Navigate to={fallbackPath} replace />;
   }
 
   return <>{children}</>;
