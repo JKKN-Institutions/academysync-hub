@@ -74,14 +74,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   );
 
   // Get departments for selected institution
-  const filteredDepartments = departments.filter(dept => 
-    !selectedInstitution || dept.institution_id === selectedInstitution
-  );
-
-  // Debug logging
-  console.log('All departments:', departments);
-  console.log('Selected institution:', selectedInstitution);
-  console.log('Filtered departments:', filteredDepartments);
+  const filteredDepartments = departments.filter(dept => {
+    if (!selectedInstitution || selectedInstitution === "all") {
+      return true; // Show all departments if no institution selected
+    }
+    console.log('Filtering departments:', {
+      deptId: dept.id,
+      deptName: dept.department_name,
+      deptInstitutionId: dept.institution_id,
+      selectedInstitution: selectedInstitution,
+      match: dept.institution_id === selectedInstitution
+    });
+    return dept.institution_id === selectedInstitution;
+  });
 
   // Get students for selected department and institution
   const getStudentsByInstitutionAndDepartment = () => {
@@ -279,6 +284,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     <SelectValue placeholder="Select an institution" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">All Institutions</SelectItem>
                     {institutions.map(institution => (
                       <SelectItem key={institution.id} value={institution.id}>
                         {institution.institution_name}
@@ -300,15 +306,26 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     <SelectValue placeholder="Select a department" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
+                    <SelectItem value="all">All Departments</SelectItem>
                     {filteredDepartments.length > 0 ? (
-                      filteredDepartments.map(department => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.department_name}
-                        </SelectItem>
-                      ))
+                      filteredDepartments.map(department => {
+                        console.log('Rendering department option:', {
+                          id: department.id,
+                          name: department.department_name,
+                          description: department.description
+                        });
+                        return (
+                          <SelectItem key={department.id} value={department.id}>
+                            {department.department_name || 'Unknown Department'}
+                          </SelectItem>
+                        );
+                      })
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        No departments found for selected institution
+                        {selectedInstitution && selectedInstitution !== "all" 
+                          ? 'No departments found for selected institution'
+                          : 'No departments available'
+                        }
                       </div>
                     )}
                   </SelectContent>
