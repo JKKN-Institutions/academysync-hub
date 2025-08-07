@@ -6,14 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Loader2, GraduationCap, Mail, Key, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Loader2, GraduationCap, Mail, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
 const StudentLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,30 +45,6 @@ const StudentLogin = () => {
     return ALLOWED_DOMAINS.includes(domain);
   };
 
-  const validateApiKey = async (email: string, apiKey: string): Promise<boolean> => {
-    try {
-      // Check if the API key exists and matches the student email
-      // This would typically involve checking against the students API or database
-      console.log('Validating API key for:', email);
-      
-      // For now, we'll do a basic format validation
-      // API key should be at least 20 characters long
-      if (!apiKey || apiKey.length < 20) {
-        throw new Error('Invalid API key format');
-      }
-
-      // In a real implementation, you would:
-      // 1. Call the MYJKKN API to validate the student email and API key
-      // 2. Verify that the student exists in the system
-      // 3. Return true if valid, false otherwise
-      
-      return true; // Temporary - always return true for development
-    } catch (error) {
-      console.error('API key validation error:', error);
-      return false;
-    }
-  };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -79,12 +54,6 @@ const StudentLogin = () => {
       // Validate institutional email
       if (!validateInstitutionalEmail(email)) {
         throw new Error('Please use your JKK Institution email address (.jkkn.ac.in, .jkkngroup.ac.in, etc.)');
-      }
-
-      // Validate API key
-      const isValidApiKey = await validateApiKey(email, apiKey);
-      if (!isValidApiKey) {
-        throw new Error('Invalid API key. Please contact your institution for the correct API key.');
       }
 
       // Attempt to sign in with Supabase
@@ -125,12 +94,6 @@ const StudentLogin = () => {
         throw new Error('Please use your JKK Institution email address (.jkkn.ac.in, .jkkngroup.ac.in, etc.)');
       }
 
-      // Validate API key
-      const isValidApiKey = await validateApiKey(email, apiKey);
-      if (!isValidApiKey) {
-        throw new Error('Invalid API key. Please contact your institution for the correct API key.');
-      }
-
       const redirectUrl = `${window.location.origin}/student-login`;
       
       const { error } = await supabase.auth.signUp({
@@ -140,8 +103,7 @@ const StudentLogin = () => {
           emailRedirectTo: redirectUrl,
           data: {
             display_name: displayName,
-            role: 'mentee', // Students are mentees by default
-            api_key: apiKey // Store API key in user metadata
+            role: 'mentee' // Students are mentees by default
           }
         }
       });
@@ -199,18 +161,18 @@ const StudentLogin = () => {
               </div>
               
               <div className="flex items-center space-x-3 text-left">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Key className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <GraduationCap className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold">API Key Authentication</h3>
-                  <p className="text-sm text-gray-600">Secure access with your student API key</p>
+                  <h3 className="font-semibold">Direct Access</h3>
+                  <p className="text-sm text-gray-600">Automatic account creation for JKKN students</p>
                 </div>
               </div>
               
               <div className="flex items-center space-x-3 text-left">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <GraduationCap className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <GraduationCap className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
                   <h3 className="font-semibold">Academic Support</h3>
@@ -258,21 +220,6 @@ const StudentLogin = () => {
                       />
                       <p className="text-xs text-gray-500">
                         Use your JKK Institution email address
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="apiKey">Student API Key</Label>
-                      <Input
-                        id="apiKey"
-                        type="password"
-                        placeholder="Enter your student API key"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        required
-                      />
-                      <p className="text-xs text-gray-500">
-                        Contact your institution if you don't have your API key
                       </p>
                     </div>
                     
@@ -328,21 +275,6 @@ const StudentLogin = () => {
                       />
                       <p className="text-xs text-gray-500">
                         Must be a valid JKK Institution email
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="signupApiKey">Student API Key</Label>
-                      <Input
-                        id="signupApiKey"
-                        type="password"
-                        placeholder="Enter your student API key"
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        required
-                      />
-                      <p className="text-xs text-gray-500">
-                        Provided by your institution
                       </p>
                     </div>
                     
