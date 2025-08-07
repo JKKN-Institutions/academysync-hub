@@ -263,107 +263,76 @@ export const SessionForm: React.FC<SessionFormProps> = ({
             <div className="space-y-4">
               <Label>Students *</Label>
               
-              <Tabs defaultValue="search" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="search">Search Students</TabsTrigger>
-                  <TabsTrigger value="browse">Browse by Institution</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="search" className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="relative flex-1">
-                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                      <Input
-                        value={studentSearch}
-                        onChange={(e) => setStudentSearch(e.target.value)}
-                        placeholder="Search students by name or roll number..."
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Student Search Results - Grouped by Department */}
-                  {studentSearch && (
-                    <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
-                      {filteredStudents.length > 0 ? (
-                        Object.entries(
-                          filteredStudents.reduce((acc, student) => {
-                            const dept = student.department;
-                            if (!acc[dept]) acc[dept] = [];
-                            acc[dept].push(student);
-                            return acc;
-                          }, {} as Record<string, typeof filteredStudents>)
-                        ).map(([department, students]) => (
-                          <div key={department} className="mb-3">
-                            <div className="text-xs font-semibold text-muted-foreground mb-2 px-2 py-1 bg-muted rounded">
-                              {department}
-                            </div>
-                            {students.map(student => (
-                              <div
-                                key={student.id}
-                                onClick={() => addStudent(student.id)}
-                                className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer rounded ml-2"
-                              >
-                                <div>
-                                  <span className="font-medium">{student.name}</span>
-                                  <span className="text-sm text-muted-foreground ml-2">({student.rollNo})</span>
-                                  <div className="text-xs text-muted-foreground">{student.program}</div>
-                                </div>
-                                <Plus className="w-4 h-4 text-green-600" />
-                              </div>
-                            ))}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground p-2">No students found</p>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="browse" className="space-y-4">
-                  {/* Institution Filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="institution">Institution</Label>
-                    <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an institution" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {institutions.map(institution => (
-                          <SelectItem key={institution.id} value={institution.id}>
-                            {institution.institution_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Institution Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="institution">Institution</Label>
+                <Select value={selectedInstitution} onValueChange={(value) => {
+                  setSelectedInstitution(value);
+                  setSelectedDepartment(''); // Reset department when institution changes
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an institution" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {institutions.map(institution => (
+                      <SelectItem key={institution.id} value={institution.id}>
+                        {institution.institution_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  {/* Department Filter */}
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Select 
-                      value={selectedDepartment} 
-                      onValueChange={setSelectedDepartment}
-                      disabled={!selectedInstitution}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a department" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredDepartments.map(department => (
-                          <SelectItem key={department.id} value={department.id}>
-                            {department.department_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Department Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Select 
+                  value={selectedDepartment} 
+                  onValueChange={setSelectedDepartment}
+                  disabled={!selectedInstitution}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredDepartments.map(department => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.department_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  {/* Students by Institution/Department */}
-                  {selectedInstitution && (
-                    <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
-                      {getStudentsByInstitutionAndDepartment().map(student => (
+              {/* Student Search */}
+              <div className="space-y-2">
+                <Label htmlFor="studentSearch">Search Students</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    id="studentSearch"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="Search students by name or roll number..."
+                    className="pl-10"
+                    disabled={!selectedInstitution}
+                  />
+                </div>
+              </div>
+
+              {/* Student Results */}
+              {selectedInstitution && (
+                <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                  {(() => {
+                    const studentsToShow = getStudentsByInstitutionAndDepartment().filter(student =>
+                      !studentSearch || 
+                      student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                      (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
+                    );
+
+                    return studentsToShow.length > 0 ? (
+                      studentsToShow.map(student => (
                         <div
                           key={student.id}
                           onClick={() => addStudent(student.id)}
@@ -377,11 +346,15 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                           </div>
                           <Plus className="w-4 h-4 text-green-600" />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground p-2">
+                        {studentSearch ? 'No students found matching your search' : 'No students found in selected filters'}
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             {/* Selected Students */}
