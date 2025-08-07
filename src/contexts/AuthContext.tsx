@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
-export type UserRole = 'admin' | 'mentor' | 'mentee' | 'dept_lead';
+export type UserRole = 'admin' | 'mentor' | 'mentee' | 'dept_lead' | 'super_admin';
 
 export interface AuthUser extends User {
   role?: UserRole;
@@ -24,6 +24,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Role-based permissions matrix
 const PERMISSIONS = {
+  super_admin: [
+    'view_integrations',
+    'manage_settings', 
+    'manage_assignments',
+    'view_reports',
+    'view_audit',
+    'manage_all_sessions',
+    'manage_all_goals',
+    'manage_all_qa',
+    'view_all_students',
+    'view_all_mentors',
+    'manage_system_settings',
+    'manage_user_roles',
+    'full_system_access'
+  ],
   admin: [
     'view_integrations',
     'manage_settings', 
@@ -62,20 +77,20 @@ const PERMISSIONS = {
 
 // Route access control
 const ROUTE_PERMISSIONS = {
-  '/admin': ['admin'],
-  '/integrations': ['admin'],
-  '/reports': ['admin', 'dept_lead'],
-  '/audit': ['admin'],
-  '/assignments': ['admin', 'mentor', 'mentee', 'dept_lead'],
-  '/counseling': ['admin', 'mentor', 'mentee'],
-  '/goals': ['admin', 'mentor', 'mentee'],
-  '/meetings': ['admin', 'mentor'],
-  '/qna': ['admin', 'mentor', 'mentee'],
-  '/mentors': ['admin', 'mentee', 'dept_lead'],
-  '/students': ['admin', 'mentor', 'dept_lead'],
-  '/student/:id': ['admin', 'mentor', 'dept_lead'],
-  '/session/:id': ['admin', 'mentor', 'mentee'],
-  '/alerts': ['admin', 'mentor', 'mentee', 'dept_lead']
+  '/admin': ['super_admin', 'admin'],
+  '/integrations': ['super_admin', 'admin'],
+  '/reports': ['super_admin', 'admin', 'dept_lead'],
+  '/audit': ['super_admin', 'admin'],
+  '/assignments': ['super_admin', 'admin', 'mentor', 'mentee', 'dept_lead'],
+  '/counseling': ['super_admin', 'admin', 'mentor', 'mentee'],
+  '/goals': ['super_admin', 'admin', 'mentor', 'mentee'],
+  '/meetings': ['super_admin', 'admin', 'mentor'],
+  '/qna': ['super_admin', 'admin', 'mentor', 'mentee'],
+  '/mentors': ['super_admin', 'admin', 'mentee', 'dept_lead'],
+  '/students': ['super_admin', 'admin', 'mentor', 'dept_lead'],
+  '/student/:id': ['super_admin', 'admin', 'mentor', 'dept_lead'],
+  '/session/:id': ['super_admin', 'admin', 'mentor', 'mentee'],
+  '/alerts': ['super_admin', 'admin', 'mentor', 'mentee', 'dept_lead']
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
