@@ -102,17 +102,29 @@ const Profile = () => {
         .update({
           display_name: profile.display_name,
           department: profile.department,
+          updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Profile update error:', error);
+        throw error;
+      }
 
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
+      
       setIsEditing(false);
+      
+      // Refresh the page to update the auth context with new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
     } catch (error: any) {
+      console.error('Profile update failed:', error);
       toast({
         title: "Error updating profile",
         description: error.message || "Failed to update profile. Please try again.",
@@ -218,12 +230,14 @@ const Profile = () => {
                 )}
               </CardTitle>
               <CardDescription className="flex flex-col items-center space-y-2">
-                <Badge 
-                  variant="outline" 
-                  className={`text-sm px-3 py-1 ${getRoleColor(user.role || 'mentee')}`}
-                >
-                  {getRoleDisplayName(user.role || 'mentee')}
-                </Badge>
+                <div>
+                  <Badge 
+                    variant="outline" 
+                    className={`text-sm px-3 py-1 ${getRoleColor(user.role || 'mentee')}`}
+                  >
+                    {getRoleDisplayName(user.role || 'mentee')}
+                  </Badge>
+                </div>
                 <span className="text-sm text-gray-500">{user.email}</span>
               </CardDescription>
             </CardHeader>

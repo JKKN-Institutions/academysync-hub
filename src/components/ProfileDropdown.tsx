@@ -14,6 +14,7 @@ import {
 import { User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const ProfileDropdown = () => {
   const { user, signOut } = useAuth();
@@ -26,16 +27,26 @@ export const ProfileDropdown = () => {
   const handleSignOut = async () => {
     setIsLoading(true);
     try {
-      await signOut();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+
       toast({
         title: "Signed out successfully",
         description: "You have been logged out of your account.",
       });
+      
+      // Clear any cached data and navigate
+      localStorage.clear();
       navigate("/login", { replace: true });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Sign out failed:', error);
       toast({
         title: "Error signing out",
-        description: "There was a problem signing you out. Please try again.",
+        description: error.message || "There was a problem signing you out. Please try again.",
         variant: "destructive",
       });
     } finally {
