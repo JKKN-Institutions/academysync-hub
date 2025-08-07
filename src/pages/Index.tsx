@@ -98,7 +98,7 @@ const Index = () => {
                   </CardTitle>
                   <CardDescription>Recent students in the system {isDemo && "(Demo Mode)"}</CardDescription>
                 </div>
-                <Link to="/students-directory">
+                <Link to="/students">
                   <Button variant="outline" size="sm">
                     View All
                   </Button>
