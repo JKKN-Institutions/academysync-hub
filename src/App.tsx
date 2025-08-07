@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import StudentLogin from "./pages/StudentLogin";
+import Profile from "./pages/Profile";
 import MentorsDirectory from "./pages/MentorsDirectory";
 import StaffDirectory from "./pages/StaffDirectory";
 import StudentsDirectory from "./pages/StudentsDirectory";
@@ -118,6 +119,7 @@ const App = () => (
                   <Alerts />
                 </ProtectedRoute>
               } />
+              <Route path="/profile" element={<Profile />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
