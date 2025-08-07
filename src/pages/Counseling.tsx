@@ -16,11 +16,20 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { SessionForm } from "@/components/SessionForm";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const Counseling = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleSessionSubmit = (sessionData: any) => {
+    console.log('Creating new session:', sessionData);
+    // TODO: Implement actual session creation
+    setIsFormOpen(false);
+  };
 
   // Mock data for counseling sessions
   const sessions = [
@@ -78,10 +87,23 @@ const Counseling = () => {
             Manage and track your counseling sessions
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Session
-        </Button>
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              New Session
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Counseling Session</DialogTitle>
+            </DialogHeader>
+            <SessionForm
+              onSubmit={handleSessionSubmit}
+              onCancel={() => setIsFormOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters */}
