@@ -17,6 +17,8 @@ import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip, MentoringStage } from "@/components/ui/etiquette-tip";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -35,6 +37,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 }) => {
   const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -50,6 +53,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const [selectedStudents, setSelectedStudents] = useState<string[]>(formData.students);
   const [studentSearch, setStudentSearch] = useState('');
+  const [selectedInstitution, setSelectedInstitution] = useState<string>('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
 
   // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
@@ -61,22 +66,31 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     department: student.department || 'Unknown Department'
   })) || [];
 
-  // Group students by department for organization
-  const groupedStudents = availableStudents.reduce((acc, student) => {
-    const department = student.department;
-    
-    if (!acc[department]) {
-      acc[department] = [];
-    }
-    acc[department].push(student);
-    return acc;
-  }, {} as Record<string, typeof availableStudents>);
-
+  // Filter students by search term
   const filteredStudents = availableStudents.filter(student =>
     student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
     student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
     (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
   );
+
+  // Get departments for selected institution
+  const filteredDepartments = departments.filter(dept => 
+    !selectedInstitution || dept.institution_id === selectedInstitution
+  );
+
+  // Get students for selected department and institution
+  const getStudentsByInstitutionAndDepartment = () => {
+    return availableStudents.filter(student => {
+      if (selectedDepartment) {
+        return student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+      }
+      if (selectedInstitution) {
+        const institutionDepts = departments.filter(d => d.institution_id === selectedInstitution);
+        return institutionDepts.some(d => d.department_name === student.department);
+      }
+      return true;
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,83 +261,154 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
             {/* Student Selection */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Students *</Label>
-                <div className="flex items-center space-x-2">
-                  <div className="relative flex-1">
-                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
-                      placeholder="Search students by name or roll number..."
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
+              <Label>Students *</Label>
+              
+              <Tabs defaultValue="search" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="search">Search Students</TabsTrigger>
+                  <TabsTrigger value="browse">Browse by Institution</TabsTrigger>
+                </TabsList>
                 
-                {/* Student Search Results - Grouped by Department */}
-                {studentSearch && (
-                  <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
-                    {filteredStudents.length > 0 ? (
-                      Object.entries(
-                        filteredStudents.reduce((acc, student) => {
-                          const dept = student.department;
-                          if (!acc[dept]) acc[dept] = [];
-                          acc[dept].push(student);
-                          return acc;
-                        }, {} as Record<string, typeof filteredStudents>)
-                      ).map(([department, students]) => (
-                        <div key={department} className="mb-3">
-                          <div className="text-xs font-semibold text-gray-600 mb-2 px-2 py-1 bg-gray-100 rounded">
-                            {department}
-                          </div>
-                          {students.map(student => (
-                            <div
-                              key={student.id}
-                              onClick={() => addStudent(student.id)}
-                              className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ml-2"
-                            >
-                              <div>
-                                <span className="font-medium">{student.name}</span>
-                                <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
-                                <div className="text-xs text-gray-400">{student.program}</div>
-                              </div>
-                              <Plus className="w-4 h-4 text-green-600" />
+                <TabsContent value="search" className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="relative flex-1">
+                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        placeholder="Search students by name or roll number..."
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Student Search Results - Grouped by Department */}
+                  {studentSearch && (
+                    <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                      {filteredStudents.length > 0 ? (
+                        Object.entries(
+                          filteredStudents.reduce((acc, student) => {
+                            const dept = student.department;
+                            if (!acc[dept]) acc[dept] = [];
+                            acc[dept].push(student);
+                            return acc;
+                          }, {} as Record<string, typeof filteredStudents>)
+                        ).map(([department, students]) => (
+                          <div key={department} className="mb-3">
+                            <div className="text-xs font-semibold text-muted-foreground mb-2 px-2 py-1 bg-muted rounded">
+                              {department}
                             </div>
-                          ))}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 p-2">No students found</p>
-                    )}
+                            {students.map(student => (
+                              <div
+                                key={student.id}
+                                onClick={() => addStudent(student.id)}
+                                className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer rounded ml-2"
+                              >
+                                <div>
+                                  <span className="font-medium">{student.name}</span>
+                                  <span className="text-sm text-muted-foreground ml-2">({student.rollNo})</span>
+                                  <div className="text-xs text-muted-foreground">{student.program}</div>
+                                </div>
+                                <Plus className="w-4 h-4 text-green-600" />
+                              </div>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground p-2">No students found</p>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="browse" className="space-y-4">
+                  {/* Institution Filter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="institution">Institution</Label>
+                    <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an institution" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Institutions</SelectItem>
+                        {institutions.map(institution => (
+                          <SelectItem key={institution.id} value={institution.id}>
+                            {institution.institution_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </div>
 
-              {/* Selected Students */}
-              {selectedStudents.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Selected Students ({selectedStudents.length})</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedStudents.map(studentId => {
-                      const student = availableStudents.find(s => s.id === studentId);
-                      return student ? (
-                        <Badge key={studentId} variant="secondary" className="pr-1">
-                          {student.name} ({student.rollNo})
-                          <button
-                            type="button"
-                            onClick={() => removeStudent(studentId)}
-                            className="ml-2 hover:bg-gray-300 rounded-full p-0.5"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      ) : null;
-                    })}
+                  {/* Department Filter */}
+                  <div className="space-y-2">
+                    <Label htmlFor="department">Department</Label>
+                    <Select 
+                      value={selectedDepartment} 
+                      onValueChange={setSelectedDepartment}
+                      disabled={!selectedInstitution}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">All Departments</SelectItem>
+                        {filteredDepartments.map(department => (
+                          <SelectItem key={department.id} value={department.id}>
+                            {department.department_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              )}
+
+                  {/* Students by Institution/Department */}
+                  {(selectedInstitution || selectedDepartment) && (
+                    <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                      {getStudentsByInstitutionAndDepartment().map(student => (
+                        <div
+                          key={student.id}
+                          onClick={() => addStudent(student.id)}
+                          className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer rounded"
+                        >
+                          <div>
+                            <span className="font-medium">{student.name}</span>
+                            <span className="text-sm text-muted-foreground ml-2">({student.rollNo})</span>
+                            <div className="text-xs text-muted-foreground">{student.program}</div>
+                            <div className="text-xs text-muted-foreground">{student.department}</div>
+                          </div>
+                          <Plus className="w-4 h-4 text-green-600" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
+
+            {/* Selected Students */}
+            {selectedStudents.length > 0 && (
+              <div className="space-y-2">
+                <Label>Selected Students ({selectedStudents.length})</Label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedStudents.map(studentId => {
+                    const student = availableStudents.find(s => s.id === studentId);
+                    return student ? (
+                      <Badge key={studentId} variant="secondary" className="pr-1">
+                        {student.name} ({student.rollNo})
+                        <button
+                          type="button"
+                          onClick={() => removeStudent(studentId)}
+                          className="ml-2 hover:bg-gray-300 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-2">
