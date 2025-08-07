@@ -9,7 +9,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, Clock, Users, MapPin, Plus, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarIcon, Clock, Users, MapPin, Plus, X, Building, GraduationCap } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { FormSkeleton } from "@/components/ui/loading-skeleton";
@@ -17,6 +18,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip, MentoringStage } from "@/components/ui/etiquette-tip";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -35,6 +37,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 }) => {
   const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -245,12 +248,25 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
             <Separator />
 
-            {/* Student Selection */}
+            {/* Student Selection with Tabs */}
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Students *</Label>
-                <div className="flex items-center space-x-2">
-                  <div className="relative flex-1">
+              <Label>Students *</Label>
+              
+              <Tabs defaultValue="search" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="search" className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Search Students
+                  </TabsTrigger>
+                  <TabsTrigger value="browse" className="flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    Browse by Institution
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Search Tab */}
+                <TabsContent value="search" className="space-y-4">
+                  <div className="relative">
                     <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                       value={studentSearch}
@@ -259,46 +275,118 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                       className="pl-10"
                     />
                   </div>
-                </div>
-                
-                {/* Student Search Results - Grouped by Department */}
-                {studentSearch && (
-                  <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
-                    {filteredStudents.length > 0 ? (
-                      Object.entries(
-                        filteredStudents.reduce((acc, student) => {
-                          const dept = student.department;
-                          if (!acc[dept]) acc[dept] = [];
-                          acc[dept].push(student);
-                          return acc;
-                        }, {} as Record<string, typeof filteredStudents>)
-                      ).map(([department, students]) => (
-                        <div key={department} className="mb-3">
-                          <div className="text-xs font-semibold text-gray-600 mb-2 px-2 py-1 bg-gray-100 rounded">
-                            {department}
-                          </div>
-                          {students.map(student => (
-                            <div
-                              key={student.id}
-                              onClick={() => addStudent(student.id)}
-                              className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ml-2"
-                            >
-                              <div>
-                                <span className="font-medium">{student.name}</span>
-                                <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
-                                <div className="text-xs text-gray-400">{student.program}</div>
-                              </div>
-                              <Plus className="w-4 h-4 text-green-600" />
+                  
+                  {/* Student Search Results - Grouped by Department */}
+                  {studentSearch && (
+                    <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                      {filteredStudents.length > 0 ? (
+                        Object.entries(
+                          filteredStudents.reduce((acc, student) => {
+                            const dept = student.department;
+                            if (!acc[dept]) acc[dept] = [];
+                            acc[dept].push(student);
+                            return acc;
+                          }, {} as Record<string, typeof filteredStudents>)
+                        ).map(([department, students]) => (
+                          <div key={department} className="mb-3">
+                            <div className="text-xs font-semibold text-gray-600 mb-2 px-2 py-1 bg-gray-100 rounded">
+                              {department}
                             </div>
-                          ))}
+                            {students.map(student => (
+                              <div
+                                key={student.id}
+                                onClick={() => addStudent(student.id)}
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded ml-2"
+                              >
+                                <div>
+                                  <span className="font-medium">{student.name}</span>
+                                  <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
+                                  <div className="text-xs text-gray-400">{student.program}</div>
+                                </div>
+                                <Plus className="w-4 h-4 text-green-600" />
+                              </div>
+                            ))}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 p-2">No students found</p>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Browse Tab */}
+                <TabsContent value="browse" className="space-y-4">
+                  <div className="border rounded-md max-h-80 overflow-y-auto">
+                    {institutions.map(institution => {
+                      // Get departments for this institution
+                      const institutionDepartments = departments.filter(dept => 
+                        dept.institution_id === institution.id || 
+                        availableStudents.some(student => 
+                          student.department === dept.department_name
+                        )
+                      );
+
+                      if (institutionDepartments.length === 0) return null;
+
+                      return (
+                        <div key={institution.id} className="p-4 border-b last:border-b-0">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Building className="w-5 h-5 text-blue-600" />
+                            <h3 className="font-semibold text-lg">{institution.name}</h3>
+                          </div>
+                          
+                          {institutionDepartments.map(department => {
+                            const deptStudents = availableStudents.filter(student => 
+                              student.department === department.department_name
+                            );
+
+                            if (deptStudents.length === 0) return null;
+
+                            return (
+                              <div key={department.id} className="ml-4 mb-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <GraduationCap className="w-4 h-4 text-green-600" />
+                                  <h4 className="font-medium text-gray-700">{department.department_name}</h4>
+                                  <span className="text-xs text-gray-500">({deptStudents.length} students)</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 gap-2 ml-6">
+                                  {deptStudents.map(student => (
+                                    <div
+                                      key={student.id}
+                                      onClick={() => addStudent(student.id)}
+                                      className={cn(
+                                        "flex items-center justify-between p-2 rounded cursor-pointer border",
+                                        selectedStudents.includes(student.id)
+                                          ? "bg-green-50 border-green-200"
+                                          : "hover:bg-gray-50 border-gray-200"
+                                      )}
+                                    >
+                                      <div>
+                                        <span className="font-medium">{student.name}</span>
+                                        <span className="text-sm text-gray-500 ml-2">({student.rollNo})</span>
+                                        <div className="text-xs text-gray-400">{student.program}</div>
+                                      </div>
+                                      {selectedStudents.includes(student.id) ? (
+                                        <div className="flex items-center gap-1 text-green-600">
+                                          <span className="text-xs">Selected</span>
+                                        </div>
+                                      ) : (
+                                        <Plus className="w-4 h-4 text-green-600" />
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500 p-2">No students found</p>
-                    )}
+                      );
+                    })}
                   </div>
-                )}
-              </div>
+                </TabsContent>
+              </Tabs>
 
               {/* Selected Students */}
               {selectedStudents.length > 0 && (
