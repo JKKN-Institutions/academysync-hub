@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { FormSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip, MentoringStage } from "@/components/ui/etiquette-tip";
+import { useStudentsData } from "@/hooks/useStudentsData";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -31,6 +32,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   error,
   initialData
 }) => {
+  const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
+  
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     date: initialData?.date || undefined,
@@ -46,16 +49,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedStudents, setSelectedStudents] = useState<string[]>(formData.students);
   const [studentSearch, setStudentSearch] = useState('');
 
-  // Mock student data
-  const availableStudents = [
-    { id: 'S001', name: 'Alex Chen', rollNo: 'CS2021001', program: 'Computer Science' },
-    { id: 'S002', name: 'Maria Rodriguez', rollNo: 'EE2021002', program: 'Electrical Engineering' },
-    { id: 'S003', name: 'John Smith', rollNo: 'ME2021003', program: 'Mechanical Engineering' }
-  ];
+  // Use real student data from API with proper property mapping
+  const availableStudents = students?.map(student => ({
+    id: student.id,
+    name: student.name,
+    rollNo: student.rollNo,
+    program: student.program,
+    email: student.email
+  })) || [];
 
   const filteredStudents = availableStudents.filter(student =>
     student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    student.rollNo.toLowerCase().includes(studentSearch.toLowerCase())
+    student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
   const handleSubmit = (e: React.FormEvent) => {
