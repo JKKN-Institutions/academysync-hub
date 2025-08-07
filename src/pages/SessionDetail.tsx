@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { MeetingLog } from "@/components/MeetingLog";
-import { CounselingAssistant } from "@/components/CounselingAssistant";
+import { ManualCounseling } from "@/components/ManualCounseling";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -310,7 +310,7 @@ const SessionDetail = () => {
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="ai-assistant">AI Assistant</TabsTrigger>
+            <TabsTrigger value="counseling">Manual Counseling</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="qna">Q&A</TabsTrigger>
             <TabsTrigger value="meeting-log">Meeting Log</TabsTrigger>
@@ -411,9 +411,9 @@ const SessionDetail = () => {
             )}
           </TabsContent>
 
-          {/* AI Assistant Tab */}
-          <TabsContent value="ai-assistant">
-            <CounselingAssistant 
+          {/* Manual Counseling Tab */}
+          <TabsContent value="counseling">
+            <ManualCounseling 
               student={{
                 id: 'cs2021001',
                 studentId: 'cs2021001',
@@ -426,8 +426,8 @@ const SessionDetail = () => {
                 status: 'active'
               }}
               sessionId={session.id}
-              onInsightGenerated={(insight) => {
-                setNotes(prev => prev + '\n\nAI Insight:\n' + insight);
+              onCounselingUpdate={(counselingData) => {
+                setNotes(prev => prev + '\n\nCounseling Assessment:\n' + JSON.stringify(counselingData, null, 2));
                 setNotesSaved(false);
               }}
             />
