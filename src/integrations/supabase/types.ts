@@ -329,6 +329,59 @@ export type Database = {
           },
         ]
       }
+      mentor_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_date: string | null
+          assignment_type: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          mentor_id: string
+          notes: string | null
+          status: string | null
+          student_id: string
+          student_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_date?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          mentor_id: string
+          notes?: string | null
+          status?: string | null
+          student_id: string
+          student_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_date?: string | null
+          assignment_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          mentor_id?: string
+          notes?: string | null
+          status?: string | null
+          student_id?: string
+          student_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_participants: {
         Row: {
           created_at: string
@@ -360,6 +413,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      staff: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          department: string | null
+          designation: string | null
+          email: string
+          id: string
+          mobile: string | null
+          name: string
+          staff_id: string
+          status: string | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          designation?: string | null
+          email: string
+          id?: string
+          mobile?: string | null
+          name: string
+          staff_id: string
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          department?: string | null
+          designation?: string | null
+          email?: string
+          id?: string
+          mobile?: string | null
+          name?: string
+          staff_id?: string
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       system_settings: {
         Row: {
@@ -423,7 +521,35 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_mentor_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_date: string | null
+          assignment_type: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string | null
+          mentor_department: string | null
+          mentor_designation: string | null
+          mentor_email: string | null
+          mentor_id: string | null
+          mentor_name: string | null
+          notes: string | null
+          status: string | null
+          student_id: string | null
+          student_name: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_current_user_role: {
