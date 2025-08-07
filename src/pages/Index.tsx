@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useStaffData } from "@/hooks/useStaffData";
+import { TestDepartments } from "@/components/TestDepartments";
 
 const Index = () => {
   const { user } = useAuth();
@@ -357,17 +358,22 @@ const Index = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">Calendar Sync: Active</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-sm">Last Data Sync: 5 min ago</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+                 <span className="text-sm">Calendar Sync: Active</span>
+               </div>
+               <div className="flex items-center space-x-2">
+                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                 <span className="text-sm">Last Data Sync: 5 min ago</span>
+               </div>
+             </div>
+           </CardContent>
+         </Card>
+
+         {/* Department API Test */}
+         <div className="mt-8">
+           <TestDepartments />
+         </div>
+       </main>
+     </div>
   );
 };
 
