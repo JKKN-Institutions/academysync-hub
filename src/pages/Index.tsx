@@ -13,6 +13,7 @@ import { useStudentsData } from "@/hooks/useStudentsData";
 import { useStaffData } from "@/hooks/useStaffData";
 import { TestDepartments } from "@/components/TestDepartments";
 import { useCounselingSessions } from "@/hooks/useCounselingSessions";
+import { useGoals } from "@/hooks/useGoals";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,6 +32,7 @@ const Index = () => {
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
   const { sessions, upcomingSessions, completedSessions, loading: sessionsLoading } = useCounselingSessions();
+  const { goals, loading: goalsLoading } = useGoals();
   const { toast } = useToast();
   
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -186,6 +188,37 @@ const Index = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'goals'
+        },
+        (payload) => {
+          console.log('🗑️ Goal deleted/cancelled:', payload);
+          const goal = payload.old;
+          
+          const newNotification: Notification = {
+            id: `goal-deleted-${goal.id}-${Date.now()}`,
+            title: 'Goal Cancelled',
+            message: `Goal "${goal.area_of_focus}" has been cancelled`,
+            type: 'goal_completed',
+            timestamp: new Date(),
+            isRead: false,
+            sessionData: goal
+          };
+
+          console.log('🗑️ Adding goal deletion notification:', newNotification);
+          setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
+          
+          toast({
+            title: "🗑️ Goal Cancelled",
+            description: newNotification.message,
+            duration: 3000,
+          });
+        }
+      )
       .subscribe((status) => {
         console.log('📡 Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
@@ -244,14 +277,34 @@ const Index = () => {
     action.roles.includes(userRole)
   );
 
-  // Get recent activities (last 7 days)
+  // Get recent activities (last 7 days) - includes both sessions and goals
   const getRecentActivities = () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    return sessions.filter(session => 
+    // Get recent sessions
+    const recentSessions = sessions.filter(session => 
       new Date(session.created_at) >= sevenDaysAgo
-    ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    ).map(session => ({
+      ...session,
+      activityType: 'session' as const,
+      activityTitle: `Session Created: ${session.name}`,
+      activityDate: session.created_at
+    }));
+
+    // Get recent goals
+    const recentGoals = goals.filter(goal => 
+      new Date(goal.created_at) >= sevenDaysAgo
+    ).map(goal => ({
+      ...goal,
+      activityType: 'goal' as const,
+      activityTitle: `Goal Created: ${goal.area_of_focus}`,
+      activityDate: goal.created_at
+    }));
+
+    // Combine and sort by date
+    return [...recentSessions, ...recentGoals]
+      .sort((a, b) => new Date(b.activityDate).getTime() - new Date(a.activityDate).getTime());
   };
 
   const getUpcomingThisWeek = () => {
@@ -428,7 +481,7 @@ const Index = () => {
               <CardDescription>Latest updates from the past 7 days</CardDescription>
             </CardHeader>
             <CardContent>
-              {sessionsLoading ? (
+              {(sessionsLoading || goalsLoading) ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} className="h-16 w-full" />
@@ -436,41 +489,63 @@ const Index = () => {
                 </div>
               ) : recentActivities.length > 0 ? (
                 <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {recentActivities.slice(0, 5).map((session) => (
-                    <div key={session.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                  {recentActivities.slice(0, 5).map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex-shrink-0">
-                        <Calendar className="w-5 h-5 text-blue-600 mt-1" />
+                        {activity.activityType === 'session' ? (
+                          <Calendar className="w-5 h-5 text-blue-600 mt-1" />
+                        ) : (
+                          <Target className="w-5 h-5 text-purple-600 mt-1" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 text-sm">
-                          Session Created: {session.name}
+                          {activity.activityTitle}
                         </p>
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <div className="flex items-center space-x-4">
-                            <span>📅 {formatDate(session.session_date)}</span>
-                            {session.start_time && (
-                              <span>⏰ {formatTime(session.start_time)}</span>
-                            )}
+                        {activity.activityType === 'session' ? (
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div className="flex items-center space-x-4">
+                              <span>📅 {formatDate((activity as any).session_date)}</span>
+                              {(activity as any).start_time && (
+                                <span>⏰ {formatTime((activity as any).start_time)}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-4">
+                              <span>👥 {(activity as any).session_type === 'one_on_one' ? '1:1' : 'Group'}</span>
+                              <span>📍 {(activity as any).location || 'No location'}</span>
+                            </div>
+                            <div className="text-gray-500">
+                              Participants: {(activity as any).participants?.length || 0} student{((activity as any).participants?.length || 0) !== 1 ? 's' : ''}
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-4">
-                            <span>👥 {session.session_type === 'one_on_one' ? '1:1' : 'Group'}</span>
-                            <span>📍 {session.location || 'No location'}</span>
+                        ) : (
+                          <div className="text-xs text-gray-600 space-y-1">
+                            <div className="flex items-center space-x-4">
+                              <span>🎯 Goal Status: {(activity as any).status}</span>
+                              {(activity as any).target_date && (
+                                <span>⏰ Due: {formatDate((activity as any).target_date)}</span>
+                              )}
+                            </div>
+                            <div className="text-gray-500">
+                              SMART Goal: {(activity as any).smart_goal_text?.substring(0, 50) || 'No description'}...
+                            </div>
                           </div>
-                          <div className="text-gray-500">
-                            Participants: {session.participants?.length || 0} student{(session.participants?.length || 0) !== 1 ? 's' : ''}
-                          </div>
-                        </div>
+                        )}
                         <div className="mt-2">
                           <Badge 
-                            variant={session.status === 'completed' ? 'default' : session.status === 'cancelled' ? 'destructive' : 'secondary'}
+                            variant={
+                              activity.activityType === 'session' 
+                                ? ((activity as any).status === 'completed' ? 'default' : (activity as any).status === 'cancelled' ? 'destructive' : 'secondary')
+                                : ((activity as any).status === 'completed' ? 'default' : (activity as any).status === 'cancelled' ? 'destructive' : 'secondary')
+                            }
                             className="text-xs"
                           >
-                            {session.status}
+                            {activity.activityType === 'session' ? (activity as any).status : (activity as any).status}
                           </Badge>
                         </div>
                       </div>
                       <div className="text-xs text-gray-400">
-                        {new Date(session.created_at).toLocaleDateString()}
+                        {new Date(activity.activityDate).toLocaleDateString()}
                       </div>
                     </div>
                   ))}
@@ -479,7 +554,7 @@ const Index = () => {
                 <div className="text-center py-6 text-gray-500">
                   <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">No recent activity</p>
-                  <p className="text-xs">Create a counseling session to get started</p>
+                  <p className="text-xs">Create a counseling session or goal to get started</p>
                 </div>
               )}
             </CardContent>
