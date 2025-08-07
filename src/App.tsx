@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import MentorsDirectory from "./pages/MentorsDirectory";
+import StaffDirectory from "./pages/StaffDirectory";
 import StudentsDirectory from "./pages/StudentsDirectory";
 import Assignments from "./pages/Assignments";
 import Admin from "./pages/Admin";
@@ -36,6 +37,11 @@ const App = () => (
               <Route path="/mentors" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
                   <MentorsDirectory />
+                </ProtectedRoute>
+              } />
+              <Route path="/staff" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
+                  <StaffDirectory />
                 </ProtectedRoute>
               } />
               <Route path="/students" element={
