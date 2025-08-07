@@ -288,9 +288,9 @@ export const fetchInstitutions = async (): Promise<MyjkknInstitution[]> => {
     // Transform API response to match our expected format
     return response.data.map(institution => ({
       id: institution.id,
-      institution_name: institution.institution_name,
-      description: institution.description,
-      status: institution.status as 'active' | 'inactive',
+      institution_name: institution.name, // API returns 'name', not 'institution_name'
+      description: institution.website || institution.email || 'Institution',
+      status: institution.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
       created_at: institution.created_at,
       updated_at: institution.updated_at
     }));
