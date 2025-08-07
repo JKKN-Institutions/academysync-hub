@@ -5,17 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen } from "lucide-react";
+import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useStaffData } from "@/hooks/useStaffData";
 import { TestDepartments } from "@/components/TestDepartments";
+import { useCounselingSessions } from "@/hooks/useCounselingSessions";
 
 const Index = () => {
   const { user } = useAuth();
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
+  const { sessions, upcomingSessions, completedSessions, loading: sessionsLoading } = useCounselingSessions();
   
   // Default to admin if no user (for development)
   const userRole = user?.role || "admin";
@@ -32,6 +34,46 @@ const Index = () => {
   const filteredActions = quickActions.filter(action => 
     action.roles.includes(userRole)
   );
+
+  // Get recent activities (last 7 days)
+  const getRecentActivities = () => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    return sessions.filter(session => 
+      new Date(session.created_at) >= sevenDaysAgo
+    ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  };
+
+  const getUpcomingThisWeek = () => {
+    const today = new Date();
+    const nextWeek = new Date();
+    nextWeek.setDate(today.getDate() + 7);
+    
+    return upcomingSessions.filter(session => {
+      const sessionDate = new Date(session.session_date);
+      return sessionDate >= today && sessionDate <= nextWeek;
+    }).sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime());
+  };
+
+  const formatTime = (time?: string) => {
+    if (!time) return '';
+    return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString([], {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short'
+    });
+  };
+
+  const recentActivities = getRecentActivities();
+  const upcomingThisWeek = getUpcomingThisWeek();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -161,35 +203,195 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity & Session Schedule */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bell className="w-5 h-5 mr-2 text-blue-600" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest updates from the past 7 days</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sessionsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : recentActivities.length > 0 ? (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {recentActivities.slice(0, 5).map((session) => (
+                    <div key={session.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-blue-600 mt-1" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm">
+                          Session Created: {session.name}
+                        </p>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div className="flex items-center space-x-4">
+                            <span>📅 {formatDate(session.session_date)}</span>
+                            {session.start_time && (
+                              <span>⏰ {formatTime(session.start_time)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span>👥 {session.session_type === 'one_on_one' ? '1:1' : 'Group'}</span>
+                            <span>📍 {session.location || 'No location'}</span>
+                          </div>
+                          <div className="text-gray-500">
+                            Participants: {session.participants?.length || 0} student{(session.participants?.length || 0) !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <Badge 
+                            variant={session.status === 'completed' ? 'default' : session.status === 'cancelled' ? 'destructive' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {session.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(session.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No recent activity</p>
+                  <p className="text-xs">Create a counseling session to get started</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Session Schedule */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-green-600" />
+                Session Schedule
+              </CardTitle>
+              <CardDescription>Upcoming sessions this week</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sessionsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : upcomingThisWeek.length > 0 ? (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {upcomingThisWeek.map((session) => (
+                    <div key={session.id} className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
+                      <div className="flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-green-600 mt-1" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {session.name}
+                        </p>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div className="flex items-center space-x-4">
+                            <span className="font-medium">📅 {formatDate(session.session_date)}</span>
+                            {session.start_time && (
+                              <span className="font-medium">⏰ {formatTime(session.start_time)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span>👥 {session.session_type === 'one_on_one' ? '1:1 Session' : 'Group Session'}</span>
+                            {session.location && <span>📍 {session.location}</span>}
+                          </div>
+                          <div className="text-gray-500">
+                            Students: {session.participants?.length || 0}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <Badge variant="secondary" className="text-xs">
+                            {session.priority || 'normal'} priority
+                          </Badge>
+                          <Link to={`/counseling`} className="text-xs text-blue-600 hover:underline">
+                            View Details
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No upcoming sessions</p>
+                  <p className="text-xs">Schedule a session to see it here</p>
+                  <Link to="/counseling">
+                    <Button variant="outline" size="sm" className="mt-3">
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create Session
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Goals & Completion Activity */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest updates across your mentoring activities</CardDescription>
+            <CardTitle className="flex items-center">
+              <Target className="w-5 h-5 mr-2 text-purple-600" />
+              Goal Completion Activity
+            </CardTitle>
+            <CardDescription>Recent goal achievements and progress updates</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg">
-                <Calendar className="w-6 h-6 text-blue-600" />
-                <div>
-                  <p className="font-medium">Session scheduled</p>
-                  <p className="text-sm text-gray-600">Tomorrow at 2:00 PM</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg border-l-4 border-l-green-500">
                 <Target className="w-6 h-6 text-green-600" />
                 <div>
-                  <p className="font-medium">Goal completed</p>
-                  <p className="text-sm text-gray-600">Research proposal done</p>
+                  <p className="font-medium text-sm">Research Proposal Completed</p>
+                  <p className="text-xs text-gray-600">Student: John Doe</p>
+                  <p className="text-xs text-gray-500">Completed 2 days ago</p>
+                  <Badge variant="default" className="text-xs mt-1">Goal Achieved</Badge>
                 </div>
               </div>
-              <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-lg">
-                <Bell className="w-6 h-6 text-yellow-600" />
+              
+              <div className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg border-l-4 border-l-blue-500">
+                <BookOpen className="w-6 h-6 text-blue-600" />
                 <div>
-                  <p className="font-medium">New Q&A submission</p>
-                  <p className="text-sm text-gray-600">Career guidance request</p>
+                  <p className="font-medium text-sm">Academic Progress Review</p>
+                  <p className="text-xs text-gray-600">Student: Jane Smith</p>
+                  <p className="text-xs text-gray-500">In Progress - 75%</p>
+                  <Badge variant="secondary" className="text-xs mt-1">Ongoing</Badge>
                 </div>
               </div>
+              
+              <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-lg border-l-4 border-l-yellow-500">
+                <Target className="w-6 h-6 text-yellow-600" />
+                <div>
+                  <p className="font-medium text-sm">Career Planning Goals</p>
+                  <p className="text-xs text-gray-600">Student: Mike Johnson</p>
+                  <p className="text-xs text-gray-500">Due in 3 days</p>
+                  <Badge variant="outline" className="text-xs mt-1">Pending</Badge>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <Link to="/goals">
+                <Button variant="outline" size="sm">
+                  <Target className="w-4 h-4 mr-2" />
+                  View All Goals
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
