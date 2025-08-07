@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { CounselingKnowledgeBase } from '@/components/CounselingKnowledgeBase';
 import { 
   User, 
   Target, 
@@ -19,9 +20,11 @@ import {
   CheckCircle,
   Plus,
   Save,
-  FileText
+  FileText,
+  Brain
 } from 'lucide-react';
 import type { MyjkknStudent } from '@/services/myjkknApi';
+import { useStudentsData } from '@/hooks/useStudentsData';
 
 interface ManualCounselingProps {
   student: MyjkknStudent;
@@ -59,6 +62,7 @@ export const ManualCounseling: React.FC<ManualCounselingProps> = ({
   sessionId,
   onCounselingUpdate
 }) => {
+  const { students } = useStudentsData();
   const [assessment, setAssessment] = useState<CounselingAssessment>({
     academicPerformance: {
       currentGPA: '',
@@ -251,13 +255,39 @@ export const ManualCounseling: React.FC<ManualCounselingProps> = ({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="academic" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="knowledge" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="knowledge">AI Knowledge Base</TabsTrigger>
           <TabsTrigger value="academic">Academic Assessment</TabsTrigger>
           <TabsTrigger value="personal">Personal Development</TabsTrigger>
           <TabsTrigger value="goals">Goals & Objectives</TabsTrigger>
           <TabsTrigger value="action">Action Plan</TabsTrigger>
         </TabsList>
+
+        {/* AI Knowledge Base Tab */}
+        <TabsContent value="knowledge">
+          <CounselingKnowledgeBase 
+            student={student}
+            allStudents={students}
+            onInsightApplied={(insight) => {
+              // Apply AI insight to counseling assessment
+              setAssessment(prev => ({
+                ...prev,
+                actionPlan: {
+                  ...prev.actionPlan,
+                  immediateActions: [
+                    ...prev.actionPlan.immediateActions,
+                    ...insight.actionItems
+                  ],
+                  mentorNotes: prev.actionPlan.mentorNotes + 
+                    `\n\nAI Insight Applied: ${insight.title}\n` +
+                    `Recommendation: ${insight.recommendation}\n` +
+                    `Evidence: ${insight.evidence.join(', ')}`
+                }
+              }));
+            }}
+          />
+        </TabsContent>
 
         {/* Academic Assessment */}
         <TabsContent value="academic" className="space-y-4">
