@@ -49,11 +49,14 @@ const Index = () => {
           table: 'counseling_sessions'
         },
         (payload) => {
+          console.log('New session detected:', payload);
           const session = payload.new;
+          
+          // Create notification for session creation
           const newNotification: Notification = {
-            id: `session-${session.id}`,
-            title: 'New Counseling Session Created',
-            message: `Session "${session.name}" has been scheduled for ${new Date(session.session_date).toLocaleDateString()}`,
+            id: `session-${session.id}-${Date.now()}`,
+            title: 'New Counseling Session Scheduled',
+            message: `"${session.name}" scheduled for ${new Date(session.session_date).toLocaleDateString()}${session.start_time ? ` at ${formatTime(session.start_time)}` : ''}`,
             type: 'session_created',
             timestamp: new Date(),
             isRead: false,
@@ -62,15 +65,87 @@ const Index = () => {
 
           setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep only 10 notifications
           
+          // Show toast notification
           toast({
-            title: "New Session Created",
+            title: "📅 New Session Scheduled",
             description: newNotification.message,
+            duration: 5000,
           });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'counseling_sessions'
+        },
+        (payload) => {
+          console.log('Session updated:', payload);
+          const session = payload.new;
+          const oldSession = payload.old;
+          
+          // Check if status changed to completed
+          if (oldSession.status !== 'completed' && session.status === 'completed') {
+            const newNotification: Notification = {
+              id: `session-completed-${session.id}-${Date.now()}`,
+              title: 'Session Completed',
+              message: `"${session.name}" has been marked as completed`,
+              type: 'meeting_scheduled',
+              timestamp: new Date(),
+              isRead: false,
+              sessionData: session
+            };
+
+            setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
+            
+            toast({
+              title: "✅ Session Completed",
+              description: newNotification.message,
+              duration: 3000,
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'goals'
+        },
+        (payload) => {
+          console.log('New goal created:', payload);
+          const goal = payload.new;
+          
+          const newNotification: Notification = {
+            id: `goal-${goal.id}-${Date.now()}`,
+            title: 'New Goal Created',
+            message: `Goal in "${goal.area_of_focus}" has been created`,
+            type: 'goal_completed',
+            timestamp: new Date(),
+            isRead: false,
+            sessionData: goal
+          };
+
+          setNotifications(prev => [newNotification, ...prev.slice(0, 9)]);
+          
+          toast({
+            title: "🎯 New Goal Created",
+            description: newNotification.message,
+            duration: 4000,
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to realtime notifications');
+        }
+      });
 
     return () => {
+      console.log('Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
   }, [toast]);
@@ -123,10 +198,14 @@ const Index = () => {
 
   const formatTime = (time?: string) => {
     if (!time) return '';
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    try {
+      return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return time;
+    }
   };
 
   const formatDate = (date: string) => {
