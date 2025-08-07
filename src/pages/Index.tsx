@@ -1,26 +1,91 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen, Plus } from "lucide-react";
+import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen, Plus, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useStaffData } from "@/hooks/useStaffData";
 import { TestDepartments } from "@/components/TestDepartments";
 import { useCounselingSessions } from "@/hooks/useCounselingSessions";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'session_created' | 'goal_completed' | 'meeting_scheduled';
+  timestamp: Date;
+  isRead: boolean;
+  sessionData?: any;
+}
 
 const Index = () => {
   const { user } = useAuth();
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
   const { sessions, upcomingSessions, completedSessions, loading: sessionsLoading } = useCounselingSessions();
+  const { toast } = useToast();
   
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   // Default to admin if no user (for development)
   const userRole = user?.role || "admin";
+
+  // Set up real-time notifications
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'counseling_sessions'
+        },
+        (payload) => {
+          const session = payload.new;
+          const newNotification: Notification = {
+            id: `session-${session.id}`,
+            title: 'New Counseling Session Created',
+            message: `Session "${session.name}" has been scheduled for ${new Date(session.session_date).toLocaleDateString()}`,
+            type: 'session_created',
+            timestamp: new Date(),
+            isRead: false,
+            sessionData: session
+          };
+
+          setNotifications(prev => [newNotification, ...prev.slice(0, 9)]); // Keep only 10 notifications
+          
+          toast({
+            title: "New Session Created",
+            description: newNotification.message,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [toast]);
+
+  const markNotificationAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === id ? { ...notif, isRead: true } : notif
+      )
+    );
+  };
+
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== id));
+  };
 
   const quickActions = [
     { icon: Users, label: "My Assignments", href: "/assignments", roles: ["mentor", "mentee"] },
@@ -92,7 +157,7 @@ const Index = () => {
               </Badge>
               <Button variant="outline" size="sm">
                 <Bell className="w-4 h-4 mr-2" />
-                Notifications (3)
+                Notifications ({notifications.filter(n => !n.isRead).length})
               </Button>
             </div>
           </div>
@@ -342,6 +407,85 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Notifications Section */}
+        {notifications.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Bell className="w-5 h-5 mr-2 text-orange-600" />
+                  Live Notifications
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {notifications.filter(n => !n.isRead).length} unread
+                </Badge>
+              </CardTitle>
+              <CardDescription>Real-time updates and system notifications</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {notifications.map((notification) => (
+                  <div 
+                    key={notification.id} 
+                    className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
+                      notification.isRead 
+                        ? 'bg-gray-50 border-gray-200' 
+                        : 'bg-orange-50 border-orange-200 border-l-4 border-l-orange-500'
+                    }`}
+                  >
+                    <div className="flex-shrink-0 mt-1">
+                      {notification.type === 'session_created' && (
+                        <Calendar className="w-5 h-5 text-orange-600" />
+                      )}
+                      {notification.type === 'goal_completed' && (
+                        <Target className="w-5 h-5 text-green-600" />
+                      )}
+                      {notification.type === 'meeting_scheduled' && (
+                        <Bell className="w-5 h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-2">
+                            {notification.timestamp.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center space-x-1 ml-2">
+                          {!notification.isRead && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markNotificationAsRead(notification.id)}
+                              className="text-xs px-2 py-1 h-auto"
+                            >
+                              Mark Read
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => dismissNotification(notification.id)}
+                            className="text-xs px-1 py-1 h-auto text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Goals & Completion Activity */}
         <Card className="mb-6">
