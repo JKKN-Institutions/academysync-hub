@@ -18,8 +18,9 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SessionForm } from "@/components/SessionForm";
+import { SessionDetailsModal } from "@/components/SessionDetailsModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useCounselingSessions, CreateSessionData } from "@/hooks/useCounselingSessions";
+import { useCounselingSessions, CreateSessionData, CounselingSession } from "@/hooks/useCounselingSessions";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const Counseling = () => {
@@ -27,6 +28,8 @@ const Counseling = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<CounselingSession | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   
   const { 
     sessions, 
@@ -51,6 +54,16 @@ const Counseling = () => {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleViewDetails = (session: CounselingSession) => {
+    setSelectedSession(session);
+    setIsDetailsOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false);
+    setSelectedSession(null);
   };
 
   // Filter sessions based on search term
@@ -277,7 +290,11 @@ const Counseling = () => {
                           Mark Complete
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(session)}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -339,7 +356,11 @@ const Counseling = () => {
                       >
                         Mark Complete
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(session)}
+                      >
                         View Details
                       </Button>
                     </div>
@@ -393,7 +414,11 @@ const Counseling = () => {
                         </div>
                       )}
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewDetails(session)}
+                    >
                       View Details
                     </Button>
                   </div>
@@ -407,6 +432,14 @@ const Counseling = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Session Details Modal */}
+      <SessionDetailsModal
+        session={selectedSession}
+        isOpen={isDetailsOpen}
+        onClose={handleCloseDetails}
+        onStatusUpdate={updateSessionStatus}
+      />
     </div>
   );
 };
