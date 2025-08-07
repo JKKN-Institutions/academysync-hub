@@ -42,17 +42,25 @@ export const useDepartmentsData = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Loading departments, isDemoMode:', isDemoMode);
 
       if (isDemoMode) {
         // Use demo data
+        console.log('Using demo departments data');
         setDepartments(getDemoDepartments());
       } else {
         // Fetch from myjkkn API
+        console.log('Fetching departments from API...');
         const apiDepartments = await fetchDepartments();
-        setDepartments(apiDepartments.filter(dept => dept.status === 'active'));
+        console.log('Raw API departments received:', apiDepartments);
+        
+        const activeDepartments = apiDepartments.filter(dept => dept.status === 'active');
+        console.log('Active departments filtered:', activeDepartments);
+        setDepartments(activeDepartments);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load departments';
+      console.error('Error in loadDepartments:', err);
       setError(errorMessage);
       
       // Show error toast only for API errors (not demo mode)

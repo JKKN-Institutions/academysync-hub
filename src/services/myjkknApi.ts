@@ -248,17 +248,21 @@ export const fetchStaffById = async (staffId: string): Promise<MyjkknStaff | nul
 // Fetch departments from myjkkn API
 export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
   try {
+    console.log('Starting to fetch departments...');
+    
     const response = await makeApiRequest<{data: any[]}>(
       '/api-management/organizations/departments'
     );
 
-    // Debug: Log the raw response to understand the structure
     console.log('Raw departments API response:', JSON.stringify(response, null, 2));
 
     // The API returns {data: [...]} format
     if (!response.data || !Array.isArray(response.data)) {
-      throw new Error('Invalid response format from API');
+      console.error('Invalid response format:', response);
+      throw new Error('Invalid response format from departments API');
     }
+
+    console.log(`Found ${response.data.length} departments in response`);
 
     // Debug: Log first department to see structure
     if (response.data.length > 0) {
@@ -267,36 +271,45 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
 
     // Transform API response to match our expected format
     const transformedData = response.data
-      .filter(department => department.is_active) // Only include active departments
+      .filter(department => {
+        const isActive = department.is_active === true || department.is_active === 1 || department.is_active === '1';
+        console.log(`Department ${department.id} active status: ${department.is_active} -> ${isActive}`);
+        return isActive;
+      })
       .map(department => {
+        console.log('Processing department:', department);
+        
         // Extract the actual string value from the name field
         let departmentName = 'Unknown Department';
         if (typeof department.name === 'string') {
           departmentName = department.name;
         } else if (department.name && typeof department.name === 'object') {
-          departmentName = department.name.value || department.name.text || 'Unknown Department';
+          departmentName = department.name.value || department.name.text || department.name.name || 'Unknown Department';
         }
 
-        // Extract the actual string value from the code field
-        let departmentCode = 'Department';
+        // Extract the actual string value from the code field  
+        let departmentCode = departmentName; // Use name as fallback for description
         if (typeof department.code === 'string') {
           departmentCode = department.code;
         } else if (department.code && typeof department.code === 'object') {
-          departmentCode = department.code.value || department.code.text || 'Department';
+          departmentCode = department.code.value || department.code.text || department.code.code || departmentName;
         }
 
-        return {
+        const transformed = {
           id: department.id,
           department_name: departmentName,
           description: departmentCode,
-          status: department.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
+          status: 'active' as 'active' | 'inactive',
           institution_id: department.institution_id,
           created_at: department.created_at,
           updated_at: department.updated_at
         };
+        
+        console.log('Transformed department:', transformed);
+        return transformed;
       });
 
-    console.log('Transformed departments data:', transformedData);
+    console.log(`Successfully transformed ${transformedData.length} departments:`, transformedData);
     return transformedData;
   } catch (error) {
     console.error('Error fetching departments:', error);
