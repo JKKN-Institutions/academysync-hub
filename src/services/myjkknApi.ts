@@ -262,8 +262,8 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
       .filter(department => department.is_active) // Only include active departments
       .map(department => ({
         id: department.id,
-        department_name: department.department_name,
-        description: department.department_code || 'Department',
+        department_name: department.name, // API returns 'name', not 'department_name'
+        description: department.code || 'Department',
         status: department.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
         institution_id: department.institution_id,
         created_at: department.created_at,
