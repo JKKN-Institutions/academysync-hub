@@ -252,23 +252,52 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
       '/api-management/organizations/departments'
     );
 
+    // Debug: Log the raw response to understand the structure
+    console.log('Raw departments API response:', JSON.stringify(response, null, 2));
+
     // The API returns {data: [...]} format
     if (!response.data || !Array.isArray(response.data)) {
       throw new Error('Invalid response format from API');
     }
 
+    // Debug: Log first department to see structure
+    if (response.data.length > 0) {
+      console.log('First department raw data:', JSON.stringify(response.data[0], null, 2));
+    }
+
     // Transform API response to match our expected format
-    return response.data
+    const transformedData = response.data
       .filter(department => department.is_active) // Only include active departments
-      .map(department => ({
-        id: department.id,
-        department_name: department.name?.value || department.name || 'Unknown Department',
-        description: department.code?.value || department.code || 'Department',
-        status: department.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
-        institution_id: department.institution_id,
-        created_at: department.created_at,
-        updated_at: department.updated_at
-      }));
+      .map(department => {
+        // Extract the actual string value from the name field
+        let departmentName = 'Unknown Department';
+        if (typeof department.name === 'string') {
+          departmentName = department.name;
+        } else if (department.name && typeof department.name === 'object') {
+          departmentName = department.name.value || department.name.text || 'Unknown Department';
+        }
+
+        // Extract the actual string value from the code field
+        let departmentCode = 'Department';
+        if (typeof department.code === 'string') {
+          departmentCode = department.code;
+        } else if (department.code && typeof department.code === 'object') {
+          departmentCode = department.code.value || department.code.text || 'Department';
+        }
+
+        return {
+          id: department.id,
+          department_name: departmentName,
+          description: departmentCode,
+          status: department.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
+          institution_id: department.institution_id,
+          created_at: department.created_at,
+          updated_at: department.updated_at
+        };
+      });
+
+    console.log('Transformed departments data:', transformedData);
+    return transformedData;
   } catch (error) {
     console.error('Error fetching departments:', error);
     throw error;
