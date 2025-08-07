@@ -258,15 +258,17 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
     }
 
     // Transform API response to match our expected format
-    return response.data.map(department => ({
-      id: department.id,
-      department_name: department.department_name,
-      description: department.description,
-      status: department.status as 'active' | 'inactive',
-      institution_id: department.institution_id,
-      created_at: department.created_at,
-      updated_at: department.updated_at
-    }));
+    return response.data
+      .filter(department => department.is_active) // Only include active departments
+      .map(department => ({
+        id: department.id,
+        department_name: department.department_name,
+        description: department.department_code || 'Department',
+        status: department.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
+        institution_id: department.institution_id,
+        created_at: department.created_at,
+        updated_at: department.updated_at
+      }));
   } catch (error) {
     console.error('Error fetching departments:', error);
     throw error;
