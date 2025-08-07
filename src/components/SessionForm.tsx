@@ -78,6 +78,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     !selectedInstitution || dept.institution_id === selectedInstitution
   );
 
+  // Debug logging
+  console.log('All departments:', departments);
+  console.log('Selected institution:', selectedInstitution);
+  console.log('Filtered departments:', filteredDepartments);
+
   // Get students for selected department and institution
   const getStudentsByInstitutionAndDepartment = () => {
     return availableStudents.filter(student => {
@@ -294,12 +299,18 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a department" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {filteredDepartments.map(department => (
-                      <SelectItem key={department.id} value={department.id}>
-                        {department.department_name}
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="bg-background border shadow-md z-50">
+                    {filteredDepartments.length > 0 ? (
+                      filteredDepartments.map(department => (
+                        <SelectItem key={department.id} value={department.id}>
+                          {department.department_name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                        No departments found for selected institution
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
