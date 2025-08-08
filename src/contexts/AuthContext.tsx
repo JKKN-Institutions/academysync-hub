@@ -118,44 +118,78 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        setUser({
-          ...session.user,
-          role: profile?.role as UserRole || 'mentee',
-          displayName: profile?.display_name || session.user.email || 'Unknown User',
-          department: profile?.department,
-          externalId: profile?.external_id
-        });
-      }
-      setLoading(false);
-    });
+    let mounted = true;
 
-    // Listen for auth changes
+    // Set up auth state listener FIRST to avoid missing events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        if (!mounted) return;
+        
         if (session?.user) {
+          // Only synchronous state updates in the callback
+          setUser({
+            ...session.user,
+            role: 'mentee', // Default role, will be updated by profile fetch
+            displayName: session.user.email || 'Unknown User',
+            department: undefined,
+            externalId: undefined
+          });
+          
           // Defer profile fetching to avoid deadlock
           setTimeout(async () => {
-            const profile = await fetchUserProfile(session.user.id);
-            setUser({
-              ...session.user,
-              role: profile?.role as UserRole || 'mentee',
-              displayName: profile?.display_name || session.user.email || 'Unknown User',
-              department: profile?.department,
-              externalId: profile?.external_id
-            });
+            if (!mounted) return;
+            
+            try {
+              const profile = await fetchUserProfile(session.user.id);
+              if (mounted) {
+                setUser(prevUser => prevUser ? {
+                  ...prevUser,
+                  role: profile?.role as UserRole || 'mentee',
+                  displayName: profile?.display_name || session.user.email || 'Unknown User',
+                  department: profile?.department,
+                  externalId: profile?.external_id
+                } : null);
+              }
+            } catch (error) {
+              console.error('Error fetching user profile:', error);
+            }
           }, 0);
         } else {
           setUser(null);
         }
-        setLoading(false);
+        
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      
+      if (session?.user) {
+        // Initial user setup - will be updated by the auth state change listener
+        setUser({
+          ...session.user,
+          role: 'mentee',
+          displayName: session.user.email || 'Unknown User',
+          department: undefined,
+          externalId: undefined
+        });
+      } else {
+        setUser(null);
+      }
+      
+      if (mounted) {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
