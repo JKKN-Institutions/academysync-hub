@@ -369,12 +369,7 @@ const Index = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.displayName || 'User'}</h2>
-          <p className="text-lg text-gray-600">{user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} • {user?.department || 'Department'}</p>
-          <div className="flex items-center mt-2 text-sm text-gray-500">
-            <Shield className="w-4 h-4 mr-1" />
-            Role: {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {user?.displayName || 'User'}</h2>
         </div>
 
         {/* Quick Actions Grid */}

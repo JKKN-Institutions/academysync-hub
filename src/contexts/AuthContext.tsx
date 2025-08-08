@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser({
             ...session.user,
             role: 'mentee', // Default role, will be updated by profile fetch
-            displayName: session.user.email || 'Unknown User',
+            displayName: (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || session.user.email || 'Unknown User',
             department: undefined,
             externalId: undefined
           });
@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setUser(prevUser => prevUser ? {
                   ...prevUser,
                   role: profile?.role as UserRole || 'mentee',
-                  displayName: profile?.display_name || session.user.email || 'Unknown User',
+                  displayName: profile?.display_name || (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || session.user.email || 'Unknown User',
                   department: profile?.department,
                   externalId: profile?.external_id
                 } : null);
