@@ -134,17 +134,55 @@ const makeApiRequest = async <T>(
 // Fetch students from myjkkn API
 export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
   try {
-    const response = await makeApiRequest<{data: any[]}>(
-      '/api-management/students?limit=1000'
-    );
+    console.log('Starting to fetch students with pagination...');
+    console.log('=== STUDENTS API PAGINATION FETCH ===');
+    
+    let allStudents: any[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
 
-    // The API returns {data: [...]} format, not {success: true, data: [...]}
-    if (!response.data || !Array.isArray(response.data)) {
-      throw new Error('Invalid response format from API');
-    }
+    // Fetch all pages of students
+    do {
+      console.log(`Fetching students page ${currentPage}...`);
+      
+      const response = await makeApiRequest<{data: any[], metadata?: any}>(
+        `/api-management/students?page=${currentPage}&limit=1000`
+      );
+
+      console.log(`Page ${currentPage} response:`, {
+        studentsCount: response.data?.length || 0,
+        metadata: response.metadata
+      });
+
+      // Add this page's students to our collection
+      if (response.data && Array.isArray(response.data)) {
+        allStudents = [...allStudents, ...response.data];
+      }
+
+      // Update pagination info
+      if (response.metadata) {
+        totalPages = response.metadata.totalPages || response.metadata.total_pages || 1;
+        console.log(`Pagination info: page ${currentPage} of ${totalPages}, total students so far: ${allStudents.length}`);
+      } else {
+        console.log('No metadata found, assuming single page');
+        break;
+      }
+
+      currentPage++;
+    } while (currentPage <= totalPages);
+
+    console.log(`✅ Successfully fetched all ${allStudents.length} students from ${totalPages} pages`);
+
+    // Filter for active students only
+    const activeStudents = allStudents.filter(student => {
+      const isActive = student.status === 'active' || student.status === 'Active' || student.status === 1 || student.status === '1';
+      return isActive;
+    });
+
+    console.log(`Filtered to ${activeStudents.length} active students out of ${allStudents.length} total`);
 
     // Transform API response to match our expected format
-    return response.data.map(student => ({
+    const transformedStudents = activeStudents.map(student => ({
       id: student.id,
       studentId: student.id,
       rollNo: student.roll_number,
@@ -159,6 +197,9 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
       mentor: null,
       interests: []
     }));
+
+    console.log(`🎉 Successfully transformed ${transformedStudents.length} students`);
+    return transformedStudents;
   } catch (error) {
     console.error('Error fetching students:', error);
     throw error;
