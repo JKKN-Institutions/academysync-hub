@@ -53,8 +53,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const [selectedStudents, setSelectedStudents] = useState<string[]>(formData.students);
   const [studentSearch, setStudentSearch] = useState('');
-  const [selectedInstitution, setSelectedInstitution] = useState<string>('');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedInstitution, setSelectedInstitution] = useState<string>('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
   // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
@@ -91,10 +91,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   // Get students for selected department and institution
   const getStudentsByInstitutionAndDepartment = () => {
     return availableStudents.filter(student => {
-      if (selectedDepartment) {
+      if (selectedDepartment && selectedDepartment !== "all") {
         return student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
       }
-      if (selectedInstitution) {
+      if (selectedInstitution && selectedInstitution !== "all") {
         const institutionDepts = departments.filter(d => d.institution_id === selectedInstitution);
         return institutionDepts.some(d => d.department_name === student.department);
       }
@@ -314,7 +314,6 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 <Select 
                   value={selectedDepartment} 
                   onValueChange={setSelectedDepartment}
-                  disabled={!selectedInstitution}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a department" />
@@ -357,13 +356,13 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="Search students by name or roll number..."
                     className="pl-10"
-                    disabled={!selectedInstitution}
+                    
                   />
                 </div>
               </div>
 
               {/* Student Results */}
-              {selectedInstitution && (
+              {(
                 <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
                   {(() => {
                     const studentsToShow = getStudentsByInstitutionAndDepartment().filter(student =>

@@ -42,8 +42,13 @@ export const useInstitutionsData = () => {
         setInstitutions(getDemoInstitutions());
       } else {
         // Fetch from myjkkn API
+        console.log('Fetching institutions from API...');
         const apiInstitutions = await fetchInstitutions();
-        setInstitutions(apiInstitutions.filter(inst => inst.status === 'active'));
+        console.log('Raw API institutions received:', apiInstitutions);
+        
+        const activeInstitutions = apiInstitutions.filter(inst => inst.status === 'active');
+        console.log('Active institutions filtered:', activeInstitutions);
+        setInstitutions(activeInstitutions);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load institutions';
