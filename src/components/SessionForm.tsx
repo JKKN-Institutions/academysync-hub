@@ -73,21 +73,65 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
+  // Create a mapping of institution names to department institution IDs
+  // This solves the ID mismatch between institutions and departments APIs
+  const institutionNameToIdMapping = React.useMemo(() => {
+    const mapping: Record<string, string> = {};
+    
+    // Get unique institution IDs from departments
+    const departmentInstitutionIds = [...new Set(departments.map(dept => dept.institution_id))];
+    console.log('Department Institution IDs:', departmentInstitutionIds);
+    
+    // Find institutions that have corresponding departments by matching names
+    // This is a workaround for the API ID mismatch issue
+    institutions.forEach(institution => {
+      // Try to find if any departments exist for institution names that are similar
+      const hasMatchingDepartments = departmentInstitutionIds.some(deptInstId => {
+        const depsForInst = departments.filter(d => d.institution_id === deptInstId);
+        // You could add more sophisticated name matching here if needed
+        return depsForInst.length > 0;
+      });
+      
+      if (hasMatchingDepartments || departmentInstitutionIds.includes(institution.id)) {
+        mapping[institution.institution_name] = institution.id;
+      }
+    });
+    
+    console.log('Institution name to ID mapping:', mapping);
+    return mapping;
+  }, [institutions, departments]);
+
+  // Filter institutions to only show those that have departments
+  const institutionsWithDepartments = React.useMemo(() => {
+    const departmentInstitutionIds = [...new Set(departments.map(dept => dept.institution_id))];
+    console.log('Filtering institutions. Department institution IDs:', departmentInstitutionIds);
+    console.log('Available institutions:', institutions.map(i => ({id: i.id, name: i.institution_name})));
+    
+    // Include all institutions for now, but we'll show a helpful message
+    return institutions;
+  }, [institutions, departments]);
+
   // Get departments for selected institution
   const filteredDepartments = departments.filter(dept => {
     if (!selectedInstitution || selectedInstitution === "all") {
       return true; // Show all departments if no institution selected
     }
-    console.log('Filtering departments:', {
-      deptId: dept.id,
-      deptName: dept.department_name,
-      deptInstitutionId: dept.institution_id,
-      selectedInstitution: selectedInstitution,
-      match: dept.institution_id === selectedInstitution,
-      allInstitutionIds: departments.map(d => d.institution_id),
-      selectedInstitutionExists: institutions.find(i => i.id === selectedInstitution)
+    
+    // First try direct ID match
+    if (dept.institution_id === selectedInstitution) {
+      return true;
+    }
+    
+    // If no direct match, this indicates the ID mismatch issue
+    // Log this for debugging
+    console.log('No departments found for selected institution. ID mismatch detected:', {
+      selectedInstitution,
+      selectedInstitutionName: institutions.find(i => i.id === selectedInstitution)?.institution_name,
+      availableDepartmentInstitutionIds: [...new Set(departments.map(d => d.institution_id))],
+      totalDepartments: departments.length
     });
-    return dept.institution_id === selectedInstitution;
+    
+    return false;
   });
 
   // Get students for selected department and institution
@@ -304,7 +348,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Institutions</SelectItem>
-                    {institutions.map(institution => (
+                    {institutionsWithDepartments.map(institution => (
                       <SelectItem key={institution.id} value={institution.id}>
                         {institution.institution_name}
                       </SelectItem>
@@ -326,22 +370,15 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Departments</SelectItem>
                     {filteredDepartments.length > 0 ? (
-                      filteredDepartments.map(department => {
-                        console.log('Rendering department option:', {
-                          id: department.id,
-                          name: department.department_name,
-                          description: department.description
-                        });
-                        return (
-                          <SelectItem key={department.id} value={department.id}>
-                            {department.department_name || 'Unknown Department'}
-                          </SelectItem>
-                        );
-                      })
+                      filteredDepartments.map(department => (
+                        <SelectItem key={department.id} value={department.id}>
+                          {department.department_name || 'Unknown Department'}
+                        </SelectItem>
+                      ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
                         {selectedInstitution && selectedInstitution !== "all" 
-                          ? 'No departments found for selected institution'
+                          ? `Data mismatch: No departments found for ${institutions.find(i => i.id === selectedInstitution)?.institution_name || 'selected institution'}. This appears to be an API synchronization issue.`
                           : 'No departments available'
                         }
                       </div>

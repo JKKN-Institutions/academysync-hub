@@ -45,6 +45,7 @@ export const useInstitutionsData = () => {
         console.log('Fetching institutions from API...');
         const apiInstitutions = await fetchInstitutions();
         console.log('Raw API institutions received:', apiInstitutions);
+        console.log('Institution IDs from institutions API:', apiInstitutions.map(inst => ({ id: inst.id, name: inst.institution_name })));
         
         const activeInstitutions = apiInstitutions.filter(inst => inst.status === 'active');
         console.log('Active institutions filtered:', activeInstitutions);

@@ -54,6 +54,10 @@ export const useDepartmentsData = () => {
         const apiDepartments = await fetchDepartments();
         console.log('Raw API departments received:', apiDepartments);
         
+        // Get unique institution IDs from departments
+        const departmentInstitutionIds = [...new Set(apiDepartments.map(dept => dept.institution_id))];
+        console.log('Unique institution IDs found in departments:', departmentInstitutionIds);
+        
         const activeDepartments = apiDepartments.filter(dept => dept.status === 'active');
         console.log('Active departments filtered:', activeDepartments);
         setDepartments(activeDepartments);
