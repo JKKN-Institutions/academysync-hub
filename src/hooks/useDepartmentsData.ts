@@ -54,12 +54,28 @@ export const useDepartmentsData = () => {
         const apiDepartments = await fetchDepartments();
         console.log('Raw API departments received:', apiDepartments);
         
+        // DETAILED ANALYSIS: Let's see exactly what we're getting
+        console.log('=== DEPARTMENTS API ANALYSIS ===');
+        console.log('Total departments returned:', apiDepartments.length);
+        
+        // Group by institution_id to see the distribution
+        const byInstitution = apiDepartments.reduce((acc, dept) => {
+          if (!acc[dept.institution_id]) {
+            acc[dept.institution_id] = [];
+          }
+          acc[dept.institution_id].push(dept.department_name);
+          return acc;
+        }, {} as Record<string, string[]>);
+        
+        console.log('Departments grouped by institution_id:', byInstitution);
+        console.log('Number of unique institutions with departments:', Object.keys(byInstitution).length);
+        
         // Get unique institution IDs from departments
         const departmentInstitutionIds = [...new Set(apiDepartments.map(dept => dept.institution_id))];
         console.log('Unique institution IDs found in departments:', departmentInstitutionIds);
         
         const activeDepartments = apiDepartments.filter(dept => dept.status === 'active');
-        console.log('Active departments filtered:', activeDepartments);
+        console.log('Active departments filtered:', activeDepartments.length, 'out of', apiDepartments.length);
         setDepartments(activeDepartments);
       }
     } catch (err) {

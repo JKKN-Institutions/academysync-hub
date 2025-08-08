@@ -249,11 +249,14 @@ export const fetchStaffById = async (staffId: string): Promise<MyjkknStaff | nul
 export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
   try {
     console.log('Starting to fetch departments...');
+    console.log('=== DEPARTMENTS API ENDPOINT ANALYSIS ===');
     
+    // Try the main departments endpoint
     const response = await makeApiRequest<{data: any[]}>(
       '/api-management/organizations/departments'
     );
 
+    console.log('Departments API endpoint used: /api-management/organizations/departments');
     console.log('Raw departments API response:', JSON.stringify(response, null, 2));
 
     // The API returns {data: [...]} format
