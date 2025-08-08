@@ -81,7 +81,7 @@ const Login = () => {
                   <GraduationCap className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">MyJKKN</h1>
+                  <h1 className="text-2xl font-bold">Mentor & Mentee</h1>
                 </div>
               </div>
               
