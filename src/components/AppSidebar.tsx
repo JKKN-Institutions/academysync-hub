@@ -17,7 +17,9 @@ import {
   Database,
   BookOpen,
   TrendingUp,
-  Activity
+  Activity,
+  BarChart,
+  UserCheck
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -112,12 +114,23 @@ export function AppSidebar() {
       ]
     },
     {
+      label: "User Management",
+      icon: Users,
+      roles: ["admin", "super_admin"],
+      items: [
+        { title: "Analytics Dashboard", url: "/user-management/analytics-dashboard", icon: BarChart, roles: ["admin", "super_admin"], description: "User analytics and insights" },
+        { title: "All Users", url: "/user-management/all-users", icon: Users, roles: ["admin", "super_admin"], description: "Manage all users" },
+        { title: "Roles Assignment", url: "/user-management/roles-assignment", icon: UserCheck, roles: ["admin", "super_admin"], description: "Assign roles to users" },
+        { title: "Role Management", url: "/user-management/role-management", icon: Settings, roles: ["admin", "super_admin"], description: "Create and manage roles" },
+        { title: "Activity Audit Logs", url: "/user-management/activity-audit-logs", icon: FileText, roles: ["admin", "super_admin"], description: "User activity tracking" },
+      ]
+    },
+    {
       label: "System Administration",
       icon: Settings,
       roles: ["admin", "super_admin"],
       items: [
         { title: "Admin Dashboard", url: "/admin", icon: Settings, roles: ["admin", "super_admin"], description: "System configuration" },
-        { title: "Roles & Permissions", url: "/roles-permissions", icon: Shield, roles: ["admin", "super_admin"], description: "Manage user roles" },
         { title: "Audit Logs", url: "/audit", icon: Shield, roles: ["admin", "super_admin"], description: "Security and change logs" },
         { title: "Data Sync", url: "/admin?tab=sync", icon: Database, roles: ["admin", "super_admin"], description: "People API integration" },
       ]
