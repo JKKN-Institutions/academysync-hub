@@ -7,7 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import Profile from "./pages/Profile";
+import UserManagement from "./pages/UserManagement";
+import RolesPermissions from "./pages/RolesPermissions";
 import MentorsDirectory from "./pages/MentorsDirectory";
 import StaffDirectory from "./pages/StaffDirectory";
 import StudentsDirectory from "./pages/StudentsDirectory";
@@ -23,13 +24,13 @@ import Goals from "./pages/Goals";
 import Meetings from "./pages/Meetings";
 import QnA from "./pages/QnA";
 import Alerts from "./pages/Alerts";
-import UserManagement from "./pages/UserManagement";
 import AnalyticsDashboard from "./pages/user-management/AnalyticsDashboard";
 import AllUsers from "./pages/user-management/AllUsers";
 import RolesAssignment from "./pages/user-management/RolesAssignment";
 import RoleManagement from "./pages/user-management/RoleManagement";
 import ActivityAuditLogs from "./pages/user-management/ActivityAuditLogs";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Profile from "./pages/Profile";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -70,6 +71,11 @@ const App = () => (
               <Route path="/student/:studentId" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
                   <Student360 />
+                </ProtectedRoute>
+              } />
+              <Route path="/roles-permissions" element={
+                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
+                  <RolesPermissions />
                 </ProtectedRoute>
               } />
               <Route path="/assignments" element={
