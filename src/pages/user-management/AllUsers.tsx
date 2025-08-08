@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { Search, Filter, Download, Plus, MoreHorizontal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  Search, 
+  Download, 
+  Plus, 
+  MoreVertical, 
+  Users, 
+  Eye, 
+  Edit, 
+  UserX, 
+  Trash2, 
+  RefreshCw,
+  Filter
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -14,219 +25,761 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { TableSkeleton } from "@/components/ui/loading-skeleton";
+
+interface User {
+  id: string;
+  user_id: string;
+  display_name: string;
+  email: string;
+  mobile?: string;
+  department?: string;
+  external_id?: string;
+  role: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  avatar_url?: string;
+}
+
+interface AddUserFormData {
+  display_name: string;
+  email: string;
+  mobile: string;
+  role: string;
+  department: string;
+}
 
 const AllUsers = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [institutionFilter, setInstitutionFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  
+  // Dialog states
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  
+  // Add user form data
+  const [addUserForm, setAddUserForm] = useState<AddUserFormData>({
+    display_name: "",
+    email: "",
+    mobile: "",
+    role: "",
+    department: ""
+  });
 
-  // Mock data - replace with actual data from your API
-  const users = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      role: "Student",
-      department: "Computer Science",
-      status: "Active",
-      lastActive: "2024-01-08",
-      avatar: null
-    },
-    {
-      id: "2",
-      name: "Dr. Jane Smith",
-      email: "jane.smith@example.com",
-      role: "Mentor",
-      department: "Engineering",
-      status: "Active",
-      lastActive: "2024-01-08",
-      avatar: null
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      email: "mike.johnson@example.com",
-      role: "Admin",
-      department: "IT",
-      status: "Active",
-      lastActive: "2024-01-07",
-      avatar: null
-    },
-    {
-      id: "4",
-      name: "Sarah Wilson",
-      email: "sarah.wilson@example.com",
-      role: "Student",
-      department: "Business",
-      status: "Inactive",
-      lastActive: "2024-01-05",
-      avatar: null
-    },
+  const { toast } = useToast();
+
+  // Available roles
+  const roles = [
+    "accounts", "admin", "faculty", "guest", "staff", "student", "super_admin"
   ];
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role.toLowerCase()) {
-      case "admin":
-        return "destructive";
-      case "mentor":
-        return "default";
-      case "student":
-        return "secondary";
-      default:
-        return "outline";
+  // Available departments/institutions
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchDepartments();
+  }, []);
+
+  useEffect(() => {
+    filterUsers();
+  }, [users, searchTerm, institutionFilter, roleFilter, statusFilter]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('department')
+        .not('department', 'is', null);
+      
+      if (error) throw error;
+      
+      const uniqueDepartments = [...new Set(data.map(d => d.department).filter(Boolean))];
+      setDepartments(uniqueDepartments);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    return status.toLowerCase() === "active" ? "default" : "secondary";
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch user profiles with role assignments
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          display_name,
+          department,
+          external_id,
+          created_at,
+          role
+        `)
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Get auth users for email data
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) {
+        console.warn('Cannot fetch auth users (admin access required)');
+      }
+
+      // Get staff data for additional info
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
+        .select('staff_id, name, email, mobile, department');
+
+      if (staffError) throw staffError;
+
+      // Combine all data
+      const combinedUsers = (profilesData || []).map(profile => {
+        const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
+        const staffInfo = staffData?.find(s => s.email === authUser?.email);
+        
+        return {
+          id: profile.id,
+          user_id: profile.user_id,
+          display_name: profile.display_name || staffInfo?.name || authUser?.email || 'Unknown User',
+          email: authUser?.email || staffInfo?.email || '',
+          mobile: staffInfo?.mobile || '',
+          department: profile.department || staffInfo?.department,
+          external_id: profile.external_id || staffInfo?.staff_id,
+          role: profile.role || 'student',
+          status: 'active' as const,
+          created_at: profile.created_at,
+          avatar_url: undefined
+        };
+      });
+
+      setUsers(combinedUsers);
+      setTotalUsers(combinedUsers.length);
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterUsers = () => {
+    let filtered = users.filter(user => {
+      const matchesSearch = user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.external_id?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesInstitution = institutionFilter === 'all' || user.department === institutionFilter;
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+      
+      return matchesSearch && matchesInstitution && matchesRole && matchesStatus;
+    });
+    
+    setFilteredUsers(filtered);
+  };
+
+  const handleAddUser = async () => {
+    try {
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: addUserForm.email,
+        password: 'TempPassword123!', // Temporary password
+        email_confirm: true
+      });
+
+      if (authError) throw authError;
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: authData.user.id,
+          display_name: addUserForm.display_name,
+          department: addUserForm.department,
+          role: addUserForm.role
+        });
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: "Success",
+        description: "User created successfully",
+      });
+
+      setIsAddUserOpen(false);
+      setAddUserForm({
+        display_name: "",
+        email: "",
+        mobile: "",
+        role: "",
+        department: ""
+      });
+      
+      await fetchUsers();
+    } catch (error: any) {
+      console.error('Error adding user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    try {
+      // Delete user profile
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('user_id', user.user_id);
+
+      if (profileError) throw profileError;
+
+      // Delete auth user
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.user_id);
+      
+      if (authError) {
+        console.warn('Could not delete auth user:', authError);
+      }
+
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+
+      await fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      for (const userId of selectedUsers) {
+        const user = users.find(u => u.id === userId);
+        if (user) {
+          await handleDeleteUser(user);
+        }
+      }
+      
+      setSelectedUsers([]);
+      setIsBulkDeleteOpen(false);
+      
+      toast({
+        title: "Success",
+        description: `Deleted ${selectedUsers.length} users`,
+      });
+    } catch (error: any) {
+      console.error('Error in bulk delete:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete selected users",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleChangeRole = async (user: User, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: newRole })
+        .eq('user_id', user.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+
+      await fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const exportUsers = () => {
+    const csvContent = [
+      ['Name', 'Email', 'Mobile', 'Role', 'Department', 'Status', 'Joined'],
+      ...filteredUsers.map(user => [
+        user.display_name,
+        user.email,
+        user.mobile || '',
+        user.role,
+        user.department || '',
+        user.status,
+        new Date(user.created_at).toLocaleDateString()
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'bg-purple-100 text-purple-800';
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'faculty': return 'bg-blue-100 text-blue-800';
+      case 'staff': return 'bg-green-100 text-green-800';
+      case 'student': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">All Users</h1>
-          <p className="text-muted-foreground">
-            Manage and monitor all system users
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <p className="text-muted-foreground">View and manage user accounts</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={exportUsers}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button size="sm">
+          <Button onClick={() => setIsAddUserOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
         </div>
       </div>
 
+      {/* Stats Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <Users className="h-8 w-8 text-primary" />
             </div>
-            <div className="flex gap-2">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="mentor">Mentor</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4" />
-              </Button>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Users</p>
+              <p className="text-3xl font-bold">{totalUsers.toLocaleString()}</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Active</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback>
-                          {user.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.department}</TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusBadgeVariant(user.status)}>
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {user.lastActive}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>View Profile</DropdownMenuItem>
-                        <DropdownMenuItem>Edit User</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>Manage Roles</DropdownMenuItem>
-                        <DropdownMenuItem>Reset Password</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          Deactivate User
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         </CardContent>
       </Card>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select value={institutionFilter} onValueChange={setInstitutionFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Institutions" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                <SelectItem value="all">All Institutions</SelectItem>
+                {departments.map(dept => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Roles" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                <SelectItem value="all">All Roles</SelectItem>
+                {roles.map(role => (
+                  <SelectItem key={role} value={role}>
+                    {role.replace('_', ' ').toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setInstitutionFilter("all");
+                setRoleFilter("all");
+                setStatusFilter("all");
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bulk Actions */}
+      {selectedUsers.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {selectedUsers.length} user(s) selected
+              </span>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  Change Role
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setIsBulkDeleteOpen(true)}
+                >
+                  Delete Selected
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Users Table */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <TableSkeleton rows={10} columns={7} showHeader={false} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedUsers(filteredUsers.map(u => u.id));
+                        } else {
+                          setSelectedUsers([]);
+                        }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Mobile Number</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedUsers.includes(user.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedUsers([...selectedUsers, user.id]);
+                          } else {
+                            setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback>
+                            {user.display_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{user.display_name}</div>
+                          <div className="text-sm text-muted-foreground">{user.email}</div>
+                          {user.external_id && (
+                            <div className="text-xs text-muted-foreground">ID: {user.external_id}</div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>{user.mobile || '-'}</TableCell>
+                    <TableCell>
+                      <Badge className={getRoleBadgeColor(user.role)} variant="secondary">
+                        {user.role.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-background border z-50">
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleChangeRole(user, user.role === 'admin' ? 'student' : 'admin')}
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            Change Role
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <UserX className="h-4 w-4 mr-2" />
+                            Deactivate User
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => {
+                              setUserToDelete(user);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with role and department assignment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Display Name</label>
+              <Input
+                value={addUserForm.display_name}
+                onChange={(e) => setAddUserForm(prev => ({ ...prev, display_name: e.target.value }))}
+                placeholder="Enter full name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={addUserForm.email}
+                onChange={(e) => setAddUserForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Mobile Number</label>
+              <Input
+                value={addUserForm.mobile}
+                onChange={(e) => setAddUserForm(prev => ({ ...prev, mobile: e.target.value }))}
+                placeholder="Enter mobile number"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Role</label>
+              <Select value={addUserForm.role} onValueChange={(value) => setAddUserForm(prev => ({ ...prev, role: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {roles.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {role.replace('_', ' ').toUpperCase()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Department</label>
+              <Select value={addUserForm.department} onValueChange={(value) => setAddUserForm(prev => ({ ...prev, department: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {departments.map(dept => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddUser}
+              disabled={!addUserForm.display_name || !addUserForm.email || !addUserForm.role}
+            >
+              Add User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {userToDelete?.display_name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (userToDelete) {
+                  handleDeleteUser(userToDelete);
+                  setIsDeleteDialogOpen(false);
+                  setUserToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Users</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedUsers.length} selected users? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Selected
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
