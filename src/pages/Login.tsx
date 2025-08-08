@@ -70,69 +70,76 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-blue-50 p-4">
-      <div className="w-full max-w-4xl flex items-center justify-center gap-8">
-        {/* Left side - Smart Learning Portal Branding */}
-        <div className="hidden lg:block flex-1 max-w-lg">
-          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white p-12 rounded-2xl">
-            <div className="space-y-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">Mentor & Mentee</h1>
-                </div>
-              </div>
-              
-              <div>
-                <h2 className="text-3xl font-bold mb-4">Smart Learning Portal</h2>
-                <p className="text-lg text-green-50 mb-8">
-                  Access your courses, track progress, and connect with faculty all in one platform.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mb-2">
-                    <div className="w-4 h-4 bg-white rounded"></div>
-                  </div>
-                  <h3 className="font-semibold text-sm">Centralized LMS</h3>
-                </div>
-                
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                  <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mb-2">
-                    <div className="w-4 h-4 bg-white rounded-full"></div>
-                  </div>
-                  <h3 className="font-semibold text-sm">AI Insights</h3>
-                </div>
-              </div>
-
-              <div className="pt-6 text-sm text-green-50">
-                © 2025 JKKN Educational Institutions
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-hidden relative">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-yellow-400 rounded-full animate-bounce opacity-20"></div>
+        <div className="absolute top-32 right-20 w-16 h-16 bg-pink-400 rounded-full animate-pulse opacity-30"></div>
+        <div className="absolute bottom-20 left-20 w-24 h-24 bg-green-400 rounded-full animate-bounce delay-1000 opacity-25"></div>
+        <div className="absolute bottom-40 right-10 w-12 h-12 bg-orange-400 rounded-full animate-pulse delay-500 opacity-20"></div>
+        
+        {/* Floating Icons */}
+        <div className="absolute top-1/4 left-1/4 animate-float">
+          <div className="w-8 h-8 bg-blue-400 rounded-lg rotate-45 opacity-30"></div>
         </div>
+        <div className="absolute top-3/4 right-1/4 animate-float delay-1000">
+          <div className="w-6 h-6 bg-purple-400 rounded-full opacity-40"></div>
+        </div>
+      </div>
 
-        {/* Right side - Login Form */}
-        <div className="w-full max-w-md lg:max-w-sm">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Animated Logo Section */}
+          <div className="text-center mb-12 animate-fade-in">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl mb-6 shadow-2xl animate-pulse">
+              <GraduationCap className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+              Mentor & Mentee
+            </h1>
+            <p className="text-blue-200 text-lg font-medium">Level Up Your Learning Journey!</p>
+          </div>
+
+          {/* Gamified Login Card */}
+          <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl animate-scale-in">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
-              <p className="text-gray-600">Sign in to access your portal</p>
+              <h2 className="text-2xl font-bold text-white mb-3">🚀 Ready to Begin?</h2>
+              <p className="text-blue-200">Join your learning adventure</p>
             </div>
 
             {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="mb-6 bg-red-500/20 border-red-400/50">
+                <AlertCircle className="h-4 w-4 text-red-300" />
+                <AlertDescription className="text-red-200">{error}</AlertDescription>
               </Alert>
             )}
 
+            {/* Achievement Badges */}
+            <div className="flex justify-center space-x-4 mb-8">
+              <div className="flex flex-col items-center group">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-2 shadow-lg group-hover:scale-110 transition-transform">
+                  <span className="text-xl">🎯</span>
+                </div>
+                <span className="text-xs text-blue-200">Goals</span>
+              </div>
+              <div className="flex flex-col items-center group">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-full flex items-center justify-center mb-2 shadow-lg group-hover:scale-110 transition-transform">
+                  <span className="text-xl">🤝</span>
+                </div>
+                <span className="text-xs text-blue-200">Mentors</span>
+              </div>
+              <div className="flex flex-col items-center group">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mb-2 shadow-lg group-hover:scale-110 transition-transform">
+                  <span className="text-xl">⭐</span>
+                </div>
+                <span className="text-xs text-blue-200">Progress</span>
+              </div>
+            </div>
+
             <Button 
               type="button" 
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-medium rounded-xl" 
+              className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 text-white py-4 text-lg font-bold rounded-2xl shadow-xl border-0 transition-all duration-300 hover:scale-105 hover:shadow-2xl" 
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
             >
@@ -143,21 +150,30 @@ const Login = () => {
                 <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              🎮 Continue with Google
             </Button>
 
-            <p className="text-center text-sm text-gray-500 mt-6">
-              By signing in, you agree to our{' '}
-              <a href="#" className="text-green-600 hover:underline">Terms of Service</a>
-              {' '}and{' '}
-              <a href="#" className="text-green-600 hover:underline">Privacy Policy</a>
-            </p>
-
-            <div className="mt-8 pt-6 border-t text-center">
-              <p className="text-sm text-gray-500">
-                For students, staff, mentors, and administrators
+            <div className="mt-6 text-center">
+              <p className="text-sm text-blue-200/80">
+                For students, mentors & faculty
               </p>
             </div>
+
+            {/* Floating XP Bar */}
+            <div className="mt-6 bg-white/5 rounded-full p-3 border border-white/10">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-blue-200">Welcome Level</span>
+                <span className="text-xs text-yellow-400">XP: 0/100</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full w-0 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 text-blue-200/60 text-sm animate-fade-in">
+            © 2025 JKKN Educational Institutions
           </div>
         </div>
       </div>
