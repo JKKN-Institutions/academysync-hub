@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRoles, type Role } from "@/hooks/useRoles";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -223,11 +223,7 @@ const RoleManagement = () => {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
+            <TableSkeleton rows={5} columns={6} showHeader={false} />
           ) : (
             <Table>
               <TableHeader>
