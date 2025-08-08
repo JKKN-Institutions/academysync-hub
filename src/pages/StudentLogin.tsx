@@ -91,7 +91,7 @@ const StudentLogin = () => {
         options: {
           redirectTo: redirectUrl,
           queryParams: {
-            hd: 'jkkn.ac.in', // Restrict to JKKN domain
+            hd: 'jkkn.ac.in', // Suggest JKKN domain (user can still bypass)
           }
         }
       });
@@ -104,6 +104,33 @@ const StudentLogin = () => {
       setGoogleLoading(false);
     }
   };
+
+  // Add effect to handle OAuth callback and verify domain
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const { data: session, error } = await supabase.auth.getSession();
+      
+      if (session?.session?.user && !error) {
+        const userEmail = session.session.user.email;
+        
+        // Verify the email domain after OAuth
+        if (userEmail && !validateInstitutionalEmail(userEmail)) {
+          // Sign out the user if domain doesn't match
+          await supabase.auth.signOut();
+          setError('Access denied. Please use your JKK Institution email address (@jkkn.ac.in, @jkkngroup.ac.in, etc.)');
+          setGoogleLoading(false);
+          return;
+        }
+      }
+      
+      setGoogleLoading(false);
+    };
+
+    // Check if we're coming back from OAuth
+    if (window.location.search.includes('access_token') || window.location.search.includes('code')) {
+      handleOAuthCallback();
+    }
+  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
