@@ -118,11 +118,11 @@ export function AppSidebar() {
       icon: Users,
       roles: ["admin", "super_admin"],
       items: [
-        { title: "Analytics Dashboard", url: "/user-management/analytics-dashboard", icon: BarChart, roles: ["admin", "super_admin"], description: "User analytics and insights" },
-        { title: "All Users", url: "/user-management/all-users", icon: Users, roles: ["admin", "super_admin"], description: "Manage all users" },
+        { title: "Analytics Dashboard", url: "/user-management/analytics", icon: BarChart, roles: ["admin", "super_admin"], description: "User analytics and insights" },
+        { title: "All Users", url: "/user-management/users", icon: Users, roles: ["admin", "super_admin"], description: "Manage all users" },
         { title: "Roles Assignment", url: "/user-management/roles-assignment", icon: UserCheck, roles: ["admin", "super_admin"], description: "Assign roles to users" },
         { title: "Role Management", url: "/user-management/role-management", icon: Settings, roles: ["admin", "super_admin"], description: "Create and manage roles" },
-        { title: "Activity Audit Logs", url: "/user-management/activity-audit-logs", icon: FileText, roles: ["admin", "super_admin"], description: "User activity tracking" },
+        { title: "Activity Audit Logs", url: "/user-management/audit-logs", icon: FileText, roles: ["admin", "super_admin"], description: "User activity tracking" },
       ]
     },
     {
