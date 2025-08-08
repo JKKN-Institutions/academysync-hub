@@ -3,8 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Users, Search, Filter, UserCheck, Calendar, Mail, Phone } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useStaffData } from "@/hooks/useStaffData";
 import { useDemoMode } from "@/hooks/useDemoMode";
 import { DemoModeBanner } from "@/components/ui/demo-mode-banner";
@@ -17,6 +19,7 @@ const MentorsDirectory = () => {
   const { isDemoMode } = useDemoMode();
   const { staff: mentors, loading, error, refetch } = useStaffData();
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   const filteredMentors = mentors.filter(mentor =>
     `${mentor.name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,6 +40,10 @@ const MentorsDirectory = () => {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleAssignStudents = (mentor: any) => {
+    navigate('/assignments', { state: { selectedMentor: mentor } });
   };
 
   return (
@@ -173,15 +180,79 @@ const MentorsDirectory = () => {
                        </div>
                      </div>
 
-                     <div className="flex space-x-2 pt-2">
-                       <Button size="sm" className="flex-1">
-                         <UserCheck className="w-4 h-4 mr-1" />
-                         Assign Students
-                       </Button>
-                       <Button variant="outline" size="sm">
-                         View Profile
-                       </Button>
-                     </div>
+                      <div className="flex space-x-2 pt-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => handleAssignStudents(mentor)}
+                        >
+                          <UserCheck className="w-4 h-4 mr-1" />
+                          Assign Students
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              View Profile
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Mentor Profile</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-6">
+                              <div className="flex items-center space-x-4">
+                                <Avatar className="h-16 w-16">
+                                  <AvatarImage src={undefined} alt={mentor.name} />
+                                  <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
+                                    {getInitials(mentor.name)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <h3 className="text-xl font-semibold">{mentor.name}</h3>
+                                  <p className="text-gray-600">{mentor.designation}</p>
+                                  <Badge variant={mentor.status === 'active' ? 'default' : 'secondary'}>
+                                    {mentor.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <h4 className="font-medium mb-2">Contact Information</h4>
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex items-center">
+                                      <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                                      <span>{mentor.email}</span>
+                                    </div>
+                                    {mentor.mobile && (
+                                      <div className="flex items-center">
+                                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                                        <span>{mentor.mobile}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <h4 className="font-medium mb-2">Department & Role</h4>
+                                  <div className="space-y-2 text-sm">
+                                    <p><strong>Department:</strong> {mentor.department || 'Not specified'}</p>
+                                    <p><strong>Staff ID:</strong> {mentor.staffId}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <h4 className="font-medium mb-2">Additional Information</h4>
+                                <div className="text-sm text-gray-600">
+                                  <p>This mentor profile is synchronized from the institutional directory.</p>
+                                  <p className="mt-1">Last synced: Recently</p>
+                                </div>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                    </div>
                  </CardContent>
                </Card>
