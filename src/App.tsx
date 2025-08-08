@@ -23,6 +23,12 @@ import Goals from "./pages/Goals";
 import Meetings from "./pages/Meetings";
 import QnA from "./pages/QnA";
 import Alerts from "./pages/Alerts";
+import UserManagement from "./pages/UserManagement";
+import AnalyticsDashboard from "./pages/user-management/AnalyticsDashboard";
+import AllUsers from "./pages/user-management/AllUsers";
+import RolesAssignment from "./pages/user-management/RolesAssignment";
+import RoleManagement from "./pages/user-management/RoleManagement";
+import ActivityAuditLogs from "./pages/user-management/ActivityAuditLogs";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
@@ -118,6 +124,18 @@ const App = () => (
                   <Alerts />
                 </ProtectedRoute>
               } />
+              {/* User Management Module */}
+              <Route path="/user-management" element={
+                <ProtectedRoute requiredRoles={['admin']}>
+                  <UserManagement />
+                </ProtectedRoute>
+              }>
+                <Route path="analytics" element={<AnalyticsDashboard />} />
+                <Route path="users" element={<AllUsers />} />
+                <Route path="roles-assignment" element={<RolesAssignment />} />
+                <Route path="role-management" element={<RoleManagement />} />
+                <Route path="audit-logs" element={<ActivityAuditLogs />} />
+              </Route>
               <Route path="/profile" element={<Profile />} />
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

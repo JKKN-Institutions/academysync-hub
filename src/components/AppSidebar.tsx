@@ -117,6 +117,7 @@ export function AppSidebar() {
       roles: ["admin", "super_admin"],
       items: [
         { title: "Admin Dashboard", url: "/admin", icon: Settings, roles: ["admin", "super_admin"], description: "System configuration" },
+        { title: "User Management", url: "/user-management", icon: Users, roles: ["admin", "super_admin"], description: "Manage users and roles" },
         { title: "Audit Logs", url: "/audit", icon: Shield, roles: ["admin", "super_admin"], description: "Security and change logs" },
         { title: "Data Sync", url: "/admin?tab=sync", icon: Database, roles: ["admin", "super_admin"], description: "People API integration" },
       ]
