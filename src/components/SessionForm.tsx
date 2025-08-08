@@ -73,76 +73,68 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
   );
 
-  // Create a mapping of institution names to department institution IDs
-  // This solves the ID mismatch between institutions and departments APIs
-  const institutionNameToIdMapping = React.useMemo(() => {
-    const mapping: Record<string, string> = {};
+  // WORKAROUND: Create institution groups based on department data
+  // Since the institutions API and departments API have mismatched IDs,
+  // we'll create virtual institution groups based on the departments' institution_ids
+  const departmentInstitutionGroups = React.useMemo(() => {
+    const groups: Record<string, { id: string; name: string; departments: typeof departments }> = {};
     
-    // Get unique institution IDs from departments
-    const departmentInstitutionIds = [...new Set(departments.map(dept => dept.institution_id))];
-    console.log('Department Institution IDs:', departmentInstitutionIds);
-    
-    // Find institutions that have corresponding departments by matching names
-    // This is a workaround for the API ID mismatch issue
-    institutions.forEach(institution => {
-      // Try to find if any departments exist for institution names that are similar
-      const hasMatchingDepartments = departmentInstitutionIds.some(deptInstId => {
-        const depsForInst = departments.filter(d => d.institution_id === deptInstId);
-        // You could add more sophisticated name matching here if needed
-        return depsForInst.length > 0;
-      });
-      
-      if (hasMatchingDepartments || departmentInstitutionIds.includes(institution.id)) {
-        mapping[institution.institution_name] = institution.id;
+    departments.forEach(dept => {
+      if (!groups[dept.institution_id]) {
+        // Create a virtual institution name based on department patterns
+        let institutionName = 'Unknown Institution';
+        
+        // Pattern matching to determine institution names from department data
+        if (dept.department_name.includes('Pharmacy') || dept.department_name.includes('Pharmaceutical')) {
+          institutionName = 'JKKN College of Pharmacy';
+        } else if (dept.department_name.includes('Conservative') || dept.department_name.includes('Endodontics')) {
+          institutionName = 'JKKN Dental College';
+        } else if (dept.department_name.includes('Engineering') || dept.department_name.includes('Technology')) {
+          institutionName = 'JKKN College of Engineering & Technology';
+        } else if (dept.department_name.includes('Nursing')) {
+          institutionName = 'JKKN College of Nursing';
+        } else if (dept.department_name.includes('Arts') || dept.department_name.includes('Science')) {
+          institutionName = 'JKKN College of Arts & Science';
+        }
+        
+        groups[dept.institution_id] = {
+          id: dept.institution_id,
+          name: institutionName,
+          departments: []
+        };
       }
+      groups[dept.institution_id].departments.push(dept);
     });
     
-    console.log('Institution name to ID mapping:', mapping);
-    return mapping;
-  }, [institutions, departments]);
+    console.log('Created department institution groups:', groups);
+    return Object.values(groups);
+  }, [departments]);
 
-  // Filter institutions to only show those that have departments
-  const institutionsWithDepartments = React.useMemo(() => {
-    const departmentInstitutionIds = [...new Set(departments.map(dept => dept.institution_id))];
-    console.log('Filtering institutions. Department institution IDs:', departmentInstitutionIds);
-    console.log('Available institutions:', institutions.map(i => ({id: i.id, name: i.institution_name})));
-    
-    // Include all institutions for now, but we'll show a helpful message
-    return institutions;
-  }, [institutions, departments]);
-
-  // Get departments for selected institution
-  const filteredDepartments = departments.filter(dept => {
+  // Get departments for selected institution (using the workaround)
+  const filteredDepartments = React.useMemo(() => {
     if (!selectedInstitution || selectedInstitution === "all") {
-      return true; // Show all departments if no institution selected
+      return departments; // Show all departments
     }
     
-    // First try direct ID match
-    if (dept.institution_id === selectedInstitution) {
-      return true;
+    // Check if it's one of our virtual institution groups
+    const virtualGroup = departmentInstitutionGroups.find(group => group.id === selectedInstitution);
+    if (virtualGroup) {
+      return virtualGroup.departments;
     }
     
-    // If no direct match, this indicates the ID mismatch issue
-    // Log this for debugging
-    console.log('No departments found for selected institution. ID mismatch detected:', {
-      selectedInstitution,
-      selectedInstitutionName: institutions.find(i => i.id === selectedInstitution)?.institution_name,
-      availableDepartmentInstitutionIds: [...new Set(departments.map(d => d.institution_id))],
-      totalDepartments: departments.length
-    });
-    
-    return false;
-  });
+    // Fallback to original filtering (which may return empty due to ID mismatch)
+    return departments.filter(dept => dept.institution_id === selectedInstitution);
+  }, [selectedInstitution, departments, departmentInstitutionGroups]);
 
-  // Get students for selected department and institution
+  // Get students for selected department and institution (updated for workaround)
   const getStudentsByInstitutionAndDepartment = () => {
     return availableStudents.filter(student => {
       if (selectedDepartment && selectedDepartment !== "all") {
         return student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
       }
       if (selectedInstitution && selectedInstitution !== "all") {
-        const institutionDepts = departments.filter(d => d.institution_id === selectedInstitution);
-        return institutionDepts.some(d => d.department_name === student.department);
+        // Use the filtered departments which now work with virtual groups
+        return filteredDepartments.some(d => d.department_name === student.department);
       }
       return true;
     });
@@ -348,8 +340,18 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Institutions</SelectItem>
-                    {institutionsWithDepartments.map(institution => (
-                      <SelectItem key={institution.id} value={institution.id}>
+                    {/* Show virtual institution groups based on actual department data */}
+                    {departmentInstitutionGroups.map(group => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} ({group.departments.length} departments)
+                      </SelectItem>
+                    ))}
+                    {/* Separator */}
+                    <div className="px-2 py-1 border-t border-border">
+                      <span className="text-xs text-muted-foreground">Original institutions (may not have departments):</span>
+                    </div>
+                    {institutions.map(institution => (
+                      <SelectItem key={`orig-${institution.id}`} value={institution.id}>
                         {institution.institution_name}
                       </SelectItem>
                     ))}
@@ -377,10 +379,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                       ))
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        {selectedInstitution && selectedInstitution !== "all" 
-                          ? `Data mismatch: No departments found for ${institutions.find(i => i.id === selectedInstitution)?.institution_name || 'selected institution'}. This appears to be an API synchronization issue.`
-                          : 'No departments available'
-                        }
+                        No departments available for selected institution
                       </div>
                     )}
                   </SelectContent>
