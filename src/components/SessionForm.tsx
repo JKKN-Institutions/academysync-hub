@@ -83,7 +83,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       deptName: dept.department_name,
       deptInstitutionId: dept.institution_id,
       selectedInstitution: selectedInstitution,
-      match: dept.institution_id === selectedInstitution
+      match: dept.institution_id === selectedInstitution,
+      allInstitutionIds: departments.map(d => d.institution_id),
+      selectedInstitutionExists: institutions.find(i => i.id === selectedInstitution)
     });
     return dept.institution_id === selectedInstitution;
   });
@@ -291,13 +293,16 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="institution">Institution</Label>
                 <Select value={selectedInstitution} onValueChange={(value) => {
+                  console.log('Institution selected:', value);
+                  console.log('Available institutions:', institutions);
+                  console.log('Available departments:', departments);
                   setSelectedInstitution(value);
-                  setSelectedDepartment(''); // Reset department when institution changes
+                  setSelectedDepartment('all'); // Reset department when institution changes
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select an institution" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Institutions</SelectItem>
                     {institutions.map(institution => (
                       <SelectItem key={institution.id} value={institution.id}>
