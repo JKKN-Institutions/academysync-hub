@@ -82,7 +82,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     departments.forEach(dept => {
       if (!groups[dept.institution_id]) {
         // Create a virtual institution name based on department patterns
-        let institutionName = 'Unknown Institution';
+        let institutionName = '';
         
         // Pattern matching to determine institution names from department data
         if (dept.department_name.includes('Pharmacy') || dept.department_name.includes('Pharmaceutical')) {
@@ -97,13 +97,20 @@ export const SessionForm: React.FC<SessionFormProps> = ({
           institutionName = 'JKKN College of Arts & Science';
         }
         
-        groups[dept.institution_id] = {
-          id: dept.institution_id,
-          name: institutionName,
-          departments: []
-        };
+        // Only create groups for departments with recognizable institution patterns
+        if (institutionName) {
+          groups[dept.institution_id] = {
+            id: dept.institution_id,
+            name: institutionName,
+            departments: []
+          };
+        }
       }
-      groups[dept.institution_id].departments.push(dept);
+      
+      // Only add department if we have a valid institution group
+      if (groups[dept.institution_id]) {
+        groups[dept.institution_id].departments.push(dept);
+      }
     });
     
     console.log('Created department institution groups:', groups);
