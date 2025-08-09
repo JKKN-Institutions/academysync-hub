@@ -340,21 +340,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Institutions</SelectItem>
-                    {/* Show virtual institution groups based on actual department data */}
-                    {departmentInstitutionGroups.map(group => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name} ({group.departments.length} departments)
-                      </SelectItem>
-                    ))}
-                    {/* Separator */}
-                    <div className="px-2 py-1 border-t border-border">
-                      <span className="text-xs text-muted-foreground">Original institutions (may not have departments):</span>
-                    </div>
-                    {institutions.map(institution => (
-                      <SelectItem key={`orig-${institution.id}`} value={institution.id}>
-                        {institution.institution_name}
-                      </SelectItem>
-                    ))}
+                    {/* Show only institutions that have departments */}
+                    {departmentInstitutionGroups
+                      .filter(group => group.departments.length > 0)
+                      .map(group => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
