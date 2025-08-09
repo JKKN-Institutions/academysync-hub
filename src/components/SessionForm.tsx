@@ -55,6 +55,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [studentSearch, setStudentSearch] = useState('');
   const [selectedInstitution, setSelectedInstitution] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedProgram, setSelectedProgram] = useState<string>('all');
+  const [selectedSemester, setSelectedSemester] = useState<string>('all');
 
   // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
@@ -133,16 +135,56 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     return departments.filter(dept => dept.institution_id === selectedInstitution);
   }, [selectedInstitution, departments, departmentInstitutionGroups]);
 
-  // Get students for selected department and institution (updated for workaround)
-  const getStudentsByInstitutionAndDepartment = () => {
+  // Get unique programs from available students
+  const availablePrograms = React.useMemo(() => {
+    const programs = new Set<string>();
+    availableStudents.forEach(student => {
+      if (student.program && student.program !== 'Unknown Program') {
+        programs.add(student.program);
+      }
+    });
+    return Array.from(programs).sort();
+  }, [availableStudents]);
+
+  // Get unique semesters (using semesterYear from student data)
+  const availableSemesters = React.useMemo(() => {
+    const semesters = new Set<string>();
+    students?.forEach(student => {
+      if (student.semesterYear) {
+        semesters.add(`Year ${student.semesterYear}`);
+      }
+    });
+    return Array.from(semesters).sort();
+  }, [students]);
+
+  // Get students for selected filters (institution, department, program, semester)
+  const getFilteredStudents = () => {
     return availableStudents.filter(student => {
-      if (selectedDepartment && selectedDepartment !== "all") {
-        return student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
-      }
+      // Institution filter
       if (selectedInstitution && selectedInstitution !== "all") {
-        // Use the filtered departments which now work with virtual groups
-        return filteredDepartments.some(d => d.department_name === student.department);
+        const matchesInstitution = filteredDepartments.some(d => d.department_name === student.department);
+        if (!matchesInstitution) return false;
       }
+      
+      // Department filter
+      if (selectedDepartment && selectedDepartment !== "all") {
+        const matchesDepartment = student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+        if (!matchesDepartment) return false;
+      }
+      
+      // Program filter
+      if (selectedProgram && selectedProgram !== "all") {
+        const matchesProgram = student.program === selectedProgram;
+        if (!matchesProgram) return false;
+      }
+      
+      // Semester filter
+      if (selectedSemester && selectedSemester !== "all") {
+        const studentData = students?.find(s => s.id === student.id);
+        const matchesSemester = `Year ${studentData?.semesterYear}` === selectedSemester;
+        if (!matchesSemester) return false;
+      }
+      
       return true;
     });
   };
@@ -386,6 +428,48 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </Select>
               </div>
 
+              {/* Program Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="program">Program</Label>
+                <Select 
+                  value={selectedProgram} 
+                  onValueChange={setSelectedProgram}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a program" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-md z-50">
+                    <SelectItem value="all">All Programs</SelectItem>
+                    {availablePrograms.map(program => (
+                      <SelectItem key={program} value={program}>
+                        {program}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Semester Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="semester">Semester/Year</Label>
+                <Select 
+                  value={selectedSemester} 
+                  onValueChange={setSelectedSemester}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select semester/year" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-md z-50">
+                    <SelectItem value="all">All Semesters</SelectItem>
+                    {availableSemesters.map(semester => (
+                      <SelectItem key={semester} value={semester}>
+                        {semester}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Student Search */}
               <div className="space-y-2">
                 <Label htmlFor="studentSearch">Search Students</Label>
@@ -406,7 +490,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
               {(
                 <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
                   {(() => {
-                    const studentsToShow = getStudentsByInstitutionAndDepartment().filter(student =>
+                    const studentsToShow = getFilteredStudents().filter(student =>
                       !studentSearch || 
                       student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
                       student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
