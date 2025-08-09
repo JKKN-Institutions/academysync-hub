@@ -135,27 +135,64 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     return departments.filter(dept => dept.institution_id === selectedInstitution);
   }, [selectedInstitution, departments, departmentInstitutionGroups]);
 
-  // Get unique programs from available students
+  // Get programs filtered by selected department
   const availablePrograms = React.useMemo(() => {
     const programs = new Set<string>();
-    availableStudents.forEach(student => {
-      if (student.program && student.program !== 'Unknown Program') {
-        programs.add(student.program);
-      }
-    });
+    
+    // If a department is selected, filter programs by that department
+    if (selectedDepartment && selectedDepartment !== 'all') {
+      const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+      
+      availableStudents.forEach(student => {
+        if (student.program && 
+            student.program !== 'Unknown Program' && 
+            student.department === selectedDeptName) {
+          programs.add(student.program);
+        }
+      });
+    } else {
+      // Show all programs if no department is selected
+      availableStudents.forEach(student => {
+        if (student.program && student.program !== 'Unknown Program') {
+          programs.add(student.program);
+        }
+      });
+    }
+    
     return Array.from(programs).sort();
-  }, [availableStudents]);
+  }, [availableStudents, selectedDepartment, filteredDepartments]);
 
-  // Get unique semesters (using semesterYear from student data)
+  // Get semesters filtered by selected department and program
   const availableSemesters = React.useMemo(() => {
     const semesters = new Set<string>();
-    students?.forEach(student => {
-      if (student.semesterYear) {
-        semesters.add(`Year ${student.semesterYear}`);
-      }
-    });
+    
+    // If department or program is selected, filter semesters accordingly
+    if (selectedDepartment && selectedDepartment !== 'all') {
+      const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+      
+      students?.forEach(student => {
+        if (student.semesterYear && student.department === selectedDeptName) {
+          // If program is also selected, filter by it
+          if (selectedProgram && selectedProgram !== 'all') {
+            if (student.program === selectedProgram) {
+              semesters.add(`Year ${student.semesterYear}`);
+            }
+          } else {
+            semesters.add(`Year ${student.semesterYear}`);
+          }
+        }
+      });
+    } else {
+      // Show all semesters if no department is selected
+      students?.forEach(student => {
+        if (student.semesterYear) {
+          semesters.add(`Year ${student.semesterYear}`);
+        }
+      });
+    }
+    
     return Array.from(semesters).sort();
-  }, [students]);
+  }, [students, selectedDepartment, selectedProgram, filteredDepartments]);
 
   // Get students for selected filters (institution, department, program, semester)
   const getFilteredStudents = () => {
@@ -406,7 +443,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 <Label htmlFor="department">Department</Label>
                 <Select 
                   value={selectedDepartment} 
-                  onValueChange={setSelectedDepartment}
+                  onValueChange={(value) => {
+                    setSelectedDepartment(value);
+                    setSelectedProgram('all'); // Reset program when department changes
+                    setSelectedSemester('all'); // Reset semester when department changes
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a department" />
@@ -414,11 +455,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Departments</SelectItem>
                     {filteredDepartments.length > 0 ? (
-                      filteredDepartments.map(department => (
-                        <SelectItem key={department.id} value={department.id}>
-                          {department.department_name || 'Unknown Department'}
-                        </SelectItem>
-                      ))
+                      filteredDepartments.map(department => {
+                        const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
+                        return (
+                          <SelectItem key={department.id} value={department.id}>
+                            <div className="flex justify-between items-center w-full">
+                              <span>{department.department_name || 'Unknown Department'}</span>
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                {studentCount} students
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        );
+                      })
                     ) : (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
                         No departments available for selected institution
@@ -433,18 +482,39 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 <Label htmlFor="program">Program</Label>
                 <Select 
                   value={selectedProgram} 
-                  onValueChange={setSelectedProgram}
+                  onValueChange={(value) => {
+                    setSelectedProgram(value);
+                    setSelectedSemester('all'); // Reset semester when program changes
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a program" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Programs</SelectItem>
-                    {availablePrograms.map(program => (
-                      <SelectItem key={program} value={program}>
-                        {program}
-                      </SelectItem>
-                    ))}
+                    {availablePrograms.map(program => {
+                      // Count students in this program based on current department filter
+                      let studentCount = 0;
+                      if (selectedDepartment && selectedDepartment !== 'all') {
+                        const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                        studentCount = availableStudents.filter(s => 
+                          s.program === program && s.department === selectedDeptName
+                        ).length;
+                      } else {
+                        studentCount = availableStudents.filter(s => s.program === program).length;
+                      }
+                      
+                      return (
+                        <SelectItem key={program} value={program}>
+                          <div className="flex justify-between items-center w-full">
+                            <span>{program}</span>
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {studentCount} students
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -461,11 +531,39 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-md z-50">
                     <SelectItem value="all">All Semesters</SelectItem>
-                    {availableSemesters.map(semester => (
-                      <SelectItem key={semester} value={semester}>
-                        {semester}
-                      </SelectItem>
-                    ))}
+                    {availableSemesters.map(semester => {
+                      // Count students in this semester based on current filters
+                      const semesterYear = semester.replace('Year ', '');
+                      let studentCount = 0;
+                      
+                      if (selectedDepartment && selectedDepartment !== 'all') {
+                        const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                        const filteredStudents = students?.filter(s => 
+                          s.department === selectedDeptName && 
+                          s.semesterYear === parseInt(semesterYear)
+                        ) || [];
+                        
+                        if (selectedProgram && selectedProgram !== 'all') {
+                          studentCount = filteredStudents.filter(s => s.program === selectedProgram).length;
+                        } else {
+                          studentCount = filteredStudents.length;
+                        }
+                      } else {
+                        const filteredStudents = students?.filter(s => s.semesterYear === parseInt(semesterYear)) || [];
+                        studentCount = filteredStudents.length;
+                      }
+                      
+                      return (
+                        <SelectItem key={semester} value={semester}>
+                          <div className="flex justify-between items-center w-full">
+                            <span>{semester}</span>
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {studentCount} students
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
