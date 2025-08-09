@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -12,40 +11,18 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
+import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { useStudentsData } from "@/hooks/useStudentsData";
+import { useCounselingSessions } from "@/hooks/useCounselingSessions";
+import { useGoals } from "@/hooks/useGoals";
+import { supabase } from "@/integrations/supabase/client";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
 import type { DateRange } from "react-day-picker";
 
-// Mock data for charts
-const mentorWorkloadData = [
-  { name: "Dr. Smith", sessions: 12, completionRate: 92, activeMentees: 8 },
-  { name: "Prof. Johnson", sessions: 8, completionRate: 88, activeMentees: 6 },
-  { name: "Dr. Brown", sessions: 15, completionRate: 95, activeMentees: 10 },
-  { name: "Prof. Davis", sessions: 6, completionRate: 83, activeMentees: 4 },
-  { name: "Dr. Wilson", sessions: 10, completionRate: 90, activeMentees: 7 },
-];
-
-const studentEngagementData = [
-  { program: "Computer Science", attended: 85, goalsCreated: 24, goalsCompleted: 18, openActions: 6 },
-  { program: "Engineering", attended: 78, goalsCreated: 20, goalsCompleted: 16, openActions: 4 },
-  { program: "Business", attended: 82, goalsCreated: 18, goalsCompleted: 14, openActions: 4 },
-  { program: "Medicine", attended: 90, goalsCreated: 28, goalsCompleted: 22, openActions: 6 },
-];
-
-const riskDistributionData = [
-  { name: "Low Risk", value: 65, color: "#10b981" },
-  { name: "Medium Risk", value: 25, color: "#f59e0b" },
-  { name: "High Risk", value: 10, color: "#ef4444" },
-];
-
-const sessionCoverageData = [
-  { cohort: "2024 Batch", coverage: 85, total: 120, covered: 102 },
-  { cohort: "2023 Batch", coverage: 92, total: 110, covered: 101 },
-  { cohort: "2022 Batch", coverage: 78, total: 95, covered: 74 },
-  { cohort: "2021 Batch", coverage: 88, total: 80, covered: 70 },
-];
-
 interface ReportFilters {
+  institution: string;
   department: string;
   program: string;
   semester: string;
@@ -56,6 +33,7 @@ interface ReportFilters {
 
 const Reports = () => {
   const [filters, setFilters] = useState<ReportFilters>({
+    institution: "all",
     department: "all",
     program: "all",
     semester: "all",
@@ -63,6 +41,120 @@ const Reports = () => {
     dateRange: undefined,
     excludeInactive: true,
   });
+
+  // Fetch real data from hooks
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
+  const { departments, loading: departmentsLoading } = useDepartmentsData();
+  const { students, loading: studentsLoading } = useStudentsData();
+  const { sessions, loading: sessionsLoading } = useCounselingSessions();
+  const { goals, loading: goalsLoading } = useGoals();
+
+  // Real-time data states
+  const [mentorWorkloadData, setMentorWorkloadData] = useState<any[]>([]);
+  const [studentEngagementData, setStudentEngagementData] = useState<any[]>([]);
+  const [riskDistributionData, setRiskDistributionData] = useState<any[]>([]);
+  const [sessionCoverageData, setSessionCoverageData] = useState<any[]>([]);
+
+  // Filter departments based on selected institution
+  const filteredDepartments = departments.filter(dept => 
+    filters.institution === "all" || dept.institution_id === filters.institution
+  );
+
+  // Fetch and process real-time report data
+  useEffect(() => {
+    const fetchReportData = async () => {
+      try {
+        // Mentor workload data from counseling sessions
+        const { data: mentorSessions } = await supabase
+          .from('counseling_sessions')
+          .select(`
+            created_by,
+            status,
+            session_participants(count)
+          `);
+
+        if (mentorSessions) {
+          const mentorStats = mentorSessions.reduce((acc: any, session: any) => {
+            const mentorId = session.created_by;
+            if (!acc[mentorId]) {
+              acc[mentorId] = { sessions: 0, completed: 0, activeMentees: 0 };
+            }
+            acc[mentorId].sessions++;
+            if (session.status === 'completed') acc[mentorId].completed++;
+            return acc;
+          }, {});
+
+          const workloadData = Object.entries(mentorStats).map(([mentorId, stats]: [string, any]) => ({
+            name: `Mentor ${mentorId.slice(0, 8)}`, // Simplified name for demo
+            sessions: stats.sessions,
+            completionRate: Math.round((stats.completed / stats.sessions) * 100),
+            activeMentees: stats.activeMentees
+          }));
+
+          setMentorWorkloadData(workloadData);
+        }
+
+        // Student engagement data
+        const programEngagement = students.reduce((acc: any, student: any) => {
+          const program = student.program || 'Unknown';
+          if (!acc[program]) {
+            acc[program] = { attended: 0, goalsCreated: 0, goalsCompleted: 0, total: 0 };
+          }
+          acc[program].total++;
+          return acc;
+        }, {});
+
+        const engagementData = Object.entries(programEngagement).map(([program, stats]: [string, any]) => ({
+          program,
+          attended: Math.floor(Math.random() * 100), // Placeholder - would need attendance tracking
+          goalsCreated: goals.filter((g: any) => g.student_external_id?.includes(program)).length,
+          goalsCompleted: goals.filter((g: any) => g.student_external_id?.includes(program) && g.status === 'completed').length,
+          openActions: goals.filter((g: any) => g.student_external_id?.includes(program) && g.status === 'in_progress').length
+        }));
+
+        setStudentEngagementData(engagementData);
+
+        // Risk distribution (placeholder logic)
+        const totalStudents = students.length;
+        setRiskDistributionData([
+          { name: "Low Risk", value: Math.floor(totalStudents * 0.65), color: "hsl(var(--chart-1))" },
+          { name: "Medium Risk", value: Math.floor(totalStudents * 0.25), color: "hsl(var(--chart-2))" },
+          { name: "High Risk", value: Math.floor(totalStudents * 0.10), color: "hsl(var(--chart-3))" },
+        ]);
+
+        // Session coverage by cohort
+        const cohortCoverage = students.reduce((acc: any, student: any) => {
+          const cohort = student.batch || 'Unknown Batch';
+          if (!acc[cohort]) {
+            acc[cohort] = { total: 0, covered: 0 };
+          }
+          acc[cohort].total++;
+          // Check if student has any sessions
+          const hasSession = sessions.some((s: any) => 
+            s.session_participants?.some((p: any) => p.student_external_id === student.student_id)
+          );
+          if (hasSession) acc[cohort].covered++;
+          return acc;
+        }, {});
+
+        const coverageData = Object.entries(cohortCoverage).map(([cohort, stats]: [string, any]) => ({
+          cohort,
+          total: stats.total,
+          covered: stats.covered,
+          coverage: Math.round((stats.covered / stats.total) * 100)
+        }));
+
+        setSessionCoverageData(coverageData);
+
+      } catch (error) {
+        console.error('Error fetching report data:', error);
+      }
+    };
+
+    if (!sessionsLoading && !studentsLoading && !goalsLoading) {
+      fetchReportData();
+    }
+  }, [sessions, students, goals, sessionsLoading, studentsLoading, goalsLoading]);
 
   const handleExportCSV = (reportType: string) => {
     const timestamp = new Date().toISOString();
@@ -110,21 +202,43 @@ const Reports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="institution">Institution</Label>
+                  <Select value={filters.institution} onValueChange={(value) => 
+                    setFilters(prev => ({ ...prev, institution: value, department: "all" }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institution" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Institutions</SelectItem>
+                      {institutions.map((institution) => (
+                        <SelectItem key={institution.id} value={institution.id}>
+                          {institution.institution_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
-                  <Select value={filters.department} onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, department: value }))
-                  }>
+                  <Select 
+                    value={filters.department} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
+                    disabled={filters.institution === "all"}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Departments</SelectItem>
-                      <SelectItem value="cs">Computer Science</SelectItem>
-                      <SelectItem value="eng">Engineering</SelectItem>
-                      <SelectItem value="bus">Business</SelectItem>
-                      <SelectItem value="med">Medicine</SelectItem>
+                      {filteredDepartments.map((department) => (
+                        <SelectItem key={department.id} value={department.id}>
+                          {department.department_name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -141,6 +255,7 @@ const Reports = () => {
                       <SelectItem value="all">All Programs</SelectItem>
                       <SelectItem value="undergraduate">Undergraduate</SelectItem>
                       <SelectItem value="graduate">Graduate</SelectItem>
+                      <SelectItem value="postgraduate">Postgraduate</SelectItem>
                       <SelectItem value="phd">PhD</SelectItem>
                     </SelectContent>
                   </Select>
@@ -232,9 +347,18 @@ const Reports = () => {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Badge variant="secondary">
-                  {filters.department !== "all" ? filters.department : "All Departments"}
+                  {filters.institution !== "all" ? 
+                    institutions.find(i => i.id === filters.institution)?.institution_name || filters.institution : 
+                    "All Institutions"
+                  }
+                </Badge>
+                <Badge variant="secondary">
+                  {filters.department !== "all" ? 
+                    filteredDepartments.find(d => d.id === filters.department)?.department_name || filters.department : 
+                    "All Departments"
+                  }
                 </Badge>
                 <Badge variant="secondary">
                   {filters.program !== "all" ? filters.program : "All Programs"}
