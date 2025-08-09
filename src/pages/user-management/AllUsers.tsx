@@ -61,6 +61,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
+import { useRoles } from "@/hooks/useRoles";
 
 interface User {
   id: string;
@@ -69,11 +71,14 @@ interface User {
   email: string;
   mobile?: string;
   department?: string;
+  institution?: string;
   external_id?: string;
   role: string;
   status: 'active' | 'inactive';
   created_at: string;
   avatar_url?: string;
+  supervisor_id?: string;
+  supervisor_name?: string;
 }
 
 interface AddUserFormData {
@@ -82,6 +87,8 @@ interface AddUserFormData {
   mobile: string;
   role: string;
   department: string;
+  institution: string;
+  supervisor_id: string;
 }
 
 const AllUsers = () => {
@@ -107,22 +114,23 @@ const AllUsers = () => {
     email: "",
     mobile: "",
     role: "",
-    department: ""
+    department: "",
+    institution: "",
+    supervisor_id: ""
   });
 
   const { toast } = useToast();
-
-  // Available roles
-  const roles = [
-    "accounts", "admin", "faculty", "guest", "staff", "student", "super_admin"
-  ];
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
+  const { roles, loading: rolesLoading } = useRoles();
 
   // Available departments/institutions
   const [departments, setDepartments] = useState<string[]>([]);
+  const [supervisors, setSupervisors] = useState<User[]>([]);
 
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
+    fetchSupervisors();
   }, []);
 
   useEffect(() => {
@@ -131,17 +139,49 @@ const AllUsers = () => {
 
   const fetchDepartments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
+      // Fetch departments from staff table
+      const { data: staffData, error: staffError } = await supabase
+        .from('staff')
         .select('department')
         .not('department', 'is', null);
       
-      if (error) throw error;
+      if (staffError) throw staffError;
       
-      const uniqueDepartments = [...new Set(data.map(d => d.department).filter(Boolean))];
+      const uniqueDepartments = [...new Set(staffData.map(d => d.department).filter(Boolean))];
       setDepartments(uniqueDepartments);
     } catch (error) {
       console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchSupervisors = async () => {
+    try {
+      // Fetch users who can be supervisors (admin, super_admin, dept_lead)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          display_name,
+          role
+        `)
+        .in('role', ['admin', 'super_admin', 'dept_lead', 'mentor']);
+
+      if (profilesError) throw profilesError;
+
+      const supervisorUsers = profilesData.map(profile => ({
+        id: profile.id,
+        user_id: profile.user_id,
+        display_name: profile.display_name || 'Unknown User',
+        email: '',
+        role: profile.role,
+        status: 'active' as const,
+        created_at: '',
+      }));
+
+      setSupervisors(supervisorUsers);
+    } catch (error) {
+      console.error('Error fetching supervisors:', error);
     }
   };
 
@@ -149,7 +189,7 @@ const AllUsers = () => {
     try {
       setLoading(true);
       
-      // Fetch user profiles with role assignments
+      // Fetch user profiles with role assignments including inactive users
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
         .select(`
@@ -172,17 +212,22 @@ const AllUsers = () => {
         console.warn('Cannot fetch auth users (admin access required)');
       }
 
-      // Get staff data for additional info
+      // Get staff data for additional info including inactive staff
       const { data: staffData, error: staffError } = await supabase
         .from('staff')
-        .select('staff_id, name, email, mobile, department');
+        .select('staff_id, name, email, mobile, department, status');
 
       if (staffError) throw staffError;
 
-      // Combine all data
+      // Combine all data including inactive users
       const combinedUsers = (profilesData || []).map(profile => {
         const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
         const staffInfo = staffData?.find(s => s.email === authUser?.email);
+        
+        // Determine institution from department mapping
+        const institution = staffInfo?.department ? 
+          institutions.find(inst => inst.institution_name.toLowerCase().includes(staffInfo.department?.toLowerCase() || ''))?.institution_name :
+          undefined;
         
         return {
           id: profile.id,
@@ -191,11 +236,14 @@ const AllUsers = () => {
           email: authUser?.email || staffInfo?.email || '',
           mobile: staffInfo?.mobile || '',
           department: profile.department || staffInfo?.department,
+          institution: institution,
           external_id: profile.external_id || staffInfo?.staff_id,
-          role: profile.role || 'student',
-          status: 'active' as const,
+          role: profile.role || 'mentee',
+          status: (staffInfo?.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
           created_at: profile.created_at,
-          avatar_url: undefined
+          avatar_url: undefined,
+          supervisor_id: undefined,
+          supervisor_name: undefined
         };
       });
 
@@ -219,7 +267,7 @@ const AllUsers = () => {
                            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.external_id?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesInstitution = institutionFilter === 'all' || user.department === institutionFilter;
+      const matchesInstitution = institutionFilter === 'all' || user.institution === institutionFilter;
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
       
@@ -263,7 +311,9 @@ const AllUsers = () => {
         email: "",
         mobile: "",
         role: "",
-        department: ""
+        department: "",
+        institution: "",
+        supervisor_id: ""
       });
       
       await fetchUsers();
@@ -458,8 +508,8 @@ const AllUsers = () => {
               </SelectTrigger>
               <SelectContent className="bg-background border z-50">
                 <SelectItem value="all">All Institutions</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                {institutions.map(inst => (
+                  <SelectItem key={inst.id} value={inst.institution_name}>{inst.institution_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -471,8 +521,8 @@ const AllUsers = () => {
               <SelectContent className="bg-background border z-50">
                 <SelectItem value="all">All Roles</SelectItem>
                 {roles.map(role => (
-                  <SelectItem key={role} value={role}>
-                    {role.replace('_', ' ').toUpperCase()}
+                  <SelectItem key={role.id} value={role.name}>
+                    {role.name.replace('_', ' ').toUpperCase()}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -623,12 +673,16 @@ const AllUsers = () => {
                             Edit User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleChangeRole(user, user.role === 'admin' ? 'student' : 'admin')}
-                          >
-                            <UserX className="h-4 w-4 mr-2" />
-                            Change Role
-                          </DropdownMenuItem>
+                           {roles.map(role => (
+                             <DropdownMenuItem
+                               key={role.id}
+                               onClick={() => handleChangeRole(user, role.name)}
+                               disabled={user.role === role.name}
+                             >
+                               <UserX className="h-4 w-4 mr-2" />
+                               Change to {role.name.replace('_', ' ').toUpperCase()}
+                             </DropdownMenuItem>
+                           ))}
                           <DropdownMenuItem>
                             <UserX className="h-4 w-4 mr-2" />
                             Deactivate User
@@ -698,9 +752,22 @@ const AllUsers = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
                   {roles.map(role => (
-                    <SelectItem key={role} value={role}>
-                      {role.replace('_', ' ').toUpperCase()}
+                    <SelectItem key={role.id} value={role.name}>
+                      {role.name.replace('_', ' ').toUpperCase()}
                     </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Institution</label>
+              <Select value={addUserForm.institution} onValueChange={(value) => setAddUserForm(prev => ({ ...prev, institution: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select institution" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {institutions.map(inst => (
+                    <SelectItem key={inst.id} value={inst.institution_name}>{inst.institution_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -714,6 +781,20 @@ const AllUsers = () => {
                 <SelectContent className="bg-background border z-50">
                   {departments.map(dept => (
                     <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Supervisor (Optional)</label>
+              <Select value={addUserForm.supervisor_id} onValueChange={(value) => setAddUserForm(prev => ({ ...prev, supervisor_id: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select supervisor" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="">No Supervisor</SelectItem>
+                  {supervisors.map(supervisor => (
+                    <SelectItem key={supervisor.id} value={supervisor.user_id}>{supervisor.display_name} ({supervisor.role})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
