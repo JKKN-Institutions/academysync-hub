@@ -57,6 +57,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedProgram, setSelectedProgram] = useState<string>('all');
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
+  const [selectedSection, setSelectedSection] = useState<string>('all');
 
   // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
@@ -194,36 +195,72 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     return Array.from(semesters).sort();
   }, [students, selectedDepartment, selectedProgram, filteredDepartments]);
 
-  // Get students for selected filters (institution, department, program, semester)
+  // Get sections (combinations of program and semester with student groups)
+  const availableSections = React.useMemo(() => {
+    const sections = new Map<string, { name: string; students: typeof availableStudents }>();
+    
+    // Only show sections if all filters are selected
+    if (selectedDepartment && selectedDepartment !== 'all' && 
+        selectedProgram && selectedProgram !== 'all' &&
+        selectedSemester && selectedSemester !== 'all') {
+      
+      const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+      const semesterYear = selectedSemester.replace('Year ', '');
+      
+      // Group students by their section (for now, we'll create sections based on roll number ranges)
+      const filteredStudents = students?.filter(s => 
+        s.department === selectedDeptName && 
+        s.program === selectedProgram &&
+        s.semesterYear === parseInt(semesterYear)
+      ) || [];
+      
+      // Create sections based on roll number patterns or student groups
+      // For simplicity, we'll group every 30 students into a section
+      const sortedStudents = filteredStudents
+        .map(student => ({
+          id: student.id,
+          name: student.name,
+          rollNo: student.rollNo,
+          program: student.program,
+          email: student.email,
+          department: student.department || 'Unknown Department'
+        }))
+        .sort((a, b) => a.rollNo.localeCompare(b.rollNo));
+      
+      if (sortedStudents.length > 0) {
+        const sectionsCount = Math.ceil(sortedStudents.length / 30);
+        
+        for (let i = 0; i < sectionsCount; i++) {
+          const startIndex = i * 30;
+          const endIndex = Math.min(startIndex + 30, sortedStudents.length);
+          const sectionStudents = sortedStudents.slice(startIndex, endIndex);
+          
+          if (sectionStudents.length > 0) {
+            const firstRoll = sectionStudents[0].rollNo;
+            const lastRoll = sectionStudents[sectionStudents.length - 1].rollNo;
+            const sectionName = `Section ${String.fromCharCode(65 + i)} (${firstRoll} - ${lastRoll})`;
+            
+            sections.set(sectionName, {
+              name: sectionName,
+              students: sectionStudents
+            });
+          }
+        }
+      }
+    }
+    
+    return Array.from(sections.values());
+  }, [students, selectedDepartment, selectedProgram, selectedSemester, filteredDepartments]);
+
+  // Get students for selected section
   const getFilteredStudents = () => {
-    return availableStudents.filter(student => {
-      // Institution filter
-      if (selectedInstitution && selectedInstitution !== "all") {
-        const matchesInstitution = filteredDepartments.some(d => d.department_name === student.department);
-        if (!matchesInstitution) return false;
-      }
-      
-      // Department filter
-      if (selectedDepartment && selectedDepartment !== "all") {
-        const matchesDepartment = student.department === filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
-        if (!matchesDepartment) return false;
-      }
-      
-      // Program filter
-      if (selectedProgram && selectedProgram !== "all") {
-        const matchesProgram = student.program === selectedProgram;
-        if (!matchesProgram) return false;
-      }
-      
-      // Semester filter
-      if (selectedSemester && selectedSemester !== "all") {
-        const studentData = students?.find(s => s.id === student.id);
-        const matchesSemester = `Year ${studentData?.semesterYear}` === selectedSemester;
-        if (!matchesSemester) return false;
-      }
-      
-      return true;
-    });
+    // If a section is selected, return only students from that section
+    if (selectedSection && selectedSection !== 'all') {
+      const section = availableSections.find(s => s.name === selectedSection);
+      return section ? section.students : [];
+    }
+    
+    return [];
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -447,6 +484,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     setSelectedDepartment(value);
                     setSelectedProgram('all'); // Reset program when department changes
                     setSelectedSemester('all'); // Reset semester when department changes
+                    setSelectedSection('all'); // Reset section when department changes
                   }}
                 >
                   <SelectTrigger>
@@ -485,6 +523,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   onValueChange={(value) => {
                     setSelectedProgram(value);
                     setSelectedSemester('all'); // Reset semester when program changes
+                    setSelectedSection('all'); // Reset section when program changes
                   }}
                 >
                   <SelectTrigger>
@@ -524,7 +563,10 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 <Label htmlFor="semester">Semester/Year</Label>
                 <Select 
                   value={selectedSemester} 
-                  onValueChange={setSelectedSemester}
+                  onValueChange={(value) => {
+                    setSelectedSemester(value);
+                    setSelectedSection('all'); // Reset section when semester changes
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select semester/year" />
@@ -568,6 +610,38 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                 </Select>
               </div>
 
+              {/* Section Detail Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="section">Section Detail</Label>
+                <Select 
+                  value={selectedSection} 
+                  onValueChange={setSelectedSection}
+                  disabled={!selectedSemester || selectedSemester === 'all'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a section" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border shadow-md z-50">
+                    <SelectItem value="all">All Sections</SelectItem>
+                    {availableSections.map(section => (
+                      <SelectItem key={section.name} value={section.name}>
+                        <div className="flex justify-between items-center w-full">
+                          <span>{section.name}</span>
+                          <Badge variant="secondary" className="ml-2 text-xs">
+                            {section.students.length} students
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(!selectedSemester || selectedSemester === 'all') && (
+                  <p className="text-xs text-muted-foreground">
+                    Please select Institution, Department, Program, and Semester first
+                  </p>
+                )}
+              </div>
+
               {/* Student Search */}
               <div className="space-y-2">
                 <Label htmlFor="studentSearch">Search Students</Label>
@@ -579,13 +653,18 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="Search students by name or roll number..."
                     className="pl-10"
-                    
+                    disabled={!selectedSection || selectedSection === 'all'}
                   />
                 </div>
+                {(!selectedSection || selectedSection === 'all') && (
+                  <p className="text-xs text-muted-foreground">
+                    Please select a section first to enable student search
+                  </p>
+                )}
               </div>
 
               {/* Student Results */}
-              {(
+              {selectedSection && selectedSection !== 'all' && (
                 <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
                   {(() => {
                     const studentsToShow = getFilteredStudents().filter(student =>
@@ -613,7 +692,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                       ))
                     ) : (
                       <p className="text-sm text-muted-foreground p-2">
-                        {studentSearch ? 'No students found matching your search' : 'No students found in selected filters'}
+                        {studentSearch ? 'No students found matching your search' : 'No students available in this section'}
                       </p>
                     );
                   })()}
