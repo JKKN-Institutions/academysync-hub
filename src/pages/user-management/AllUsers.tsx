@@ -238,7 +238,7 @@ const AllUsers = () => {
           department: profile.department || staffInfo?.department,
           institution: institution,
           external_id: profile.external_id || staffInfo?.staff_id,
-          role: profile.role || 'mentee',
+          role: (profile.role || 'mentee').toString(),
           status: (staffInfo?.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
           created_at: profile.created_at,
           avatar_url: undefined,
@@ -644,9 +644,9 @@ const AllUsers = () => {
                     </TableCell>
                     <TableCell>{user.mobile || '-'}</TableCell>
                     <TableCell>
-                      <Badge className={getRoleBadgeColor(user.role)} variant="secondary">
-                        {user.role.replace('_', ' ').toUpperCase()}
-                      </Badge>
+                       <Badge className={getRoleBadgeColor(user.role)} variant="secondary">
+                         {(user.role || '').toString().replace('_', ' ').toUpperCase()}
+                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
