@@ -45,14 +45,13 @@ export const useRoles = () => {
 
       if (rolesError) throw rolesError;
 
-      // Get user counts for each role
+      // Get user counts for each role from user_profiles table
       const rolesWithCounts = await Promise.all(
         rolesData.map(async (role) => {
           const { count } = await supabase
-            .from('user_role_assignments')
+            .from('user_profiles')
             .select('*', { count: 'exact', head: true })
-            .eq('role_id', role.id)
-            .eq('status', 'active');
+            .eq('role', role.name);
 
           return {
             ...role,
@@ -146,15 +145,23 @@ export const useRoles = () => {
 
   const deleteRole = async (roleId: string) => {
     try {
-      // Check if role has users assigned
+      // First get the role name
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('name')
+        .eq('id', roleId)
+        .single();
+
+      if (roleError) throw roleError;
+
+      // Check if role has users assigned in user_profiles
       const { count } = await supabase
-        .from('user_role_assignments')
+        .from('user_profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('role_id', roleId)
-        .eq('status', 'active');
+        .eq('role', roleData.name);
 
       if (count && count > 0) {
-        throw new Error('Cannot delete role with active user assignments');
+        throw new Error('Cannot delete role with active users');
       }
 
       const { error } = await supabase
