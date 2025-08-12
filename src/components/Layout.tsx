@@ -24,13 +24,6 @@ const Layout = () => {
         <main className="flex-1 overflow-auto">
           <Outlet />
         </main>
-        
-        {/* Footer */}
-        <footer className="border-t bg-muted/50 px-4 py-3">
-          <div className="text-center text-sm text-muted-foreground">
-            Developed by RahulRj - Copyright @ 2025. All Rights Reserved.
-          </div>
-        </footer>
       </SidebarInset>
     </SidebarProvider>
   );
