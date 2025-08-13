@@ -27,8 +27,8 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
   loading = false
 }) => {
   const [searchTerm, setSearchTerm] = useState(filters.searchTerm || "");
-  const { institutions } = useInstitutionsData();
-  const { departments } = useDepartmentsData();
+  const { institutions, loading: institutionsLoading } = useInstitutionsData();
+  const { departments, loading: departmentsLoading } = useDepartmentsData();
 
   // Demo data for institutions, departments, etc.
   const demoInstitutions = [
@@ -107,42 +107,56 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Institution Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Institution</label>
+              <label className="text-sm font-medium text-muted-foreground">
+                Institution {institutionsLoading && <span className="text-xs">(Loading...)</span>}
+              </label>
               <Select
                 value={filters.institution || "all"}
                 onValueChange={(value) => handleFilterChange('institution', value)}
+                disabled={institutionsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Institutions" />
+                  <SelectValue placeholder={institutionsLoading ? "Loading institutions..." : "All Institutions"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Institutions</SelectItem>
-                  {activeInstitutions.map(institution => (
-                    <SelectItem key={institution.id} value={institution.id}>
-                      {institution.institution_name}
-                    </SelectItem>
-                  ))}
+                  {institutionsLoading ? (
+                    <SelectItem value="loading" disabled>Loading institutions...</SelectItem>
+                  ) : (
+                    activeInstitutions.map(institution => (
+                      <SelectItem key={institution.id} value={institution.id}>
+                        {institution.institution_name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
             {/* Department Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Department</label>
+              <label className="text-sm font-medium text-muted-foreground">
+                Department {departmentsLoading && <span className="text-xs">(Loading...)</span>}
+              </label>
               <Select
                 value={filters.department || "all"}
                 onValueChange={(value) => handleFilterChange('department', value)}
+                disabled={departmentsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Departments" />
+                  <SelectValue placeholder={departmentsLoading ? "Loading departments..." : "All Departments"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {activeDepartments.map(department => (
-                    <SelectItem key={department.id} value={department.id}>
-                      {department.department_name}
-                    </SelectItem>
-                  ))}
+                  {departmentsLoading ? (
+                    <SelectItem value="loading" disabled>Loading departments...</SelectItem>
+                  ) : (
+                    activeDepartments.map(department => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.department_name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

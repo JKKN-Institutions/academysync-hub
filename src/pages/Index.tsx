@@ -406,13 +406,21 @@ const Index = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Students</span>
                   <span className="font-bold text-2xl text-blue-600">
-                    {studentsLoading ? '...' : students.length}
+                    {studentsLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      students.length
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Active Students</span>
                   <span className="font-bold text-2xl text-green-600">
-                    {studentsLoading ? '...' : students.filter(s => s.status === 'active').length}
+                    {studentsLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      students.filter(s => s.status === 'active').length
+                    )}
                   </span>
                 </div>
               </div>
@@ -430,13 +438,21 @@ const Index = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Staff</span>
                   <span className="font-bold text-2xl text-purple-600">
-                    {staffLoading ? '...' : staff.length}
+                    {staffLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      staff.length
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Active Staff</span>
                   <span className="font-bold text-2xl text-green-600">
-                    {staffLoading ? '...' : staff.filter(s => s.status === 'active').length}
+                    {staffLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      staff.filter(s => s.status === 'active').length
+                    )}
                   </span>
                 </div>
               </div>

@@ -111,7 +111,7 @@ export const MentorFilters = ({
             {/* Institution */}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">
-                Institution
+                Institution {institutionsLoading && <span className="text-xs text-muted-foreground">(Loading...)</span>}
               </label>
               <Select
                 value={filters.institution}
@@ -119,15 +119,19 @@ export const MentorFilters = ({
                 disabled={institutionsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Institutions" />
+                  <SelectValue placeholder={institutionsLoading ? "Loading institutions..." : "All Institutions"} />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border">
                   <SelectItem value="all">All Institutions</SelectItem>
-                  {activeInstitutions.map((institution) => (
-                    <SelectItem key={institution.id} value={institution.name}>
-                      {institution.name}
-                    </SelectItem>
-                  ))}
+                  {institutionsLoading ? (
+                    <SelectItem value="loading" disabled>Loading institutions...</SelectItem>
+                  ) : (
+                    activeInstitutions.map((institution) => (
+                      <SelectItem key={institution.id} value={institution.name}>
+                        {institution.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -135,7 +139,7 @@ export const MentorFilters = ({
             {/* Department */}
             <div>
               <label className="text-sm font-medium text-foreground mb-2 block">
-                Department
+                Department {departmentsLoading && <span className="text-xs text-muted-foreground">(Loading...)</span>}
               </label>
               <Select
                 value={filters.department}
@@ -143,15 +147,19 @@ export const MentorFilters = ({
                 disabled={departmentsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Departments" />
+                  <SelectValue placeholder={departmentsLoading ? "Loading departments..." : "All Departments"} />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border">
                   <SelectItem value="all">All Departments</SelectItem>
-                  {activeDepartments.map((department) => (
-                    <SelectItem key={department.id} value={department.name}>
-                      {department.name}
-                    </SelectItem>
-                  ))}
+                  {departmentsLoading ? (
+                    <SelectItem value="loading" disabled>Loading departments...</SelectItem>
+                  ) : (
+                    activeDepartments.map((department) => (
+                      <SelectItem key={department.id} value={department.name}>
+                        {department.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
