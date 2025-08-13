@@ -14,7 +14,7 @@ const Layout = () => {
       <AppSidebar />
       <SidebarInset>
         {/* Global header with sidebar trigger */}
-        <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background px-4">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />
           <div className="flex-1" />
           <ProfileDropdown />

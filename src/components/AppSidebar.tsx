@@ -177,8 +177,8 @@ export function AppSidebar() {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground">Academic Hub</span>
-              <span className="text-xs text-sidebar-foreground/70">Welcome to Mentor & Mentee</span>
+              <span className="font-semibold text-sidebar-foreground">Mentor & Mentee</span>
+              <span className="text-xs text-sidebar-foreground/70">Mentoring Platform</span>
             </div>
           )}
         </div>
