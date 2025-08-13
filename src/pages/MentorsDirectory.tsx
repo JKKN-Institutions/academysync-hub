@@ -39,19 +39,19 @@ const MentorsDirectory = () => {
 
     // Institution filter - for now we'll assume all mentors are from same institution
     // This can be enhanced when institution data is available in staff records
-    const institutionMatch = filters.institution === "all" || filters.institution === "Main Campus";
+    const institutionMatch = !filters.institution || filters.institution === "all" || filters.institution === "Main Campus";
 
     // Department filter
-    const departmentMatch = filters.department === "all" || 
-      mentor.department?.toLowerCase() === filters.department.toLowerCase();
+    const departmentMatch = !filters.department || filters.department === "all" || 
+      mentor.department?.toLowerCase() === filters.department?.toLowerCase();
 
     // Designation filter
-    const designationMatch = filters.designation === "all" || 
-      mentor.designation?.toLowerCase() === filters.designation.toLowerCase();
+    const designationMatch = !filters.designation || filters.designation === "all" || 
+      mentor.designation?.toLowerCase() === filters.designation?.toLowerCase();
 
     // Status filter
-    const statusMatch = filters.status === "all" || 
-      mentor.status?.toLowerCase() === filters.status.toLowerCase();
+    const statusMatch = !filters.status || filters.status === "all" || 
+      mentor.status?.toLowerCase() === filters.status?.toLowerCase();
 
     return searchMatch && institutionMatch && departmentMatch && designationMatch && statusMatch;
   });
