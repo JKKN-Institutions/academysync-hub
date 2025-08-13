@@ -22,6 +22,7 @@ import {
 import { CounselingSession } from "@/hooks/useCounselingSessions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useStudentsData } from "@/hooks/useStudentsData";
 
 interface SessionDetailsModalProps {
   session: CounselingSession | null;
@@ -68,6 +69,24 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { students } = useStudentsData();
+
+  // Helper function to get student name from external ID
+  const getStudentDisplayInfo = (studentExternalId: string) => {
+    const student = students.find(s => s.studentId === studentExternalId);
+    if (student) {
+      return {
+        name: student.name,
+        email: student.email,
+        rollNo: student.rollNo
+      };
+    }
+    return {
+      name: `Student ID: ${studentExternalId}`,
+      email: '',
+      rollNo: ''
+    };
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -242,14 +261,25 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {session.participants.map((participant, index) => (
-                      <div key={participant.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                        <span className="font-medium">Student ID: {participant.student_external_id}</span>
-                        <Badge variant="outline" className="capitalize">
-                          {participant.participation_status}
-                        </Badge>
-                      </div>
-                    ))}
+                    {session.participants.map((participant, index) => {
+                      const studentInfo = getStudentDisplayInfo(participant.student_external_id);
+                      return (
+                        <div key={participant.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{studentInfo.name}</span>
+                            {studentInfo.email && (
+                              <span className="text-sm text-muted-foreground">{studentInfo.email}</span>
+                            )}
+                            {studentInfo.rollNo && (
+                              <span className="text-xs text-muted-foreground">Roll No: {studentInfo.rollNo}</span>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="capitalize">
+                            {participant.participation_status}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
