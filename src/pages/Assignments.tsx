@@ -4,12 +4,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Users, Clock, Calendar, AlertTriangle } from "lucide-react";
+import { Plus, Users, Clock, Calendar, AlertTriangle, UserPlus, Settings } from "lucide-react";
 import { AssignmentModeBanner } from "@/components/ui/assignment-mode-banner";
 import { useAssignmentMode } from "@/hooks/useAssignmentMode";
+import MentorAssignmentWizard from "@/components/MentorAssignmentWizard";
+import { useState } from "react";
 
 const Assignments = () => {
   const { isAppManaged, isUpstreamManaged } = useAssignmentMode();
+  const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
   
   // Mock data - would come from app database
   const assignments = [
@@ -69,10 +72,16 @@ const Assignments = () => {
               </p>
             </div>
             {isAppManaged && (
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                New Assignment
-              </Button>
+              <div className="flex space-x-2">
+                <Button onClick={() => setShowAssignmentWizard(true)}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Create Fresh Assignment
+                </Button>
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Bulk Operations
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -150,6 +159,16 @@ const Assignments = () => {
             <AssignmentsList assignments={pendingAssignments} />
           </TabsContent>
         </Tabs>
+
+        {/* Assignment Wizard */}
+        <MentorAssignmentWizard
+          open={showAssignmentWizard}
+          onOpenChange={setShowAssignmentWizard}
+          onAssignmentCreated={() => {
+            // Refresh assignments data
+            console.log('Assignment created, refreshing data...');
+          }}
+        />
       </div>
     </div>
   );
