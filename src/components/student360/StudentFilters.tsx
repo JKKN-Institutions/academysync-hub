@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Filter, X, RefreshCw } from "lucide-react";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { SelectLoadingItem } from "@/components/ui/select-loading";
 import type { Student360Filters } from "@/hooks/useStudent360Data";
 
 interface StudentFiltersProps {
@@ -121,7 +122,7 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
                 <SelectContent>
                   <SelectItem value="all">All Institutions</SelectItem>
                   {institutionsLoading ? (
-                    <SelectItem value="loading" disabled>Loading institutions...</SelectItem>
+                    <SelectLoadingItem message="Loading institutions..." />
                   ) : (
                     activeInstitutions.map(institution => (
                       <SelectItem key={institution.id} value={institution.id}>
@@ -149,7 +150,7 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
                   {departmentsLoading ? (
-                    <SelectItem value="loading" disabled>Loading departments...</SelectItem>
+                    <SelectLoadingItem message="Loading departments..." />
                   ) : (
                     activeDepartments.map(department => (
                       <SelectItem key={department.id} value={department.id}>

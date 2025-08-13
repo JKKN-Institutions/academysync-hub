@@ -13,6 +13,7 @@ import { Search, X, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { SelectLoadingItem } from "@/components/ui/select-loading";
 
 export interface MentorFilters {
   search: string;
@@ -124,7 +125,7 @@ export const MentorFilters = ({
                 <SelectContent className="bg-background border border-border">
                   <SelectItem value="all">All Institutions</SelectItem>
                   {institutionsLoading ? (
-                    <SelectItem value="loading" disabled>Loading institutions...</SelectItem>
+                    <SelectLoadingItem message="Loading institutions..." />
                   ) : (
                     activeInstitutions.map((institution) => (
                       <SelectItem key={institution.id} value={institution.name}>
@@ -152,7 +153,7 @@ export const MentorFilters = ({
                 <SelectContent className="bg-background border border-border">
                   <SelectItem value="all">All Departments</SelectItem>
                   {departmentsLoading ? (
-                    <SelectItem value="loading" disabled>Loading departments...</SelectItem>
+                    <SelectLoadingItem message="Loading departments..." />
                   ) : (
                     activeDepartments.map((department) => (
                       <SelectItem key={department.id} value={department.name}>
