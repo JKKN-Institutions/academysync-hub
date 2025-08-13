@@ -1,10 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Users, Search, Filter, UserCheck, Calendar, Mail, Phone } from "lucide-react";
+import { Users, UserCheck, Calendar, Mail, Phone } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStaffData } from "@/hooks/useStaffData";
@@ -14,23 +13,65 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip } from "@/components/ui/etiquette-tip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MentorFilters, type MentorFilters as MentorFiltersType } from "@/components/mentor/MentorFilters";
 
 const MentorsDirectory = () => {
   const { isDemoMode } = useDemoMode();
   const { staff: mentors, loading, error, refetch } = useStaffData();
-  const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
+  
+  const [filters, setFilters] = useState<MentorFiltersType>({
+    search: "",
+    institution: "all",
+    department: "all",
+    designation: "all",
+    status: "all"
+  });
 
-  const filteredMentors = mentors.filter(mentor =>
-    `${mentor.name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mentor.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mentor.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mentor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mentor.staffId?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMentors = mentors.filter(mentor => {
+    // Search filter
+    const searchMatch = !filters.search || 
+      `${mentor.name}`.toLowerCase().includes(filters.search.toLowerCase()) ||
+      mentor.department?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      mentor.designation?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      mentor.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      mentor.staffId?.toLowerCase().includes(filters.search.toLowerCase());
+
+    // Institution filter - for now we'll assume all mentors are from same institution
+    // This can be enhanced when institution data is available in staff records
+    const institutionMatch = filters.institution === "all" || filters.institution === "Main Campus";
+
+    // Department filter
+    const departmentMatch = filters.department === "all" || 
+      mentor.department?.toLowerCase() === filters.department.toLowerCase();
+
+    // Designation filter
+    const designationMatch = filters.designation === "all" || 
+      mentor.designation?.toLowerCase() === filters.designation.toLowerCase();
+
+    // Status filter
+    const statusMatch = filters.status === "all" || 
+      mentor.status?.toLowerCase() === filters.status.toLowerCase();
+
+    return searchMatch && institutionMatch && departmentMatch && designationMatch && statusMatch;
+  });
 
   const handleRetrySync = () => {
     refetch();
+  };
+
+  const handleFiltersChange = (newFilters: Partial<MentorFiltersType>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      search: "",
+      institution: "all",
+      department: "all",
+      designation: "all",
+      status: "all"
+    });
   };
 
   const getInitials = (name: string) => {
@@ -76,27 +117,14 @@ const MentorsDirectory = () => {
         )}
 
         {/* Search and Filters */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search mentors by name, department, designation, email, or staff ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <Button variant="outline">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <MentorFilters
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+          onRefetch={handleRetrySync}
+          isDemo={isDemoMode}
+          loading={loading}
+        />
 
         {/* Mentors Grid */}
         {loading ? (
@@ -115,13 +143,13 @@ const MentorsDirectory = () => {
             icon={Users}
             title="No mentors found"
             description={
-              searchTerm 
-                ? `No mentors match "${searchTerm}". Try adjusting your search.`
+              filters.search || Object.values(filters).some(v => v !== "all" && v !== "")
+                ? "No mentors match your current filters. Try adjusting your search criteria."
                 : "No mentors are available in the directory."
             }
-            action={searchTerm ? {
-              label: "Clear search",
-              onClick: () => setSearchTerm("")
+            action={filters.search || Object.values(filters).some(v => v !== "all" && v !== "") ? {
+              label: "Clear filters",
+              onClick: handleClearFilters
             } : undefined}
           />
         ) : (
