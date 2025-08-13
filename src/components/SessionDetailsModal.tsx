@@ -78,13 +78,17 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
       return {
         name: student.name,
         email: student.email,
-        rollNo: student.rollNo
+        rollNo: student.rollNo,
+        department: student.department,
+        program: student.program
       };
     }
     return {
       name: `Student ID: ${studentExternalId}`,
       email: '',
-      rollNo: ''
+      rollNo: '',
+      department: '',
+      program: ''
     };
   };
 
@@ -264,15 +268,23 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                     {session.participants.map((participant, index) => {
                       const studentInfo = getStudentDisplayInfo(participant.student_external_id);
                       return (
-                        <div key={participant.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                          <div className="flex flex-col">
+                        <div key={participant.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                          <div className="flex flex-col space-y-1">
                             <span className="font-medium">{studentInfo.name}</span>
                             {studentInfo.email && (
                               <span className="text-sm text-muted-foreground">{studentInfo.email}</span>
                             )}
-                            {studentInfo.rollNo && (
-                              <span className="text-xs text-muted-foreground">Roll No: {studentInfo.rollNo}</span>
-                            )}
+                            <div className="flex flex-col text-xs text-muted-foreground space-y-0.5">
+                              {studentInfo.rollNo && (
+                                <span>Roll No: {studentInfo.rollNo}</span>
+                              )}
+                              {studentInfo.program && (
+                                <span>Program: {studentInfo.program}</span>
+                              )}
+                              {studentInfo.department && (
+                                <span>Department: {studentInfo.department}</span>
+                              )}
+                            </div>
                           </div>
                           <Badge variant="outline" className="capitalize">
                             {participant.participation_status}
