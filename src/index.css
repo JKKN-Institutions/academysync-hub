@@ -102,6 +102,18 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Enhanced z-index for dropdowns and menus */
+  .dropdown-content,
+  .popover-content,
+  .select-content,
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content],
+  [data-radix-popover-content] {
+    z-index: 9999 !important;
+    background: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+  }
 }
 
 /* Custom Animations for Gamified UI */
