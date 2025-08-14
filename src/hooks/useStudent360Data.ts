@@ -6,7 +6,7 @@ import { fetchFilteredStudents, fetchStudent360Data, Student360Data } from '@/se
 export interface Student360Filters {
   institution?: string;
   department?: string;
-  degree?: string;
+  program?: string;
   section?: string;
   semester?: number;
   searchTerm?: string;

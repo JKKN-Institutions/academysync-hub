@@ -57,6 +57,7 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
   const demoSections = ['A', 'B', 'C', 'D'];
   const demoSemesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
+  // Use real data when not in demo mode
   const activeInstitutions = isDemo ? demoInstitutions : institutions;
   
   // Filter departments based on selected institution
@@ -67,6 +68,21 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
       : departments;
   
   const activeDepartments = filteredDepartments;
+  
+  // Programs data (real-time)
+  const demoPrograms = [
+    { id: 'btech_cse', name: 'B.Tech Computer Science & Engineering' },
+    { id: 'btech_ece', name: 'B.Tech Electronics & Communication Engineering' },
+    { id: 'btech_mech', name: 'B.Tech Mechanical Engineering' },
+    { id: 'btech_civil', name: 'B.Tech Civil Engineering' },
+    { id: 'btech_eee', name: 'B.Tech Electrical & Electronics Engineering' },
+    { id: 'mtech_cse', name: 'M.Tech Computer Science & Engineering' },
+    { id: 'bsc_cs', name: 'B.Sc Computer Science' },
+    { id: 'msc_cs', name: 'M.Sc Computer Science' }
+  ];
+  
+  // Filter programs based on selected department (in real scenario, this would come from API)
+  const activePrograms = isDemo ? demoPrograms : demoPrograms; // TODO: Replace with real API data
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -107,8 +123,8 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
     return activeDepartments.find(dept => dept.id === id)?.department_name || id;
   };
 
-  const getDegreeName = (id: string) => {
-    return demoDegrees.find(degree => degree.id === id)?.name || id;
+  const getProgramName = (id: string) => {
+    return activePrograms.find(program => program.id === id)?.name || id;
   };
 
   return (
@@ -184,51 +200,31 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
               </Select>
             </div>
 
-            {/* Degree Filter */}
+            {/* Program Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Degree</label>
+              <label className="text-sm font-medium text-muted-foreground">Program</label>
               <Select
-                value={filters.degree || "all"}
-                onValueChange={(value) => handleFilterChange('degree', value)}
+                value={filters.program || "all"}
+                onValueChange={(value) => handleFilterChange('program', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Degrees" />
+                  <SelectValue placeholder="All Programs" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Degrees</SelectItem>
-                  {demoDegrees.map(degree => (
-                    <SelectItem key={degree.id} value={degree.id}>
-                      {degree.name}
+                  <SelectItem value="all">All Programs</SelectItem>
+                  {activePrograms.map(program => (
+                    <SelectItem key={program.id} value={program.id}>
+                      {program.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Section Filter */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Section</label>
-              <Select
-                value={filters.section || "all"}
-                onValueChange={(value) => handleFilterChange('section', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All Sections" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sections</SelectItem>
-                  {demoSections.map(section => (
-                    <SelectItem key={section} value={section}>
-                      Section {section}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            {/* Semester Filter */}
+            {/* Semester/Year Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Semester</label>
+              <label className="text-sm font-medium text-muted-foreground">Semester/Year</label>
               <Select
                 value={filters.semester?.toString() || "all"}
                 onValueChange={(value) => handleFilterChange('semester', value === "all" ? "all" : parseInt(value))}
@@ -241,6 +237,27 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
                   {demoSemesters.map(semester => (
                     <SelectItem key={semester} value={semester.toString()}>
                       Semester {semester}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Section Detail Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Section Detail</label>
+              <Select
+                value={filters.section || "all"}
+                onValueChange={(value) => handleFilterChange('section', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Sections" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sections</SelectItem>
+                  {demoSections.map(section => (
+                    <SelectItem key={section} value={section}>
+                      Section {section}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -315,11 +332,11 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
                   </button>
                 </Badge>
               )}
-              {filters.degree && (
+              {filters.program && (
                 <Badge variant="secondary" className="flex items-center gap-1">
-                  Degree: {getDegreeName(filters.degree)}
+                  Program: {getProgramName(filters.program)}
                   <button
-                    onClick={() => handleFilterChange('degree', '')}
+                    onClick={() => handleFilterChange('program', '')}
                     className="ml-1 hover:bg-muted rounded-full p-0.5"
                   >
                     <X className="w-3 h-3" />
