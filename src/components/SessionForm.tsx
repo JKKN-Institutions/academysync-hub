@@ -26,6 +26,7 @@ interface SessionFormProps {
   loading?: boolean;
   error?: string | null;
   initialData?: any;
+  onStudentAdded?: (students: Array<{id: string; name: string; rollNo: string; program: string; department: string}>) => void;
 }
 
 export const SessionForm: React.FC<SessionFormProps> = ({
@@ -33,7 +34,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   onCancel,
   loading = false,
   error,
-  initialData
+  initialData,
+  onStudentAdded
 }) => {
   const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
@@ -284,7 +286,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
   const addStudent = (studentId: string) => {
     if (!selectedStudents.includes(studentId)) {
-      setSelectedStudents([...selectedStudents, studentId]);
+      const newSelectedStudents = [...selectedStudents, studentId];
+      setSelectedStudents(newSelectedStudents);
+      
+      // Get student details for notification
+      const student = availableStudents.find(s => s.id === studentId);
+      if (student && onStudentAdded) {
+        onStudentAdded([student]);
+      }
     }
     setStudentSearch('');
   };

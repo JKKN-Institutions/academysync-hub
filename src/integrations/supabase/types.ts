@@ -472,6 +472,93 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_notifications: boolean
+          id: string
+          in_app_notifications: boolean
+          push_notifications: boolean
+          session_invitations: boolean
+          session_reminders: boolean
+          session_updates: boolean
+          updated_at: string
+          user_external_id: string
+          user_type: string
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          in_app_notifications?: boolean
+          push_notifications?: boolean
+          session_invitations?: boolean
+          session_reminders?: boolean
+          session_updates?: boolean
+          updated_at?: string
+          user_external_id: string
+          user_type: string
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          in_app_notifications?: boolean
+          push_notifications?: boolean
+          session_invitations?: boolean
+          session_reminders?: boolean
+          session_updates?: boolean
+          updated_at?: string
+          user_external_id?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_required: boolean | null
+          action_url: string | null
+          created_at: string
+          data: Json | null
+          expires_at: string | null
+          id: string
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          user_external_id: string
+          user_type: string
+        }
+        Insert: {
+          action_required?: boolean | null
+          action_url?: string | null
+          created_at?: string
+          data?: Json | null
+          expires_at?: string | null
+          id?: string
+          message: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_external_id: string
+          user_type: string
+        }
+        Update: {
+          action_required?: boolean | null
+          action_url?: string | null
+          created_at?: string
+          data?: Json | null
+          expires_at?: string | null
+          id?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_external_id?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           created_at: string

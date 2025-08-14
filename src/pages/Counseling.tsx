@@ -19,17 +19,26 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { SessionForm } from "@/components/SessionForm";
 import { SessionDetailsModal } from "@/components/SessionDetailsModal";
+import { StudentAddedNotification } from "@/components/StudentAddedNotification";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useCounselingSessions, CreateSessionData, CounselingSession } from "@/hooks/useCounselingSessions";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 const Counseling = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedSession, setSelectedSession] = useState<CounselingSession | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
+  // Notification states
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [addedStudents, setAddedStudents] = useState<Array<{id: string; name: string; rollNo: string; program: string; department: string}>>([]);
+  const [pendingSessionData, setPendingSessionData] = useState<CreateSessionData | null>(null);
   
   const { 
     sessions, 
@@ -41,16 +50,88 @@ const Counseling = () => {
     completedSessions,
     allSessions
   } = useCounselingSessions();
+  
+  const { sendSessionInvitations, sendMentorConfirmation } = useNotifications(
+    user?.email || 'demo-mentor',
+    'mentor'
+  );
 
   const handleSessionSubmit = async (sessionData: CreateSessionData) => {
+    // Store session data and added students for notification
+    setPendingSessionData(sessionData);
+    
+    // If students were added, show confirmation dialog
+    if (addedStudents.length > 0) {
+      setNotificationOpen(true);
+    } else {
+      // No students, create session directly
+      await createSessionDirectly(sessionData);
+    }
+  };
+
+  const createSessionDirectly = async (sessionData: CreateSessionData) => {
     setIsCreating(true);
     try {
       const newSession = await createSession(sessionData);
       if (newSession) {
         setIsFormOpen(false);
+        
+        // Send mentor confirmation
+        await sendMentorConfirmation({
+          sessionId: newSession.id,
+          sessionName: sessionData.name,
+          studentCount: sessionData.students.length,
+          mentorExternalId: user?.email || 'demo-mentor',
+          sessionDate: sessionData.session_date
+        });
       }
     } catch (error) {
       console.error('Failed to create session:', error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleStudentAdded = (students: Array<{id: string; name: string; rollNo: string; program: string; department: string}>) => {
+    setAddedStudents(prev => [...prev, ...students]);
+  };
+
+  const handleConfirmNotifications = async () => {
+    if (!pendingSessionData) return;
+
+    setIsCreating(true);
+    try {
+      // Create the session first
+      const newSession = await createSession(pendingSessionData);
+      
+      if (newSession) {
+        // Send notifications to students
+        await sendSessionInvitations({
+          sessionId: newSession.id,
+          sessionName: pendingSessionData.name,
+          sessionDate: pendingSessionData.session_date,
+          sessionTime: pendingSessionData.start_time,
+          location: pendingSessionData.location,
+          mentorName: user?.email || 'Your Mentor',
+          studentIds: pendingSessionData.students
+        });
+
+        // Send confirmation to mentor
+        await sendMentorConfirmation({
+          sessionId: newSession.id,
+          sessionName: pendingSessionData.name,
+          studentCount: pendingSessionData.students.length,
+          mentorExternalId: user?.email || 'demo-mentor',
+          sessionDate: pendingSessionData.session_date
+        });
+
+        setIsFormOpen(false);
+        setAddedStudents([]);
+        setPendingSessionData(null);
+      }
+    } catch (error) {
+      console.error('Failed to create session with notifications:', error);
+      throw error;
     } finally {
       setIsCreating(false);
     }
@@ -197,6 +278,7 @@ const Counseling = () => {
               onSubmit={handleSessionSubmit}
               onCancel={() => setIsFormOpen(false)}
               loading={isCreating}
+              onStudentAdded={handleStudentAdded}
             />
           </DialogContent>
         </Dialog>
@@ -440,6 +522,22 @@ const Counseling = () => {
         onClose={handleCloseDetails}
         onStatusUpdate={updateSessionStatus}
       />
+
+      {/* Student Added Notification Dialog */}
+      {pendingSessionData && (
+        <StudentAddedNotification
+          open={notificationOpen}
+          onOpenChange={setNotificationOpen}
+          sessionData={{
+            sessionName: pendingSessionData.name,
+            sessionDate: pendingSessionData.session_date,
+            sessionTime: pendingSessionData.start_time,
+            location: pendingSessionData.location,
+            addedStudents: addedStudents
+          }}
+          onConfirm={handleConfirmNotifications}
+        />
+      )}
     </div>
   );
 };
