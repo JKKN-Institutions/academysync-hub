@@ -521,6 +521,10 @@ const Counseling = () => {
         isOpen={isDetailsOpen}
         onClose={handleCloseDetails}
         onStatusUpdate={updateSessionStatus}
+        onSessionUpdated={() => {
+          // Refresh the sessions list when a session is updated
+          window.location.reload();
+        }}
       />
 
       {/* Student Added Notification Dialog */}

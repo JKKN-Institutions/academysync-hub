@@ -17,9 +17,11 @@ import {
   Target,
   MessageSquare,
   FileText,
-  Edit
+  Edit,
+  UserPlus
 } from "lucide-react";
 import { CounselingSession } from "@/hooks/useCounselingSessions";
+import { SessionEditModal } from "@/components/SessionEditModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentsData } from "@/hooks/useStudentsData";
@@ -29,6 +31,7 @@ interface SessionDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusUpdate?: (sessionId: string, status: 'pending' | 'completed' | 'cancelled') => void;
+  onSessionUpdated?: () => void;
 }
 
 interface MeetingLog {
@@ -61,13 +64,14 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   session,
   isOpen,
   onClose,
-  onStatusUpdate
+  onStatusUpdate,
+  onSessionUpdated
 }) => {
-  console.log('SessionDetailsModal render:', { session: !!session, isOpen });
   
   const [meetingLogs, setMeetingLogs] = useState<MeetingLog[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const { toast } = useToast();
   const { students } = useStudentsData();
 
@@ -172,6 +176,11 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
     if (session && onStatusUpdate) {
       onStatusUpdate(session.id, status);
     }
+  };
+
+  const handleEditSuccess = () => {
+    onSessionUpdated?.();
+    setEditModalOpen(false);
   };
 
   if (!session || !isOpen) return null;
@@ -398,6 +407,30 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 flex-wrap">
+                  {/* Edit Session Button - Always available for pending sessions */}
+                  {session.status === 'pending' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => setEditModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Session
+                    </Button>
+                  )}
+
+                  {/* Add Students Button - For pending sessions */}
+                  {session.status === 'pending' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => setEditModalOpen(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Add Students
+                    </Button>
+                  )}
+
                   {session.status === 'pending' && (
                     <>
                       <Button 
@@ -418,7 +451,25 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                     </>
                   )}
                   
+                  {/* Reopen and Edit for completed sessions */}
                   {session.status === 'completed' && (
+                    <>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          handleStatusUpdate('pending');
+                          setEditModalOpen(true);
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Reopen & Edit
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Reopen for cancelled sessions */}
+                  {session.status === 'cancelled' && (
                     <Button 
                       variant="outline"
                       onClick={() => handleStatusUpdate('pending')}
@@ -433,6 +484,16 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
             </Card>
           </div>
         </ScrollArea>
+
+        {/* Session Edit Modal */}
+        {session && (
+          <SessionEditModal
+            open={editModalOpen}
+            onOpenChange={setEditModalOpen}
+            session={session}
+            onSuccess={handleEditSuccess}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
