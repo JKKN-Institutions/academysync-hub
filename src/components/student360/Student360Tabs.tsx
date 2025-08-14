@@ -21,7 +21,9 @@ import {
   AlertCircle,
   Phone,
   Mail,
-  MapPin
+  MapPin,
+  Bus,
+  CalendarClock
 } from "lucide-react";
 import type { Student360Data } from "@/services/student360Api";
 
@@ -94,7 +96,7 @@ export const Student360Tabs: React.FC<Student360TabsProps> = ({
       <DataSourceBanner />
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="profile">
             <User className="w-4 h-4 mr-2" />
             Profile
@@ -122,6 +124,10 @@ export const Student360Tabs: React.FC<Student360TabsProps> = ({
           <TabsTrigger value="fees">
             <DollarSign className="w-4 h-4 mr-2" />
             Fees
+          </TabsTrigger>
+          <TabsTrigger value="transport">
+            <Bus className="w-4 h-4 mr-2" />
+            Transport
           </TabsTrigger>
         </TabsList>
 
@@ -202,6 +208,35 @@ export const Student360Tabs: React.FC<Student360TabsProps> = ({
                       <div>
                         <span className="text-sm font-medium">Section:</span>
                         <p className="text-sm text-muted-foreground">{student.section}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Academic Dates */}
+                    <div className="space-y-3 pt-4 border-t">
+                      <h5 className="text-sm font-semibold text-muted-foreground">Academic Timeline</h5>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-3">
+                          <CalendarClock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Join Date:</span>
+                          <span className="text-sm">{new Date(student.academic_dates.join_date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Expected Completion:</span>
+                          <span className="text-sm">{new Date(student.academic_dates.expected_completion_date).toLocaleDateString()}</span>
+                        </div>
+                        {student.academic_dates.actual_completion_date && (
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium">Completed:</span>
+                            <span className="text-sm">{new Date(student.academic_dates.actual_completion_date).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-3">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Course Duration:</span>
+                          <span className="text-sm">{student.academic_dates.course_duration_years} years</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -661,6 +696,111 @@ export const Student360Tabs: React.FC<Student360TabsProps> = ({
                           <TableCell>{payment.receipt_no}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{payment.payment_method}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="transport">
+          <div className="space-y-6">
+            {/* Transport Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Transport Fee Overview</CardTitle>
+                <CardDescription>Bus transportation fees and payment status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-blue-50 to-blue-100">
+                    <div className="text-2xl font-bold text-blue-600">₹{student.bus_payments.total_bus_fees.toLocaleString()}</div>
+                    <p className="text-sm text-muted-foreground">Total Bus Fees</p>
+                  </div>
+                  <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-green-50 to-green-100">
+                    <div className="text-2xl font-bold text-green-600">₹{student.bus_payments.paid_amount.toLocaleString()}</div>
+                    <p className="text-sm text-muted-foreground">Paid Amount</p>
+                  </div>
+                  <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-red-50 to-red-100">
+                    <div className="text-2xl font-bold text-red-600">₹{student.bus_payments.pending_amount.toLocaleString()}</div>
+                    <p className="text-sm text-muted-foreground">Pending Amount</p>
+                  </div>
+                </div>
+
+                {/* Transport Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-muted-foreground border-b pb-2">Route Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <Bus className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Route:</span>
+                        <span className="text-sm">{student.bus_payments.route}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Stop:</span>
+                        <span className="text-sm">{student.bus_payments.stop_name}</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Monthly Fee:</span>
+                        <span className="text-sm">₹{student.bus_payments.monthly_fee.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-muted-foreground border-b pb-2">Payment Progress</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Payment Progress</span>
+                        <span>{((student.bus_payments.paid_amount / student.bus_payments.total_bus_fees) * 100).toFixed(1)}%</span>
+                      </div>
+                      <Progress value={(student.bus_payments.paid_amount / student.bus_payments.total_bus_fees) * 100} className="h-3" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Transport Payment History */}
+            {student.bus_payments.payment_history.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Transport Payment History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Receipt No</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {student.bus_payments.payment_history.map((payment, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{payment.month}</TableCell>
+                          <TableCell>₹{payment.amount.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '-'}
+                          </TableCell>
+                          <TableCell>{payment.receipt_no || '-'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              {getStatusIcon(payment.status)}
+                              <Badge className={getStatusColor(payment.status)}>
+                                {payment.status}
+                              </Badge>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

@@ -49,9 +49,13 @@ const Student360 = () => {
         window.history.pushState(null, '', `/student360/${id}`);
       } else {
         console.warn('No student details returned for ID:', id);
+        // Navigate back to the list if student not found
+        handleBackToList();
       }
     } catch (error) {
       console.error('Error loading student details:', error);
+      // Navigate back to the list on error
+      handleBackToList();
     } finally {
       setLoadingDetails(false);
     }

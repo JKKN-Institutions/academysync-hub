@@ -137,6 +137,37 @@ export const useStudent360Data = () => {
               payment_method: 'Online'
             }
           ]
+        },
+        bus_payments: {
+          total_bus_fees: 12000,
+          paid_amount: 8000,
+          pending_amount: 4000,
+          route: 'Route A - Main Campus',
+          stop_name: 'Central Bus Stop',
+          monthly_fee: 1000,
+          payment_history: [
+            {
+              month: 'January 2024',
+              amount: 1000,
+              payment_date: '2024-01-05',
+              receipt_no: 'BUS001',
+              status: 'paid'
+            },
+            {
+              month: 'February 2024',
+              amount: 1000,
+              payment_date: '2024-02-05',
+              receipt_no: 'BUS002',
+              status: 'paid'
+            }
+          ]
+        },
+        academic_dates: {
+          join_date: '2023-08-15',
+          expected_completion_date: '2027-05-15',
+          course_duration_years: 4,
+          current_academic_year: '2024-2025',
+          current_semester: 6
         }
       },
       {
@@ -230,6 +261,37 @@ export const useStudent360Data = () => {
               payment_method: 'Bank Transfer'
             }
           ]
+        },
+        bus_payments: {
+          total_bus_fees: 12000,
+          paid_amount: 12000,
+          pending_amount: 0,
+          route: 'Route B - Science Block',
+          stop_name: 'Science Campus Stop',
+          monthly_fee: 1000,
+          payment_history: [
+            {
+              month: 'January 2024',
+              amount: 1000,
+              payment_date: '2024-01-05',
+              receipt_no: 'BUS003',
+              status: 'paid'
+            },
+            {
+              month: 'February 2024',
+              amount: 1000,
+              payment_date: '2024-02-05',
+              receipt_no: 'BUS004',
+              status: 'paid'
+            }
+          ]
+        },
+        academic_dates: {
+          join_date: '2022-08-15',
+          expected_completion_date: '2026-05-15',
+          course_duration_years: 4,
+          current_academic_year: '2024-2025',
+          current_semester: 4
         }
       }
     ];

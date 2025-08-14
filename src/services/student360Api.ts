@@ -94,6 +94,31 @@ export interface StudentFees {
   }>;
 }
 
+export interface StudentBusPayments {
+  total_bus_fees: number;
+  paid_amount: number;
+  pending_amount: number;
+  route: string;
+  stop_name: string;
+  monthly_fee: number;
+  payment_history: Array<{
+    month: string;
+    amount: number;
+    payment_date: string;
+    receipt_no: string;
+    status: 'paid' | 'pending' | 'overdue';
+  }>;
+}
+
+export interface StudentAcademicDates {
+  join_date: string;
+  expected_completion_date: string;
+  actual_completion_date?: string;
+  course_duration_years: number;
+  current_academic_year: string;
+  current_semester: number;
+}
+
 export interface Student360Data {
   id: string;
   studentId: string;
@@ -116,6 +141,8 @@ export interface Student360Data {
   results: StudentResult[];
   requests: StudentRequest[];
   fees: StudentFees;
+  bus_payments: StudentBusPayments;
+  academic_dates: StudentAcademicDates;
 }
 
 // Get API key from Supabase secrets
@@ -415,6 +442,50 @@ export const fetchStudentFees = async (studentId: string): Promise<StudentFees> 
   }
 };
 
+// Fetch student bus payments
+export const fetchStudentBusPayments = async (studentId: string): Promise<StudentBusPayments> => {
+  try {
+    const response = await makeApiRequest<{data: any}>(
+      `/api-management/students/${studentId}/bus-payments`
+    );
+
+    return response.data || {};
+  } catch (error) {
+    console.warn('Bus payments API not available, using mock data');
+    return {
+      total_bus_fees: 12000,
+      paid_amount: 8000,
+      pending_amount: 4000,
+      route: 'Route A - Main Campus',
+      stop_name: 'Central Bus Stop',
+      monthly_fee: 1000,
+      payment_history: [
+        {
+          month: 'January 2024',
+          amount: 1000,
+          payment_date: '2024-01-05',
+          receipt_no: 'BUS001',
+          status: 'paid'
+        },
+        {
+          month: 'February 2024',
+          amount: 1000,
+          payment_date: '2024-02-05',
+          receipt_no: 'BUS002',
+          status: 'paid'
+        },
+        {
+          month: 'March 2024',
+          amount: 1000,
+          payment_date: '',
+          receipt_no: '',
+          status: 'pending'
+        }
+      ]
+    };
+  }
+};
+
 // Fetch comprehensive student 360 data
 export const fetchStudent360Data = async (studentId: string): Promise<Student360Data | null> => {
   try {
@@ -435,14 +506,21 @@ export const fetchStudent360Data = async (studentId: string): Promise<Student360
     const student = studentResponse.data;
 
     // Fetch all additional data in parallel
-    const [attendance, leaveRecords, assignments, results, requests, fees] = await Promise.all([
+    const [attendance, leaveRecords, assignments, results, requests, fees, busPayments] = await Promise.all([
       fetchStudentAttendance(studentId),
       fetchStudentLeave(studentId),
       fetchStudentAssignments(studentId),
       fetchStudentResults(studentId),
       fetchStudentRequests(studentId),
-      fetchStudentFees(studentId)
+      fetchStudentFees(studentId),
+      fetchStudentBusPayments(studentId)
     ]);
+
+    // Calculate academic dates
+    const joinDate = student.admission_date || student.created_at || new Date().toISOString();
+    const courseDurationYears = student.program?.duration_years || 4;
+    const expectedCompletionDate = new Date(joinDate);
+    expectedCompletionDate.setFullYear(expectedCompletionDate.getFullYear() + courseDurationYears);
 
     const result = {
       id: student.id,
@@ -465,7 +543,16 @@ export const fetchStudent360Data = async (studentId: string): Promise<Student360
       assignments,
       results,
       requests,
-      fees
+      fees,
+      bus_payments: busPayments,
+      academic_dates: {
+        join_date: joinDate,
+        expected_completion_date: expectedCompletionDate.toISOString(),
+        actual_completion_date: student.graduation_date,
+        course_duration_years: courseDurationYears,
+        current_academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+        current_semester: student.current_semester || 1
+      }
     };
 
     console.log('Final student 360 data:', result);
@@ -545,6 +632,22 @@ export const fetchFilteredStudents = async (filters: {
           due_date: '',
           fee_structure: [],
           payment_history: []
+        },
+        bus_payments: {
+          total_bus_fees: 0,
+          paid_amount: 0,
+          pending_amount: 0,
+          route: '',
+          stop_name: '',
+          monthly_fee: 0,
+          payment_history: []
+        },
+        academic_dates: {
+          join_date: student.admission_date || student.created_at || new Date().toISOString(),
+          expected_completion_date: new Date().toISOString(),
+          course_duration_years: 4,
+          current_academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+          current_semester: student.current_semester || 1
         }
       }));
 
