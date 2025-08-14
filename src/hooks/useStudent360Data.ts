@@ -393,11 +393,7 @@ export const useStudent360Data = () => {
       const result = await fetchStudent360Data(studentId);
       
       if (!result) {
-        toast({
-          title: 'Student Not Found',
-          description: 'The requested student could not be found in the system',
-          variant: 'destructive'
-        });
+        console.warn('No student data returned from API');
         return null;
       }
       
@@ -405,11 +401,6 @@ export const useStudent360Data = () => {
       return result;
     } catch (error) {
       console.error('Error fetching student details:', error);
-      toast({
-        title: 'Error Loading Student Details',
-        description: error instanceof Error ? error.message : 'Failed to load detailed student information',
-        variant: 'destructive'
-      });
       return null;
     }
   }, [isDemoMode, toast]);
