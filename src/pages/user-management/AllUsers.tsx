@@ -792,7 +792,7 @@ const AllUsers = () => {
                   <SelectValue placeholder="Select supervisor" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  <SelectItem value="">No Supervisor</SelectItem>
+                  <SelectItem value="no_supervisor">No Supervisor</SelectItem>
                   {supervisors.map(supervisor => (
                     <SelectItem key={supervisor.id} value={supervisor.user_id}>{supervisor.display_name} ({supervisor.role})</SelectItem>
                   ))}
