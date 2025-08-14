@@ -14,7 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { MeetingLog } from "@/components/MeetingLog";
 import { ManualCounseling } from "@/components/ManualCounseling";
 import { SessionFeedbackForm } from "@/components/SessionFeedbackForm";
+import { MentorFeedbackForm } from "@/components/MentorFeedbackForm";
+import { SessionCancellationDialog } from "@/components/SessionCancellationDialog";
 import { useSessionFeedback } from "@/hooks/useSessionFeedback";
+import { useMentorFeedback } from "@/hooks/useMentorFeedback";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
@@ -173,9 +176,12 @@ const SessionDetail = () => {
   
   // Feedback form state
   const [feedbackFormOpen, setFeedbackFormOpen] = useState(false);
+  const [mentorFeedbackFormOpen, setMentorFeedbackFormOpen] = useState(false);
+  const [cancellationDialogOpen, setCancellationDialogOpen] = useState(false);
   
-  // Feedback hook
+  // Feedback hooks
   const { feedback, loading: feedbackLoading, getAverageRatings } = useSessionFeedback(session.id);
+  const { hasFeedback: hasMentorFeedback, getSessionFeedback, refetch: refetchMentorFeedback } = useMentorFeedback(session.id);
 
   const handleAddQuestion = async () => {
     if (!newQuestion.trim()) return;
@@ -201,14 +207,26 @@ const SessionDetail = () => {
   };
 
   const handleStatusChange = async () => {
-    // Validation for completion - require Meeting Log to be complete
-    if (newStatus === 'completed' && !isMeetingLogComplete) {
-      toast({
-        title: "Cannot complete session",
-        description: "Please complete the Meeting Log with focus and next session date/time before completing the session.",
-        variant: "destructive",
-      });
-      return;
+    // Validation for completion - require Meeting Log and Mentor Feedback to be complete
+    if (newStatus === 'completed') {
+      if (!isMeetingLogComplete) {
+        toast({
+          title: "Cannot complete session",
+          description: "Please complete the Meeting Log with focus and next session date/time before completing the session.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!hasMentorFeedback(session.id)) {
+        toast({
+          title: "Mentor feedback required",
+          description: "Please provide detailed mentor feedback before completing the session.",
+          variant: "destructive",
+        });
+        setMentorFeedbackFormOpen(true);
+        return;
+      }
     }
     
     // Validation for rejection
@@ -231,6 +249,17 @@ const SessionDetail = () => {
   };
 
   const handleMarkAsCompleted = async () => {
+    // Check if mentor feedback is required first
+    if (!hasMentorFeedback(session.id)) {
+      toast({
+        title: "Mentor feedback required",
+        description: "Please provide detailed mentor feedback before completing the session.",
+        variant: "destructive",
+      });
+      setMentorFeedbackFormOpen(true);
+      return;
+    }
+
     try {
       // Call Superface integration
       const { data, error } = await supabase.functions.invoke('superface-integration', {
@@ -258,13 +287,30 @@ const SessionDetail = () => {
         description: "Session has been successfully completed and synced with Superface.",
       });
 
-      // Show feedback form
+      // Show student feedback form
       setFeedbackFormOpen(true);
     } catch (error) {
       console.error('Error marking session as completed:', error);
       toast({
         title: "Error completing session",
         description: "There was a problem marking the session as completed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelSession = async (cancellationReason: string) => {
+    try {
+      // In real implementation, this would update Supabase
+      toast({
+        title: "Session cancelled",
+        description: "Session has been cancelled successfully.",
+      });
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      toast({
+        title: "Error cancelling session",
+        description: "There was a problem cancelling the session. Please try again.",
         variant: "destructive",
       });
     }
@@ -359,14 +405,20 @@ const SessionDetail = () => {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="counseling">Manual Counseling</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="qna">Q&A</TabsTrigger>
             <TabsTrigger value="meeting-log">Meeting Log</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
+            <TabsTrigger value="mentor-feedback">
+              Mentor Feedback
+              {hasMentorFeedback(session.id) && (
+                <span className="ml-1 inline-block w-2 h-2 bg-green-500 rounded-full" />
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="feedback">Student Feedback</TabsTrigger>
             <TabsTrigger value="status">Status</TabsTrigger>
           </TabsList>
 
@@ -641,6 +693,182 @@ const SessionDetail = () => {
             />
           </TabsContent>
 
+          {/* Mentor Feedback Tab */}
+          <TabsContent value="mentor-feedback" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Mentor Feedback Status */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Mentor Feedback Status</CardTitle>
+                  <CardDescription>
+                    Required before session can be completed
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {hasMentorFeedback(session.id) ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2 text-green-600">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-medium">Mentor feedback completed</span>
+                      </div>
+                      {(() => {
+                        const mentorFeedback = getSessionFeedback(session.id);
+                        return mentorFeedback ? (
+                          <div className="space-y-3 pt-3 border-t">
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="text-center">
+                                <div className="text-xs text-muted-foreground">Session Quality</div>
+                                <div className="flex items-center justify-center space-x-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">{mentorFeedback.session_quality_rating}/5</span>
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-muted-foreground">Student Engagement</div>
+                                <div className="flex items-center justify-center space-x-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">{mentorFeedback.student_engagement_rating}/5</span>
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-muted-foreground">Goals Achieved</div>
+                                <div className="flex items-center justify-center space-x-1">
+                                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">{mentorFeedback.goals_achieved_rating}/5</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Submitted on {new Date(mentorFeedback.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2 text-amber-600">
+                        <XCircle className="w-5 h-5" />
+                        <span className="font-medium">Mentor feedback required</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Please complete the mentor feedback form before marking this session as completed.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Feedback Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feedback Actions</CardTitle>
+                  <CardDescription>
+                    Complete mentor assessment and feedback
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={() => setMentorFeedbackFormOpen(true)}
+                    className="w-full"
+                    disabled={hasMentorFeedback(session.id)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    {hasMentorFeedback(session.id) ? 'Feedback Completed' : 'Complete Mentor Feedback'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Detailed Mentor Feedback */}
+            {hasMentorFeedback(session.id) && (() => {
+              const mentorFeedback = getSessionFeedback(session.id);
+              return mentorFeedback ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Detailed Mentor Feedback</CardTitle>
+                    <CardDescription>
+                      Comprehensive session assessment and recommendations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Progress Assessment */}
+                    <div>
+                      <h4 className="font-medium mb-2">Student Progress Notes</h4>
+                      <p className="text-sm text-muted-foreground">{mentorFeedback.student_progress_notes}</p>
+                    </div>
+
+                    {mentorFeedback.key_outcomes && (
+                      <div>
+                        <h4 className="font-medium mb-2">Key Outcomes</h4>
+                        <p className="text-sm text-muted-foreground">{mentorFeedback.key_outcomes}</p>
+                      </div>
+                    )}
+
+                    {mentorFeedback.challenges_faced && (
+                      <div>
+                        <h4 className="font-medium mb-2">Challenges Faced</h4>
+                        <p className="text-sm text-muted-foreground">{mentorFeedback.challenges_faced}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <h4 className="font-medium mb-2">Next Steps Recommended</h4>
+                      <p className="text-sm text-muted-foreground">{mentorFeedback.next_steps_recommended}</p>
+                    </div>
+
+                    {/* Follow-up Planning */}
+                    <Separator />
+                    <div>
+                      <h4 className="font-medium mb-2">Follow-up Planning</h4>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="text-sm">Follow-up Required:</span>
+                        <Badge variant={mentorFeedback.follow_up_required ? "default" : "secondary"}>
+                          {mentorFeedback.follow_up_required ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      {mentorFeedback.follow_up_required && mentorFeedback.follow_up_timeline && (
+                        <div>
+                          <span className="text-sm font-medium">Timeline: </span>
+                          <span className="text-sm text-muted-foreground">{mentorFeedback.follow_up_timeline}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {mentorFeedback.additional_support_needed && (
+                      <div>
+                        <h4 className="font-medium mb-2">Additional Support Needed</h4>
+                        <p className="text-sm text-muted-foreground">{mentorFeedback.additional_support_needed}</p>
+                      </div>
+                    )}
+
+                    {/* Mentor Reflection */}
+                    {(mentorFeedback.mentor_reflection || mentorFeedback.improvement_areas) && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h4 className="font-medium mb-2">Mentor Reflection</h4>
+                          {mentorFeedback.mentor_reflection && (
+                            <div className="mb-3">
+                              <span className="text-sm font-medium">Personal Reflection: </span>
+                              <p className="text-sm text-muted-foreground">{mentorFeedback.mentor_reflection}</p>
+                            </div>
+                          )}
+                          {mentorFeedback.improvement_areas && (
+                            <div>
+                              <span className="text-sm font-medium">Areas for Improvement: </span>
+                              <p className="text-sm text-muted-foreground">{mentorFeedback.improvement_areas}</p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : null;
+            })()}
+          </TabsContent>
+
           {/* Attachments Tab */}
           <TabsContent value="attachments" className="space-y-6">
             {/* Upload Section */}
@@ -903,45 +1131,14 @@ const SessionDetail = () => {
                       Mark as Completed
                     </Button>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="destructive"
-                          onClick={() => setNewStatus('rejected')}
-                          disabled={session.status === 'rejected'}
-                        >
-                          <XCircle className="w-4 h-4 mr-2" />
-                          Cancel Session
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Cancel Session</DialogTitle>
-                          <DialogDescription>
-                            Are you sure you want to cancel this session? This action cannot be undone.
-                          </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="rejection-reason">Reason for cancellation</Label>
-                          <Textarea
-                            id="rejection-reason"
-                            placeholder="Please provide a reason for cancelling this session..."
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                          />
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button variant="destructive" onClick={handleStatusChange}>
-                            Confirm Cancellation
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      variant="destructive"
+                      onClick={() => setCancellationDialogOpen(true)}
+                      disabled={session.status === 'rejected'}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Cancel Session
+                    </Button>
                   </div>
                 </div>
 
@@ -956,7 +1153,22 @@ const SessionDetail = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Feedback Form Modal */}
+        {/* Mentor Feedback Form Modal */}
+        <MentorFeedbackForm
+          open={mentorFeedbackFormOpen}
+          onOpenChange={setMentorFeedbackFormOpen}
+          sessionId={session.id}
+          mentorExternalId="mentor-123" // In real implementation, get from auth context
+          onSuccess={() => {
+            refetchMentorFeedback();
+            toast({
+              title: "Mentor feedback submitted successfully",
+              description: "You can now mark the session as completed."
+            });
+          }}
+        />
+
+        {/* Student Feedback Form Modal */}
         <SessionFeedbackForm
           open={feedbackFormOpen}
           onOpenChange={setFeedbackFormOpen}
@@ -968,6 +1180,14 @@ const SessionDetail = () => {
               description: "Thank you for your feedback!"
             });
           }}
+        />
+
+        {/* Session Cancellation Dialog */}
+        <SessionCancellationDialog
+          open={cancellationDialogOpen}
+          onOpenChange={setCancellationDialogOpen}
+          sessionName={session.name}
+          onConfirm={handleCancelSession}
         />
       </div>
     </div>

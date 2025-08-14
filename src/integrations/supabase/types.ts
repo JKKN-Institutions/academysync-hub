@@ -97,6 +97,7 @@ export type Database = {
       }
       counseling_sessions: {
         Row: {
+          cancellation_reason: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -113,6 +114,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -129,6 +131,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -381,6 +384,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mentor_feedback: {
+        Row: {
+          additional_support_needed: string | null
+          challenges_faced: string | null
+          created_at: string
+          follow_up_required: boolean
+          follow_up_timeline: string | null
+          goals_achieved_rating: number
+          id: string
+          improvement_areas: string | null
+          key_outcomes: string | null
+          mentor_external_id: string
+          mentor_reflection: string | null
+          next_steps_recommended: string
+          session_id: string
+          session_quality_rating: number
+          student_engagement_rating: number
+          student_progress_notes: string
+          updated_at: string
+        }
+        Insert: {
+          additional_support_needed?: string | null
+          challenges_faced?: string | null
+          created_at?: string
+          follow_up_required?: boolean
+          follow_up_timeline?: string | null
+          goals_achieved_rating: number
+          id?: string
+          improvement_areas?: string | null
+          key_outcomes?: string | null
+          mentor_external_id: string
+          mentor_reflection?: string | null
+          next_steps_recommended: string
+          session_id: string
+          session_quality_rating: number
+          student_engagement_rating: number
+          student_progress_notes: string
+          updated_at?: string
+        }
+        Update: {
+          additional_support_needed?: string | null
+          challenges_faced?: string | null
+          created_at?: string
+          follow_up_required?: boolean
+          follow_up_timeline?: string | null
+          goals_achieved_rating?: number
+          id?: string
+          improvement_areas?: string | null
+          key_outcomes?: string | null
+          mentor_external_id?: string
+          mentor_reflection?: string | null
+          next_steps_recommended?: string
+          session_id?: string
+          session_quality_rating?: number
+          student_engagement_rating?: number
+          student_progress_notes?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       news_feed: {
         Row: {
