@@ -327,12 +327,25 @@ export const useStudent360Data = () => {
     }
 
     try {
-      return await fetchStudent360Data(studentId);
+      console.log('Fetching real-time student data for ID:', studentId);
+      const result = await fetchStudent360Data(studentId);
+      
+      if (!result) {
+        toast({
+          title: 'Student Not Found',
+          description: 'The requested student could not be found in the system',
+          variant: 'destructive'
+        });
+        return null;
+      }
+      
+      console.log('Successfully fetched student data:', result);
+      return result;
     } catch (error) {
       console.error('Error fetching student details:', error);
       toast({
         title: 'Error Loading Student Details',
-        description: 'Failed to load detailed student information',
+        description: error instanceof Error ? error.message : 'Failed to load detailed student information',
         variant: 'destructive'
       });
       return null;

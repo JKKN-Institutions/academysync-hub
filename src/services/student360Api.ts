@@ -418,12 +418,17 @@ export const fetchStudentFees = async (studentId: string): Promise<StudentFees> 
 // Fetch comprehensive student 360 data
 export const fetchStudent360Data = async (studentId: string): Promise<Student360Data | null> => {
   try {
+    console.log('Fetching student 360 data for ID:', studentId);
+    
     // Fetch basic student info first
     const studentResponse = await makeApiRequest<{data: any}>(
       `/api-management/students/${studentId}`
     );
 
+    console.log('Student API response:', studentResponse);
+
     if (!studentResponse.data) {
+      console.warn('No student data found for ID:', studentId);
       return null;
     }
 
@@ -439,7 +444,7 @@ export const fetchStudent360Data = async (studentId: string): Promise<Student360
       fetchStudentFees(studentId)
     ]);
 
-    return {
+    const result = {
       id: student.id,
       studentId: student.id,
       rollNo: student.roll_number || '',
@@ -462,6 +467,9 @@ export const fetchStudent360Data = async (studentId: string): Promise<Student360
       requests,
       fees
     };
+
+    console.log('Final student 360 data:', result);
+    return result;
   } catch (error) {
     console.error('Error fetching student 360 data:', error);
     return null;

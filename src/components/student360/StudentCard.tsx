@@ -186,7 +186,13 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         {/* Action Button */}
         <div className="pt-3 border-t">
           <Button 
-            onClick={() => onViewDetails(student.id)}
+            onClick={() => {
+              console.log('Viewing student 360 for student:', student);
+              // Use studentId if available, fallback to id
+              const id = student.studentId || student.id;
+              console.log('Using student ID for fetch:', id);
+              onViewDetails(id);
+            }}
             className="w-full group-hover:shadow-md transition-all duration-200"
             variant="default"
           >

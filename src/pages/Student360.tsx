@@ -40,11 +40,15 @@ const Student360 = () => {
   const handleViewDetails = async (id: string) => {
     setLoadingDetails(true);
     try {
+      console.log('Loading student details for ID:', id);
       const studentDetails = await fetchStudentDetails(id);
       if (studentDetails) {
+        console.log('Student details loaded successfully:', studentDetails);
         setSelectedStudent(studentDetails);
         // Update URL without causing re-navigation
         window.history.pushState(null, '', `/student360/${id}`);
+      } else {
+        console.warn('No student details returned for ID:', id);
       }
     } catch (error) {
       console.error('Error loading student details:', error);
