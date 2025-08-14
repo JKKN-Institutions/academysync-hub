@@ -69,7 +69,19 @@ export const MentorFilters = ({
   const statusOptions = ['active', 'inactive'];
 
   const activeInstitutions = isDemo ? demoInstitutions : institutions;
-  const activeDepartments = isDemo ? demoDepartments : departments;
+  
+  // Filter departments based on selected institution
+  const filteredDepartments = isDemo 
+    ? demoDepartments 
+    : filters.institution && filters.institution !== 'all'
+      ? departments.filter(dept => {
+          // Find the selected institution
+          const selectedInstitution = institutions.find(inst => inst.institution_name === filters.institution);
+          return selectedInstitution && dept.institution_id === selectedInstitution.id;
+        })
+      : departments;
+  
+  const activeDepartments = filteredDepartments;
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -77,7 +89,12 @@ export const MentorFilters = ({
   };
 
   const handleFilterChange = (key: keyof MentorFilters, value: string) => {
-    onFiltersChange({ [key]: value });
+    // If institution changes, clear department filter
+    if (key === 'institution') {
+      onFiltersChange({ [key]: value, department: 'all' });
+    } else {
+      onFiltersChange({ [key]: value });
+    }
   };
 
   const getActiveFilterCount = () => {
@@ -128,8 +145,8 @@ export const MentorFilters = ({
                     <SelectLoadingItem message="Loading institutions..." />
                   ) : (
                     activeInstitutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.name}>
-                        {institution.name}
+                      <SelectItem key={institution.id} value={institution.institution_name}>
+                        {institution.institution_name}
                       </SelectItem>
                     ))
                   )}
@@ -156,8 +173,8 @@ export const MentorFilters = ({
                     <SelectLoadingItem message="Loading departments..." />
                   ) : (
                     activeDepartments.map((department) => (
-                      <SelectItem key={department.id} value={department.name}>
-                        {department.name}
+                      <SelectItem key={department.id} value={department.department_name}>
+                        {department.department_name}
                       </SelectItem>
                     ))
                   )}

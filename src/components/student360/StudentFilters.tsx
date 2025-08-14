@@ -58,7 +58,15 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
   const demoSemesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
   const activeInstitutions = isDemo ? demoInstitutions : institutions;
-  const activeDepartments = isDemo ? demoDepartments : departments;
+  
+  // Filter departments based on selected institution
+  const filteredDepartments = isDemo 
+    ? demoDepartments 
+    : filters.institution && filters.institution !== 'all'
+      ? departments.filter(dept => dept.institution_id === filters.institution)
+      : departments;
+  
+  const activeDepartments = filteredDepartments;
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -69,9 +77,23 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
     if (value === "all" || value === "") {
       const newFilters = { ...filters };
       delete newFilters[key];
+      
+      // If institution is being cleared, also clear department
+      if (key === 'institution') {
+        delete newFilters.department;
+      }
+      
       onFiltersChange(newFilters);
     } else {
-      onFiltersChange({ [key]: value });
+      // If institution changes, clear department filter
+      if (key === 'institution') {
+        const newFilters = { ...filters };
+        delete newFilters.department;
+        newFilters[key] = value as any;
+        onFiltersChange(newFilters);
+      } else {
+        onFiltersChange({ [key]: value });
+      }
     }
   };
 
