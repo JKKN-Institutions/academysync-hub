@@ -13,6 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { MeetingLog } from "@/components/MeetingLog";
 import { ManualCounseling } from "@/components/ManualCounseling";
+import { SessionFeedbackForm } from "@/components/SessionFeedbackForm";
+import { useSessionFeedback } from "@/hooks/useSessionFeedback";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -28,7 +31,9 @@ import {
   XCircle,
   ExternalLink,
   Plus,
-  Eye
+  Eye,
+  Star,
+  MessageSquare
 } from "lucide-react";
 
 // Mock data structure for demonstration
@@ -165,6 +170,12 @@ const SessionDetail = () => {
   
   // Meeting log state
   const [isMeetingLogComplete, setIsMeetingLogComplete] = useState(false);
+  
+  // Feedback form state
+  const [feedbackFormOpen, setFeedbackFormOpen] = useState(false);
+  
+  // Feedback hook
+  const { feedback, loading: feedbackLoading, getAverageRatings } = useSessionFeedback(session.id);
 
   const handleAddQuestion = async () => {
     if (!newQuestion.trim()) return;
@@ -217,6 +228,46 @@ const SessionDetail = () => {
     });
     setStatusDialogOpen(false);
     setRejectionReason("");
+  };
+
+  const handleMarkAsCompleted = async () => {
+    try {
+      // Call Superface integration
+      const { data, error } = await supabase.functions.invoke('superface-integration', {
+        body: {
+          action: 'mark_completed',
+          sessionId: session.id,
+          data: {
+            session_name: session.name,
+            completed_at: new Date().toISOString(),
+            participants: session.participants.map(p => ({
+              student_id: p.student_roll_no,
+              student_name: p.student_name
+            }))
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update session status locally (in real implementation, this would update Supabase)
+      toast({
+        title: "Session marked as completed",
+        description: "Session has been successfully completed and synced with Superface.",
+      });
+
+      // Show feedback form
+      setFeedbackFormOpen(true);
+    } catch (error) {
+      console.error('Error marking session as completed:', error);
+      toast({
+        title: "Error completing session",
+        description: "There was a problem marking the session as completed. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -308,13 +359,14 @@ const SessionDetail = () => {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="counseling">Manual Counseling</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="qna">Q&A</TabsTrigger>
             <TabsTrigger value="meeting-log">Meeting Log</TabsTrigger>
             <TabsTrigger value="attachments">Attachments</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback</TabsTrigger>
             <TabsTrigger value="status">Status</TabsTrigger>
           </TabsList>
 
@@ -670,114 +722,253 @@ const SessionDetail = () => {
             </Card>
           </TabsContent>
 
-          {/* Status Tab */}
-          <TabsContent value="status">
+          {/* Feedback Tab */}
+          <TabsContent value="feedback" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Current Status */}
+              {/* Feedback Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Status</CardTitle>
+                  <CardTitle>Feedback Summary</CardTitle>
+                  <CardDescription>
+                    Average ratings from session participants
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium">Status:</span>
-                    <Badge className={getStatusColor(session.status)}>
-                      {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                    </Badge>
-                  </div>
-                  {session.priority && (
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">Priority:</span>
-                      <Badge variant="outline">{session.priority}</Badge>
+                <CardContent>
+                  {feedback.length > 0 ? (
+                    <div className="space-y-4">
+                      {(() => {
+                        const avgRatings = getAverageRatings();
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Overall Rating</span>
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                <span className="font-medium">{avgRatings.overall}/5</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Mentor Helpfulness</span>
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                <span className="font-medium">{avgRatings.mentorHelpfulness}/5</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Session Effectiveness</span>
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                <span className="font-medium">{avgRatings.sessionEffectiveness}/5</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Would Recommend</span>
+                              <span className="font-medium">{avgRatings.recommendationRate}%</span>
+                            </div>
+                            <div className="pt-2 border-t">
+                              <span className="text-xs text-muted-foreground">
+                                Based on {avgRatings.totalResponses} response{avgRatings.totalResponses !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
-                  )}
-                  {session.rejection_reason && (
-                    <div>
-                      <Label className="font-medium">Rejection Reason:</Label>
-                      <p className="text-sm text-muted-foreground mt-1">{session.rejection_reason}</p>
-                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No feedback received yet.</p>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Status Actions */}
+              {/* Actions */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Change Status</CardTitle>
-                  <CardDescription>Update the session status</CardDescription>
+                  <CardTitle>Feedback Actions</CardTitle>
+                  <CardDescription>
+                    Collect feedback from session participants
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {session.status === 'pending' && (
-                    <div className="space-y-2">
-                      <Button className="w-full" onClick={() => {
-                        setNewStatus('completed');
-                        setStatusDialogOpen(true);
-                      }}>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Mark as Completed
-                      </Button>
-                      
-                      <Button variant="destructive" className="w-full" onClick={() => {
-                        setNewStatus('rejected');
-                        setStatusDialogOpen(true);
-                      }}>
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reject Session
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {session.status !== 'pending' && (
-                    <p className="text-muted-foreground">
-                      This session has been {session.status}. No further actions available.
-                    </p>
-                  )}
+                <CardContent>
+                  <Button 
+                    onClick={() => setFeedbackFormOpen(true)}
+                    className="w-full"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Submit Feedback
+                  </Button>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Individual Feedback Entries */}
+            {feedback.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Individual Feedback</CardTitle>
+                  <CardDescription>
+                    Detailed feedback from each participant
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {feedback.map((f) => (
+                      <div key={f.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Participant: {f.mentee_external_id}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(f.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Overall</div>
+                            <div className="flex items-center justify-center space-x-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{f.overall_rating}/5</span>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Helpfulness</div>
+                            <div className="flex items-center justify-center space-x-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{f.mentor_helpfulness}/5</span>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs text-muted-foreground">Effectiveness</div>
+                            <div className="flex items-center justify-center space-x-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{f.session_effectiveness}/5</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {f.comments && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Comments:</div>
+                            <p className="text-sm">{f.comments}</p>
+                          </div>
+                        )}
+
+                        {f.improvement_suggestions && (
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1">Suggestions:</div>
+                            <p className="text-sm">{f.improvement_suggestions}</p>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-muted-foreground">Would recommend:</span>
+                          <Badge variant={f.would_recommend ? "default" : "secondary"}>
+                            {f.would_recommend ? "Yes" : "No"}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Status Tab */}
+          <TabsContent value="status">
+            <Card>
+              <CardHeader>
+                <CardTitle>Session Status Management</CardTitle>
+                <CardDescription>Update the status of this counseling session</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Label>Current Status:</Label>
+                  <Badge className={getStatusColor(session.status)}>
+                    {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                  </Badge>
+                </div>
+
+                {/* Actions Section */}
+                <div className="bg-muted/30 rounded-lg p-4">
+                  <h4 className="font-medium mb-3 flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                    Actions
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      onClick={handleMarkAsCompleted}
+                      disabled={session.status === 'completed'}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark as Completed
+                    </Button>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="destructive"
+                          onClick={() => setNewStatus('rejected')}
+                          disabled={session.status === 'rejected'}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Cancel Session
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Cancel Session</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to cancel this session? This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="rejection-reason">Reason for cancellation</Label>
+                          <Textarea
+                            id="rejection-reason"
+                            placeholder="Please provide a reason for cancelling this session..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                          />
+                        </div>
+                        
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button variant="destructive" onClick={handleStatusChange}>
+                            Confirm Cancellation
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+
+                {session.rejection_reason && (
+                  <div>
+                    <Label className="text-sm font-medium">Rejection Reason:</Label>
+                    <p className="text-sm text-muted-foreground mt-1">{session.rejection_reason}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
-        {/* Status Change Dialog */}
-        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {newStatus === 'completed' ? 'Complete Session' : 'Reject Session'}
-              </DialogTitle>
-              <DialogDescription>
-                {newStatus === 'completed' 
-                  ? 'Are you sure you want to mark this session as completed?'
-                  : 'Please provide a reason for rejecting this session.'
-                }
-              </DialogDescription>
-            </DialogHeader>
-            
-            {newStatus === 'rejected' && (
-              <div className="space-y-2">
-                <Label htmlFor="rejection-reason">Rejection Reason *</Label>
-                <Textarea
-                  id="rejection-reason"
-                  placeholder="Enter the reason for rejecting this session..."
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                />
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleStatusChange}
-                variant={newStatus === 'rejected' ? 'destructive' : 'default'}
-              >
-                {newStatus === 'completed' ? 'Complete Session' : 'Reject Session'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Feedback Form Modal */}
+        <SessionFeedbackForm
+          open={feedbackFormOpen}
+          onOpenChange={setFeedbackFormOpen}
+          sessionId={session.id}
+          menteeExternalId={session.participants[0]?.student_roll_no || 'demo-student'}
+          onSuccess={() => {
+            toast({
+              title: "Feedback submitted successfully",
+              description: "Thank you for your feedback!"
+            });
+          }}
+        />
       </div>
     </div>
   );

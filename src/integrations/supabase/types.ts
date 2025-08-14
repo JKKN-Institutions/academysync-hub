@@ -445,6 +445,56 @@ export type Database = {
         }
         Relationships: []
       }
+      session_feedback: {
+        Row: {
+          comments: string | null
+          created_at: string
+          id: string
+          improvement_suggestions: string | null
+          mentee_external_id: string
+          mentor_helpfulness: number
+          overall_rating: number
+          session_effectiveness: number
+          session_id: string
+          updated_at: string
+          would_recommend: boolean
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          improvement_suggestions?: string | null
+          mentee_external_id: string
+          mentor_helpfulness: number
+          overall_rating: number
+          session_effectiveness: number
+          session_id: string
+          updated_at?: string
+          would_recommend?: boolean
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          id?: string
+          improvement_suggestions?: string | null
+          mentee_external_id?: string
+          mentor_helpfulness?: number
+          overall_rating?: number
+          session_effectiveness?: number
+          session_id?: string
+          updated_at?: string
+          would_recommend?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_participants: {
         Row: {
           created_at: string
