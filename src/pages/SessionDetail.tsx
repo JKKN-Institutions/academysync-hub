@@ -49,7 +49,7 @@ interface Session {
   location?: string;
   description?: string;
   session_type: 'one_on_one' | 'group';
-  status: 'pending' | 'completed' | 'rejected';
+  status: 'pending' | 'completed' | 'rejected' | 'cancelled';
   priority?: string;
   notes?: string;
   rejection_reason?: string;
@@ -1115,13 +1115,44 @@ const SessionDetail = () => {
                   </Badge>
                 </div>
 
-                {/* Actions Section */}
-                <div className="bg-muted/30 rounded-lg p-4">
+                {/* Mentor Feedback Section - Always visible first */}
+                <div className="bg-blue-50 rounded-lg p-4 mb-4">
                   <h4 className="font-medium mb-3 flex items-center">
-                    <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                    Actions
+                    <MessageSquare className="w-4 h-4 mr-2 text-blue-600" />
+                    Step 1: Mentor Feedback Required
                   </h4>
-                  <div className="flex flex-wrap gap-2">
+                  {hasMentorFeedback(session.id) ? (
+                    <div className="flex items-center space-x-2 text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-sm">Mentor feedback completed successfully</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Complete the detailed mentor feedback before proceeding to mark session as completed.
+                      </p>
+                      <Button 
+                        onClick={() => setMentorFeedbackFormOpen(true)}
+                        variant="outline"
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Complete Mentor Feedback
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Completion Section - Only shown after mentor feedback */}
+                {hasMentorFeedback(session.id) && (
+                  <div className="bg-green-50 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium mb-3 flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                      Step 2: Mark Session as Completed
+                    </h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      All requirements met. You can now mark this session as completed.
+                    </p>
                     <Button 
                       onClick={handleMarkAsCompleted}
                       disabled={session.status === 'completed'}
@@ -1130,16 +1161,27 @@ const SessionDetail = () => {
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Mark as Completed
                     </Button>
-                    
-                    <Button 
-                      variant="destructive"
-                      onClick={() => setCancellationDialogOpen(true)}
-                      disabled={session.status === 'rejected'}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Cancel Session
-                    </Button>
                   </div>
+                )}
+
+                {/* Cancellation Section - Always available with validation */}
+                <div className="bg-red-50 rounded-lg p-4">
+                  <h4 className="font-medium mb-3 flex items-center">
+                    <XCircle className="w-4 h-4 mr-2 text-red-600" />
+                    Cancel Session
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Cancel this session with a required reason. This action cannot be undone.
+                  </p>
+                    
+                  <Button 
+                    variant="destructive"
+                    onClick={() => setCancellationDialogOpen(true)}
+                    disabled={session.status === 'rejected' || session.status === 'cancelled'}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Cancel Session
+                  </Button>
                 </div>
 
                 {session.rejection_reason && (
