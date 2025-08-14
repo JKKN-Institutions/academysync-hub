@@ -7,49 +7,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Users, Clock, Calendar, AlertTriangle, UserPlus, Settings } from "lucide-react";
 import { AssignmentModeBanner } from "@/components/ui/assignment-mode-banner";
 import { useAssignmentMode } from "@/hooks/useAssignmentMode";
+import { useAssignments } from "@/hooks/useAssignments";
 import MentorAssignmentWizard from "@/components/MentorAssignmentWizard";
 import { useState } from "react";
+import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { ErrorState } from "@/components/ui/error-state";
 
 const Assignments = () => {
   const { isAppManaged, isUpstreamManaged } = useAssignmentMode();
+  const { assignments, loading, error, getAssignmentStats, refetch } = useAssignments();
   const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
   
-  // Mock data - would come from app database
-  const assignments = [
-    {
-      id: "assign_001",
-      mentorId: "ext_001",
-      mentorName: "Dr. Sarah Johnson",
-      menteeId: "ext_101", 
-      menteeName: "Alex Chen",
-      startDate: "2024-01-15",
-      endDate: "2024-12-15",
-      status: "Active",
-      sessionsCount: 12,
-      lastSession: "2024-01-02",
-      nextSession: "2024-01-08",
-      goals: 3,
-      completedGoals: 1
-    },
-    {
-      id: "assign_002",
-      mentorId: "ext_001", 
-      mentorName: "Dr. Sarah Johnson",
-      menteeId: "ext_102",
-      menteeName: "Maria Rodriguez",
-      startDate: "2024-01-10",
-      endDate: "2024-12-10", 
-      status: "Pending",
-      sessionsCount: 0,
-      lastSession: null,
-      nextSession: "2024-01-05",
-      goals: 0,
-      completedGoals: 0
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <CardSkeleton count={6} />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <ErrorState message={error} onRetry={refetch} />
+      </div>
+    );
+  }
 
-  const activeAssignments = assignments.filter(a => a.status === "Active");
-  const pendingAssignments = assignments.filter(a => a.status === "Pending");
+  const activeAssignments = assignments.filter(a => a.status === "active");
+  const pendingAssignments = assignments.filter(a => a.status === "pending");
+  const stats = getAssignmentStats();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,7 +80,7 @@ const Assignments = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Assignments</p>
-                  <p className="text-3xl font-bold text-blue-600">{assignments.length}</p>
+                  <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
                 </div>
                 <Users className="w-8 h-8 text-blue-600" />
               </div>
@@ -105,7 +92,7 @@ const Assignments = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active</p>
-                  <p className="text-3xl font-bold text-green-600">{activeAssignments.length}</p>
+                  <p className="text-3xl font-bold text-green-600">{stats.active}</p>
                 </div>
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                   <div className="w-3 h-3 bg-green-600 rounded-full"></div>
@@ -119,7 +106,7 @@ const Assignments = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-600">{pendingAssignments.length}</p>
+                  <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-600" />
               </div>
@@ -131,7 +118,7 @@ const Assignments = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Needs Attention</p>
-                  <p className="text-3xl font-bold text-red-600">1</p>
+                  <p className="text-3xl font-bold text-red-600">{stats.needsAttention}</p>
                 </div>
                 <AlertTriangle className="w-8 h-8 text-red-600" />
               </div>
@@ -142,9 +129,9 @@ const Assignments = () => {
         {/* Assignments Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="all">All Assignments ({assignments.length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeAssignments.length})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({pendingAssignments.length})</TabsTrigger>
+            <TabsTrigger value="all">All Assignments ({stats.total})</TabsTrigger>
+            <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
+            <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
@@ -165,8 +152,7 @@ const Assignments = () => {
           open={showAssignmentWizard}
           onOpenChange={setShowAssignmentWizard}
           onAssignmentCreated={() => {
-            // Refresh assignments data
-            console.log('Assignment created, refreshing data...');
+            refetch();
           }}
         />
       </div>
@@ -189,13 +175,13 @@ const AssignmentsList = ({ assignments }: AssignmentsListProps) => {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center space-x-3">
                 <Users className="w-5 h-5 text-blue-600" />
-                <span>Assignment #{assignment.id.split('_')[1]}</span>
-                <Badge variant={assignment.status === 'Active' ? 'default' : 'secondary'}>
+                <span>Assignment #{assignment.id.substring(0, 8)}</span>
+                <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
                   {assignment.status}
                 </Badge>
               </CardTitle>
               <div className="text-sm text-gray-500">
-                {assignment.startDate} - {assignment.endDate}
+                {new Date(assignment.effective_from).toLocaleDateString()} - {assignment.effective_to ? new Date(assignment.effective_to).toLocaleDateString() : 'Ongoing'}
               </div>
             </div>
           </CardHeader>
@@ -205,21 +191,26 @@ const AssignmentsList = ({ assignments }: AssignmentsListProps) => {
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarFallback>{assignment.mentorName.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {assignment.mentor_external_id.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{assignment.mentorName}</p>
-                    <p className="text-sm text-gray-600">Mentor • ID: {assignment.mentorId}</p>
+                    <p className="font-medium">Mentor</p>
+                    <p className="text-sm text-gray-600">ID: {assignment.mentor_external_id}</p>
+                    <p className="text-xs text-gray-500">{assignment.role} mentor</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
                   <Avatar>
-                    <AvatarFallback>{assignment.menteeName.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {assignment.student_external_id.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{assignment.menteeName}</p>
-                    <p className="text-sm text-gray-600">Mentee • ID: {assignment.menteeId}</p>
+                    <p className="font-medium">Student</p>
+                    <p className="text-sm text-gray-600">ID: {assignment.student_external_id}</p>
                   </div>
                 </div>
               </div>
@@ -228,28 +219,25 @@ const AssignmentsList = ({ assignments }: AssignmentsListProps) => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Sessions Completed</p>
-                    <p className="text-xl font-bold text-blue-600">{assignment.sessionsCount}</p>
+                    <p className="text-sm text-gray-600">Assignment Type</p>
+                    <p className="text-xl font-bold text-blue-600 capitalize">{assignment.role}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Goals Progress</p>
-                    <p className="text-xl font-bold text-green-600">
-                      {assignment.completedGoals}/{assignment.goals}
+                    <p className="text-sm text-gray-600">Status</p>
+                    <p className="text-xl font-bold text-green-600 capitalize">
+                      {assignment.status}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  {assignment.lastSession && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="w-4 h-4 mr-2" />
-                      Last session: {assignment.lastSession}
-                    </div>
-                  )}
-                  {assignment.nextSession && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Next session: {assignment.nextSession}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Created: {new Date(assignment.created_at).toLocaleDateString()}
+                  </div>
+                  {assignment.notes && (
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Notes:</span> {assignment.notes}
                     </div>
                   )}
                 </div>
