@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useRoles } from "@/hooks/useRoles";
+import { useStaffData } from "@/hooks/useStaffData";
+import { useStudentsData } from "@/hooks/useStudentsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,7 +27,11 @@ interface UserWithRoles {
   email: string;
   department: string | null;
   currentRoles: string[];
-  auth_user_id: string;
+  auth_user_id: string | null;
+  userType: 'profile' | 'staff' | 'student';
+  designation?: string;
+  rollNo?: string;
+  program?: string;
 }
 
 const RolesAssignment = () => {
@@ -37,6 +43,8 @@ const RolesAssignment = () => {
   const [assigning, setAssigning] = useState(false);
 
   const { roles, loading: rolesLoading, assignRoleToUser } = useRoles();
+  const { staff, loading: staffLoading } = useStaffData();
+  const { students, loading: studentsLoading } = useStudentsData();
   const { toast } = useToast();
 
   // Fetch users with their current roles
@@ -64,25 +72,67 @@ const RolesAssignment = () => {
         `)
         .eq('status', 'active');
 
-      // Combine data
-      const usersWithRoles: UserWithRoles[] = (profiles || []).map((profile) => {
-        const authUser = authUsers.find(user => user.id === profile.user_id);
-        const userRoles = (roleAssignments || [])
-          .filter(assignment => assignment.user_id === profile.user_id)
-          .map(assignment => (assignment.roles as any)?.name)
-          .filter(Boolean);
+      const allUsers: UserWithRoles[] = [];
 
-        return {
-          id: profile.id || crypto.randomUUID(),
-          display_name: profile.display_name || authUser?.email || 'Unknown User',
-          email: authUser?.email || '',
-          department: profile.department || null,
-          currentRoles: userRoles,
-          auth_user_id: profile.user_id
-        };
+      // Add user profiles
+      if (profiles) {
+        profiles.forEach((profile) => {
+          const authUser = authUsers.find(user => user.id === profile.user_id);
+          const userRoles = (roleAssignments || [])
+            .filter(assignment => assignment.user_id === profile.user_id)
+            .map(assignment => (assignment.roles as any)?.name)
+            .filter(Boolean);
+
+          allUsers.push({
+            id: profile.id || crypto.randomUUID(),
+            display_name: profile.display_name || authUser?.email || 'Unknown User',
+            email: authUser?.email || '',
+            department: profile.department || null,
+            currentRoles: userRoles,
+            auth_user_id: profile.user_id,
+            userType: 'profile'
+          });
+        });
+      }
+
+      // Add staff members (from external API)
+      staff.forEach((staffMember) => {
+        // Check if staff member already exists in profiles
+        const existingProfile = allUsers.find(user => user.email === staffMember.email);
+        if (!existingProfile) {
+          allUsers.push({
+            id: `staff-${staffMember.id}`,
+            display_name: staffMember.name,
+            email: staffMember.email,
+            department: staffMember.department || null,
+            designation: staffMember.designation,
+            currentRoles: [],
+            auth_user_id: null,
+            userType: 'staff'
+          });
+        }
       });
 
-      setUsers(usersWithRoles);
+      // Add students (from external API)
+      students.forEach((student) => {
+        // Check if student already exists in profiles
+        const existingProfile = allUsers.find(user => user.email === student.email);
+        if (!existingProfile) {
+          allUsers.push({
+            id: `student-${student.id}`,
+            display_name: student.name,
+            email: student.email,
+            department: student.department || null,
+            rollNo: student.rollNo,
+            program: student.program,
+            currentRoles: [],
+            auth_user_id: null,
+            userType: 'student'
+          });
+        }
+      });
+
+      setUsers(allUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -96,8 +146,10 @@ const RolesAssignment = () => {
   };
 
   useEffect(() => {
-    fetchUsersWithRoles();
-  }, []);
+    if (!staffLoading && !studentsLoading) {
+      fetchUsersWithRoles();
+    }
+  }, [staffLoading, studentsLoading]);
 
   const handleUserSelection = (userId: string, checked: boolean) => {
     if (checked) {
@@ -113,17 +165,33 @@ const RolesAssignment = () => {
     try {
       setAssigning(true);
       
-      // Get the selected users' auth user IDs
+      // Get the selected users
       const selectedUserObjects = users.filter(user => selectedUsers.includes(user.id));
       
-      // Assign role to each selected user
-      for (const user of selectedUserObjects) {
-        await assignRoleToUser(user.auth_user_id, selectedRole);
+      // Filter only users who have auth_user_id (authenticated users)
+      const authenticatedUsers = selectedUserObjects.filter(user => user.auth_user_id);
+      
+      if (authenticatedUsers.length === 0) {
+        toast({
+          title: "Warning",
+          description: "Selected users need to sign up first before roles can be assigned",
+          variant: "destructive",
+        });
+        return;
       }
+      
+      // Assign role to each authenticated user
+      for (const user of authenticatedUsers) {
+        await assignRoleToUser(user.auth_user_id!, selectedRole);
+      }
+      
+      const notAuthenticatedCount = selectedUserObjects.length - authenticatedUsers.length;
       
       toast({
         title: "Success",
-        description: `Role assigned to ${selectedUsers.length} user(s) successfully`,
+        description: `Role assigned to ${authenticatedUsers.length} user(s) successfully${
+          notAuthenticatedCount > 0 ? `. ${notAuthenticatedCount} users need to sign up first.` : ''
+        }`,
       });
       
       // Reset selections and refresh data
@@ -147,7 +215,9 @@ const RolesAssignment = () => {
   const filteredUsers = users.filter(user =>
     user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.department?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.rollNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.designation?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -180,7 +250,7 @@ const RolesAssignment = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {loading ? (
+              {loading || staffLoading || studentsLoading ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-16" />
@@ -205,9 +275,24 @@ const RolesAssignment = () => {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium">{user.display_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{user.display_name}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {user.userType}
+                          </Badge>
+                          {!user.auth_user_id && (
+                            <Badge variant="destructive" className="text-xs">
+                              Not signed up
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
-                        <p className="text-xs text-muted-foreground">{user.department || 'No department'}</p>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <p>{user.department || 'No department'}</p>
+                          {user.designation && <p>Designation: {user.designation}</p>}
+                          {user.rollNo && <p>Roll No: {user.rollNo}</p>}
+                          {user.program && <p>Program: {user.program}</p>}
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {user.currentRoles.length > 0 ? (
