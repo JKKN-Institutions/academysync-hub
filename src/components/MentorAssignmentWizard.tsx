@@ -14,6 +14,7 @@ import { useStudentsData } from '@/hooks/useStudentsData';
 import { useStaffData } from '@/hooks/useStaffData';
 import { useDepartmentsData } from '@/hooks/useDepartmentsData';
 import { useInstitutionsData } from '@/hooks/useInstitutionsData';
+import { useAssignments } from '@/hooks/useAssignments';
 import { useToast } from '@/hooks/use-toast';
 
 interface MentorAssignmentWizardProps {
@@ -57,6 +58,7 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
   const { staff: mentors } = useStaffData();
   const { departments } = useDepartmentsData();
   const { institutions } = useInstitutionsData();
+  const { createAssignment } = useAssignments();
   const { toast } = useToast();
 
   // Get unique values for filters
@@ -112,17 +114,15 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
 
     try {
       // Create fresh assignments for each selected mentee
-      for (const menteeId of selectedMentees) {
+      const assignmentPromises = selectedMentees.map(async (menteeId) => {
         const student = students.find(s => s.id === menteeId);
-        if (!student) continue;
+        if (!student) return null;
 
         const assignmentData = {
           mentor_external_id: selectedMentor.staffId,
           student_external_id: student.studentId,
           role: assignmentType,
           notes,
-          status: 'active',
-          effective_from: new Date().toISOString(),
           supervisor_id: supervisorId || null,
           assignment_metadata: {
             institution: student.department, // Using department as institution proxy
@@ -135,14 +135,24 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
           }
         };
 
-        // This would be the actual API call to create assignment
-        console.log('Creating assignment:', assignmentData);
-      }
-
-      toast({
-        title: 'Assignments Created',
-        description: `Successfully created ${selectedMentees.length} fresh assignment(s).`,
+        return await createAssignment(assignmentData);
       });
+
+      const results = await Promise.all(assignmentPromises);
+      const successCount = results.filter(r => r?.success).length;
+
+      if (successCount === selectedMentees.length) {
+        toast({
+          title: 'Assignments Created',
+          description: `Successfully created ${successCount} fresh assignment(s).`,
+        });
+      } else {
+        toast({
+          title: 'Partial Success',
+          description: `Created ${successCount} out of ${selectedMentees.length} assignments.`,
+          variant: 'destructive'
+        });
+      }
 
       // Reset form and close
       setSelectedMentor(null);
