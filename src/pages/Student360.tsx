@@ -45,8 +45,8 @@ const Student360 = () => {
       if (studentDetails) {
         console.log('Student details loaded successfully:', studentDetails);
         setSelectedStudent(studentDetails);
-        // Update URL without causing re-navigation
-        window.history.pushState(null, '', `/student360/${id}`);
+        // Use navigate to properly update the URL
+        navigate(`/student360/${id}`, { replace: true });
       } else {
         console.warn('No student details returned for ID:', id);
         // Navigate back to the list if student not found
@@ -63,7 +63,7 @@ const Student360 = () => {
 
   const handleBackToList = () => {
     setSelectedStudent(null);
-    window.history.pushState(null, '', '/student360');
+    navigate('/student360', { replace: true });
   };
 
   // If showing specific student details

@@ -68,6 +68,11 @@ const App = () => (
                   <Student360 />
                 </ProtectedRoute>
               } />
+              <Route path="/student360/:studentId" element={
+                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
+                  <Student360 />
+                </ProtectedRoute>
+              } />
               <Route path="/student/:studentId" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
                   <Student360 />
