@@ -72,6 +72,7 @@ export function AppSidebar() {
       roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
         { title: "Overview", url: "/", icon: Activity, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Main dashboard" },
+        { title: "Handbook", url: "/handbook", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"], description: "Mentoring guidelines and best practices" },
       ]
     },
     {
