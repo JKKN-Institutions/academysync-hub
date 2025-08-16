@@ -448,6 +448,12 @@ const Landing = () => {
                 Remember, like the bird in the Zen Master's story, your success in the mentoring program 
                 is in your hands. Take the initiative, be proactive, and make the most of this opportunity.
               </p>
+              
+              <div className="mb-6">
+                <p className="text-lg font-semibold text-foreground">Rangarajan Raghavachari</p>
+                <p className="text-muted-foreground">The Chief Executive Officer (CEO) JKKN INSTITUTIONS</p>
+              </div>
+              
               <div className="flex flex-wrap justify-center gap-4">
                 <Badge variant="secondary" className="px-4 py-2">Trust</Badge>
                 <Badge variant="secondary" className="px-4 py-2">Time</Badge>
