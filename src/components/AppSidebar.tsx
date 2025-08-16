@@ -66,15 +66,6 @@ export function AppSidebar() {
 
   const menuGroups: MenuGroup[] = [
     {
-      label: "Dashboard",
-      icon: Home,
-      roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
-      items: [
-        { title: "Overview", url: "/", icon: Activity, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
-        { title: "Handbook", url: "/handbook", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
-      ]
-    },
-    {
       label: "People Management",
       icon: Users,
       roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
@@ -140,6 +131,7 @@ export function AppSidebar() {
       icon: BookOpen,
       roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
+        { title: "Handbook", url: "/handbook", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
         { title: "Help Center", url: "/help", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
       ]
     }
@@ -202,6 +194,21 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0">
+        {/* Dashboard - Direct Navigation */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.pathname === "/"}>
+                <NavLink to="/" className="group">
+                  <Home className="h-4 w-4" />
+                  {!isCollapsed && <span>Dashboard</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {/* Other Menu Groups */}
         {filteredGroups.map((group, groupIndex) => {
           const GroupIcon = group.icon;
           const isGroupOpen = openGroups.includes(group.label.toLowerCase().replace(/\s+/g, '_'));
