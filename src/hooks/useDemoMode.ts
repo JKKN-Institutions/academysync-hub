@@ -31,6 +31,9 @@ export const useDemoMode = () => {
       if (data?.setting_value) {
         const demoData = data.setting_value as unknown as DemoModeData;
         setEnabled(demoData.enabled || false);
+      } else {
+        // Default to disabled if no setting found
+        setEnabled(false);
       }
     } catch (err) {
       console.error('Error fetching demo mode:', err);

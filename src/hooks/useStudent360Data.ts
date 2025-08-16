@@ -302,7 +302,23 @@ export const useStudent360Data = () => {
       setLoading(true);
       setError(null);
 
+      // Always try to fetch real data first, even in demo mode
+      try {
+        console.log('Attempting to fetch real student data...');
+        const apiStudents = await fetchFilteredStudents(newFilters);
+        
+        if (apiStudents && apiStudents.length > 0) {
+          console.log('Successfully loaded real student data:', apiStudents.length, 'students');
+          setStudents(apiStudents);
+          return; // Exit early if real data is available
+        }
+      } catch (apiError) {
+        console.warn('Real API failed, checking demo mode:', apiError);
+      }
+
+      // Only use demo data if real API failed and demo mode is enabled
       if (isDemoMode) {
+        console.log('Using demo data as fallback');
         // Filter demo data
         let demoStudents = getDemoStudents();
         
@@ -342,21 +358,18 @@ export const useStudent360Data = () => {
 
         setStudents(demoStudents);
       } else {
-        // Fetch from API
-        const apiStudents = await fetchFilteredStudents(newFilters);
-        setStudents(apiStudents);
+        // If demo mode is off and API failed, show error
+        throw new Error('Unable to fetch student data. Please check your API configuration.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load student data';
       setError(errorMessage);
       
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Student Data',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      toast({
+        title: 'Error Loading Student Data',
+        description: errorMessage,
+        variant: 'destructive'
+      });
       
       setStudents([]);
     } finally {
@@ -383,27 +396,30 @@ export const useStudent360Data = () => {
 
   // Fetch detailed data for a specific student
   const fetchStudentDetails = useCallback(async (studentId: string): Promise<Student360Data | null> => {
-    if (isDemoMode) {
-      const demoStudents = getDemoStudents();
-      return demoStudents.find(s => s.id === studentId) || null;
-    }
-
+    // Always try to fetch real data first
     try {
       console.log('Fetching real-time student data for ID:', studentId);
       const result = await fetchStudent360Data(studentId);
       
-      if (!result) {
-        console.warn('No student data returned from API');
-        return null;
+      if (result && result.name !== "Demo Student") {
+        console.log('Successfully fetched real student data:', result);
+        return result;
       }
-      
-      console.log('Successfully fetched student data:', result);
-      return result;
     } catch (error) {
-      console.error('Error fetching student details:', error);
-      return null;
+      console.warn('Real API failed for student details:', error);
     }
-  }, [isDemoMode, toast]);
+
+    // Fallback to demo data only if demo mode is enabled and real API failed
+    if (isDemoMode) {
+      console.log('Using demo data as fallback for student details');
+      const demoStudents = getDemoStudents();
+      return demoStudents.find(s => s.id === studentId) || null;
+    }
+
+    // If not in demo mode and real API failed, return null
+    console.error('Unable to fetch student details - API failed and demo mode is disabled');
+    return null;
+  }, [isDemoMode]);
 
   return {
     students,
