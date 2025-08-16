@@ -83,6 +83,12 @@ const Landing = () => {
             </CardHeader>
             <CardContent className="space-y-4 text-muted-foreground leading-relaxed">
               <p>
+                Throughout history there have been countless mentor-mentee relationships in every conceivable discipline. 
+                From philosophy to politics to psychiatry to the arts, mentoring has always played an important role. 
+                Socrates mentored Plato. Hubert Humphrey mentored Walter Mondale. Sigmund Freud mentored C. G. Jung. 
+                Ralph Waldo Emerson mentored Henry David Thoreau.
+              </p>
+              <p>
                 The story of Mentor comes from Homer's epic poem The Odyssey. When Odysseus, King of Ithaca went 
                 to fight in the Trojan War, he entrusted the care of his kingdom to Mentor. Mentor served as the 
                 teacher and overseer of Odysseus's son, Telemachus.
@@ -100,6 +106,9 @@ const Landing = () => {
                   individual's development. This guidance is not done for personal gain.
                 </p>
               </div>
+              <p className="text-sm italic text-muted-foreground/80">
+                One of the most valuable assets your career can have is a good mentor.
+              </p>
             </CardContent>
           </Card>
 
