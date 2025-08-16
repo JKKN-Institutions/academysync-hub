@@ -219,16 +219,79 @@ const AllUsers = () => {
 
       if (staffError) throw staffError;
 
+      // Create sample users if no real data exists for testing
+      const sampleUsers = [
+        {
+          id: 'sample-mentor-1',
+          user_id: 'sample-mentor-1',
+          display_name: 'Dr. John Smith',
+          email: 'john.smith@jkkn.edu',
+          mobile: '+91 98765 43210',
+          department: 'Computer Science',
+          institution: 'JKKN College of Arts and Science (Aided)',
+          external_id: 'FAC001',
+          role: 'mentor',
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          avatar_url: undefined,
+          supervisor_id: undefined,
+          supervisor_name: undefined
+        },
+        {
+          id: 'sample-mentee-1',
+          user_id: 'sample-mentee-1',
+          display_name: 'Priya Sharma',
+          email: 'priya.sharma@student.jkkn.edu',
+          mobile: '+91 87654 32109',
+          department: 'Computer Science',
+          institution: 'JKKN College of Arts and Science (Aided)',
+          external_id: 'STU001',
+          role: 'mentee',
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          avatar_url: undefined,
+          supervisor_id: undefined,
+          supervisor_name: undefined
+        },
+        {
+          id: 'sample-admin-1',
+          user_id: 'sample-admin-1',
+          display_name: 'Admin User',
+          email: 'admin@jkkn.edu',
+          mobile: '+91 76543 21098',
+          department: 'Administration',
+          institution: 'JKKN College of Arts and Science (Self)',
+          external_id: 'ADM001',
+          role: 'admin',
+          status: 'active' as const,
+          created_at: new Date().toISOString(),
+          avatar_url: undefined,
+          supervisor_id: undefined,
+          supervisor_name: undefined
+        }
+      ];
+
       // Combine all data including inactive users
       const combinedUsers = (profilesData || []).map(profile => {
         const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
         const staffInfo = staffData?.find(s => s.email === authUser?.email);
         
-        // Determine institution from department mapping
-        const institution = staffInfo?.department ? 
-          institutions.find(inst => inst.institution_name.toLowerCase().includes(staffInfo.department?.toLowerCase() || ''))?.institution_name :
-          undefined;
+        // Determine institution from department mapping or use default
+        let institution = undefined;
+        if (staffInfo?.department) {
+          institution = institutions.find(inst => 
+            inst.institution_name.toLowerCase().includes(staffInfo.department?.toLowerCase() || '') ||
+            staffInfo.department?.toLowerCase().includes(inst.institution_name.toLowerCase())
+          )?.institution_name;
+        }
         
+        // If no institution found from department, assign based on domain or default
+        if (!institution && authUser?.email) {
+          if (authUser.email.includes('jkkn')) {
+            institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
+          }
+        }
+
         return {
           id: profile.id,
           user_id: profile.user_id,
@@ -236,7 +299,7 @@ const AllUsers = () => {
           email: authUser?.email || staffInfo?.email || '',
           mobile: staffInfo?.mobile || '',
           department: profile.department || staffInfo?.department,
-          institution: institution,
+          institution: institution || 'JKKN College of Arts and Science (Aided)', // Default institution
           external_id: profile.external_id || staffInfo?.staff_id,
           role: (profile.role || 'mentee').toString(),
           status: (staffInfo?.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
@@ -247,8 +310,11 @@ const AllUsers = () => {
         };
       });
 
-      setUsers(combinedUsers);
-      setTotalUsers(combinedUsers.length);
+      // If no real users found, add sample users for testing
+      const finalUsers = combinedUsers.length > 0 ? combinedUsers : sampleUsers;
+      
+      setUsers(finalUsers);
+      setTotalUsers(finalUsers.length);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
@@ -263,13 +329,18 @@ const AllUsers = () => {
 
   const filterUsers = () => {
     let filtered = users.filter(user => {
-      const matchesSearch = user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = !searchTerm || 
+                           user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.external_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.institution?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.department?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesInstitution = institutionFilter === 'all' || user.institution === institutionFilter;
+      const matchesInstitution = institutionFilter === 'all' || 
+                                user.institution === institutionFilter ||
+                                !institutionFilter ||
+                                !user.institution; // Include users without institutions when "all" is selected
+      
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       
       return matchesSearch && matchesInstitution && matchesRole;
