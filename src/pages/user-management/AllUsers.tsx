@@ -219,110 +219,71 @@ const AllUsers = () => {
 
       if (staffError) throw staffError;
 
-      // Create sample users if no real data exists for testing
-      const sampleUsers = [
-        {
-          id: 'sample-mentor-1',
-          user_id: 'sample-mentor-1',
-          display_name: 'Dr. John Smith',
-          email: 'john.smith@jkkn.edu',
-          mobile: '+91 98765 43210',
-          department: 'Computer Science',
-          institution: 'JKKN College of Arts and Science (Aided)',
-          external_id: 'FAC001',
-          role: 'mentor',
-          status: 'active' as const,
-          created_at: new Date().toISOString(),
-          avatar_url: undefined,
-          supervisor_id: undefined,
-          supervisor_name: undefined
-        },
-        {
-          id: 'sample-mentee-1',
-          user_id: 'sample-mentee-1',
-          display_name: 'Priya Sharma',
-          email: 'priya.sharma@student.jkkn.edu',
-          mobile: '+91 87654 32109',
-          department: 'Computer Science',
-          institution: 'JKKN College of Arts and Science (Aided)',
-          external_id: 'STU001',
-          role: 'mentee',
-          status: 'active' as const,
-          created_at: new Date().toISOString(),
-          avatar_url: undefined,
-          supervisor_id: undefined,
-          supervisor_name: undefined
-        },
-        {
-          id: 'sample-admin-1',
-          user_id: 'sample-admin-1',
-          display_name: 'Admin User',
-          email: 'admin@jkkn.edu',
-          mobile: '+91 76543 21098',
-          department: 'Administration',
-          institution: 'JKKN College of Arts and Science (Self)',
-          external_id: 'ADM001',
-          role: 'admin',
-          status: 'active' as const,
-          created_at: new Date().toISOString(),
-          avatar_url: undefined,
-          supervisor_id: undefined,
-          supervisor_name: undefined
-        }
-      ];
-
-      // Combine all data including inactive users
-      const combinedUsers = (profilesData || []).map(profile => {
+      // Process all profile data to create the user list
+      const allUsers = await Promise.all((profilesData || []).map(async (profile) => {
         const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
         const staffInfo = staffData?.find(s => s.email === authUser?.email);
         
-        // Determine institution from department mapping or use default
-        let institution = undefined;
-        if (staffInfo?.department) {
-          institution = institutions.find(inst => 
-            inst.institution_name.toLowerCase().includes(staffInfo.department?.toLowerCase() || '') ||
-            staffInfo.department?.toLowerCase().includes(inst.institution_name.toLowerCase())
-          )?.institution_name;
-        }
+        // Determine institution from email domain or use department mapping
+        let institution = 'JKKN College of Arts and Science (Aided)'; // Default
         
-        // If no institution found from department, assign based on domain or default
-        if (!institution && authUser?.email) {
-          if (authUser.email.includes('jkkn')) {
-            institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
-          } else {
-            // Assign default institution for non-jkkn emails
-            institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
+        if (authUser?.email) {
+          if (authUser.email.includes('jkkn.ac.in') || authUser.email.includes('jkkn.edu')) {
+            // Map emails to different institutions based on email pattern or department
+            if (profile.department === 'Web' || authUser.email.includes('admin')) {
+              institution = institutions.length > 1 ? institutions[1].institution_name : 'JKKN College of Arts and Science (Self)';
+            } else {
+              institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
+            }
           }
         }
+
+        // Determine role - fix role mapping issues
+        let userRole = profile.role || 'mentee';
         
-        // Ensure all users have an institution assigned
-        if (!institution) {
-          institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
+        // Map email patterns to appropriate roles
+        if (authUser?.email) {
+          const email = authUser.email.toLowerCase();
+          if (email.includes('ceo') || email.includes('admin') || profile.role === 'super_admin') {
+            userRole = profile.role === 'super_admin' ? 'super_admin' : 'admin';
+          } else if (email.includes('faculty') || email.includes('prof') || email.includes('dr.')) {
+            userRole = 'mentor';
+          } else if (profile.role === 'mentee' || email.includes('student')) {
+            userRole = 'mentee';
+          }
         }
 
         return {
           id: profile.id,
           user_id: profile.user_id,
-          display_name: profile.display_name || staffInfo?.name || authUser?.email || 'Unknown User',
-          email: authUser?.email || staffInfo?.email || '',
+          display_name: profile.display_name || authUser?.email?.split('@')[0] || 'Unknown User',
+          email: authUser?.email || '',
           mobile: staffInfo?.mobile || '',
-          department: profile.department || staffInfo?.department,
-          institution: institution || 'JKKN College of Arts and Science (Aided)', // Default institution
-          external_id: profile.external_id || staffInfo?.staff_id,
-          role: (profile.role || 'mentee').toString(),
-          status: (staffInfo?.status === 'inactive' ? 'inactive' : 'active') as 'active' | 'inactive',
+          department: profile.department || 'Not Assigned',
+          institution: institution,
+          external_id: profile.external_id || authUser?.email?.split('@')[0],
+          role: userRole,
+          status: 'active' as const,
           created_at: profile.created_at,
           avatar_url: undefined,
           supervisor_id: undefined,
           supervisor_name: undefined
         };
-      });
+      }));
 
-      // If no real users found, add sample users for testing
-      const finalUsers = combinedUsers.length > 0 ? combinedUsers : sampleUsers;
+      console.log('Fetched users data:', {
+        totalProfiles: profilesData?.length || 0,
+        totalAuthUsers: authUsers?.users?.length || 0,
+        processedUsers: allUsers.length,
+        userRoles: allUsers.reduce((acc: any, user) => {
+          acc[user.role] = (acc[user.role] || 0) + 1;
+          return acc;
+        }, {}),
+        sampleUsers: allUsers.slice(0, 3)
+      });
       
-      setUsers(finalUsers);
-      setTotalUsers(finalUsers.length);
+      setUsers(allUsers);
+      setTotalUsers(allUsers.length);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast({
