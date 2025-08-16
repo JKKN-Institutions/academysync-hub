@@ -24,7 +24,12 @@ const Landing = () => {
               <BookOpen className="h-8 w-8 text-primary" />
               Handbook for Mentees
             </h2>
-            <p className="text-muted-foreground text-lg">Your guide to a successful mentoring journey</p>
+            <p className="text-muted-foreground text-lg">
+              Throughout history there have been countless mentor-mentee relationships in every conceivable discipline. 
+              From philosophy to politics to psychiatry to the arts, mentoring has always played an important role. 
+              Socrates mentored Plato. Hubert Humphrey mentored Walter Mondale. Sigmund Freud mentored C. G. Jung. 
+              Ralph Waldo Emerson mentored Henry David Thoreau.
+            </p>
           </div>
 
           {/* The Zen Master Story */}
