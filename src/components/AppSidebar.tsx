@@ -170,23 +170,26 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-3 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <GraduationCap className="h-4 w-4" />
+    <Sidebar 
+      className={`transition-all duration-300 ease-in-out ${isCollapsed ? "w-16" : "w-64"}`} 
+      collapsible="icon"
+    >
+      <SidebarHeader className="border-b border-sidebar-border p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
+            <GraduationCap className="h-5 w-5" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground">Mentor & Mentee</span>
-              <span className="text-xs text-sidebar-foreground/70">Mentoring Platform</span>
+              <span className="font-semibold text-sidebar-foreground text-base">Mentor & Mentee</span>
+              <span className="text-sm text-sidebar-foreground/70">Mentoring Platform</span>
             </div>
           )}
         </div>
         {!isCollapsed && user && (
-          <div className="px-3 pb-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-xs">
+          <div className="mt-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-xs font-medium">
                 {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
               </Badge>
               {user.department && (
