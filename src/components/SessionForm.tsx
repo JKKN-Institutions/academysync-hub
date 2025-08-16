@@ -9,7 +9,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, Clock, Users, MapPin, Plus, X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon, Clock, Users, MapPin, Plus, X, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { FormSkeleton } from "@/components/ui/loading-skeleton";
@@ -19,6 +20,7 @@ import { useStudentsData } from "@/hooks/useStudentsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -54,12 +56,15 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   });
 
   const [selectedStudents, setSelectedStudents] = useState<string[]>(formData.students);
+  const [pendingStudents, setPendingStudents] = useState<string[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [selectedInstitution, setSelectedInstitution] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [selectedProgram, setSelectedProgram] = useState<string>('all');
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [selectedSection, setSelectedSection] = useState<string>('all');
+  
+  const { toast } = useToast();
 
   // Use real student data from API with proper property mapping and grouping
   const availableStudents = students?.map(student => ({
@@ -284,18 +289,58 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     onSubmit?.(sessionData);
   };
 
-  const addStudent = (studentId: string) => {
-    if (!selectedStudents.includes(studentId)) {
-      const newSelectedStudents = [...selectedStudents, studentId];
-      setSelectedStudents(newSelectedStudents);
+  const toggleStudentSelection = (studentId: string) => {
+    setPendingStudents(prev => {
+      if (prev.includes(studentId)) {
+        return prev.filter(id => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
+  };
+
+  const addBulkStudents = () => {
+    if (pendingStudents.length === 0) return;
+    
+    const newStudents = pendingStudents.filter(id => !selectedStudents.includes(id));
+    const newSelectedStudents = [...selectedStudents, ...newStudents];
+    setSelectedStudents(newSelectedStudents);
+    
+    // Get student details for notification
+    const addedStudentDetails = availableStudents.filter(s => newStudents.includes(s.id));
+    
+    if (addedStudentDetails.length > 0) {
+      toast({
+        title: "Students Added",
+        description: `${addedStudentDetails.length} student${addedStudentDetails.length !== 1 ? 's have' : ' has'} been added to the session.`,
+      });
       
-      // Get student details for notification
-      const student = availableStudents.find(s => s.id === studentId);
-      if (student && onStudentAdded) {
-        onStudentAdded([student]);
+      if (onStudentAdded) {
+        onStudentAdded(addedStudentDetails);
       }
     }
+    
+    setPendingStudents([]);
     setStudentSearch('');
+  };
+
+  const selectAllFilteredStudents = () => {
+    const studentsToShow = getFilteredStudents().filter(student =>
+      !studentSearch || 
+      student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
+    );
+    
+    const newPendingStudents = studentsToShow
+      .filter(student => !selectedStudents.includes(student.id))
+      .map(student => student.id);
+    
+    setPendingStudents(newPendingStudents);
+  };
+
+  const clearPendingSelection = () => {
+    setPendingStudents([]);
   };
 
   const removeStudent = (studentId: string) => {
@@ -674,37 +719,108 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
               {/* Student Results */}
               {selectedSection && selectedSection !== 'all' && (
-                <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
-                  {(() => {
-                    const studentsToShow = getFilteredStudents().filter(student =>
-                      !studentSearch || 
-                      student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
-                      (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
-                    );
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Available Students ({getFilteredStudents().filter(student =>
+                        !studentSearch || 
+                        student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
+                      ).length})
+                    </Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAllFilteredStudents}
+                        disabled={getFilteredStudents().length === 0}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={clearPendingSelection}
+                        disabled={pendingStudents.length === 0}
+                      >
+                        Clear Selection
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-md p-2 max-h-60 overflow-y-auto">
+                    {(() => {
+                      const studentsToShow = getFilteredStudents().filter(student =>
+                        !studentSearch || 
+                        student.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        student.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                        (student.email && student.email.toLowerCase().includes(studentSearch.toLowerCase()))
+                      );
 
-                    return studentsToShow.length > 0 ? (
-                      studentsToShow.map(student => (
-                        <div
-                          key={student.id}
-                          onClick={() => addStudent(student.id)}
-                          className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer rounded"
-                        >
-                          <div>
-                            <span className="font-medium">{student.name}</span>
-                            <span className="text-sm text-muted-foreground ml-2">({student.rollNo})</span>
-                            <div className="text-xs text-muted-foreground">{student.program}</div>
-                            <div className="text-xs text-muted-foreground">{student.department}</div>
-                          </div>
-                          <Plus className="w-4 h-4 text-green-600" />
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground p-2">
-                        {studentSearch ? 'No students found matching your search' : 'No students available in this section'}
-                      </p>
-                    );
-                  })()}
+                      return studentsToShow.length > 0 ? (
+                        studentsToShow.map(student => {
+                          const isSelected = selectedStudents.includes(student.id);
+                          const isPending = pendingStudents.includes(student.id);
+                          
+                          return (
+                            <div
+                              key={student.id}
+                              className={cn(
+                                "flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer",
+                                isSelected && "bg-muted/50 opacity-60",
+                                isPending && "bg-blue-50 border border-blue-200"
+                              )}
+                              onClick={() => !isSelected && toggleStudentSelection(student.id)}
+                            >
+                              <Checkbox
+                                checked={isPending}
+                                disabled={isSelected}
+                                onChange={() => !isSelected && toggleStudentSelection(student.id)}
+                                className="pointer-events-none"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={cn("font-medium", isSelected && "text-muted-foreground")}>
+                                    {student.name}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">({student.rollNo})</span>
+                                  {isSelected && (
+                                    <Badge variant="secondary" className="text-xs">Already Added</Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{student.program}</div>
+                                <div className="text-xs text-muted-foreground">{student.department}</div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground p-2">
+                          {studentSearch ? 'No students found matching your search' : 'No students available in this section'}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  
+                  {pendingStudents.length > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <span className="text-sm font-medium text-blue-900">
+                        {pendingStudents.length} student{pendingStudents.length !== 1 ? 's' : ''} selected
+                      </span>
+                      <Button
+                        type="button"
+                        onClick={addBulkStudents}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Add Selected Students
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
