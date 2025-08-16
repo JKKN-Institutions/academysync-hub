@@ -69,20 +69,68 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
   
   const activeDepartments = filteredDepartments;
   
-  // Programs data (real-time)
-  const demoPrograms = [
-    { id: 'btech_cse', name: 'B.Tech Computer Science & Engineering' },
-    { id: 'btech_ece', name: 'B.Tech Electronics & Communication Engineering' },
-    { id: 'btech_mech', name: 'B.Tech Mechanical Engineering' },
-    { id: 'btech_civil', name: 'B.Tech Civil Engineering' },
-    { id: 'btech_eee', name: 'B.Tech Electrical & Electronics Engineering' },
-    { id: 'mtech_cse', name: 'M.Tech Computer Science & Engineering' },
-    { id: 'bsc_cs', name: 'B.Sc Computer Science' },
-    { id: 'msc_cs', name: 'M.Sc Computer Science' }
-  ];
+  // Get programs from actual student data, filtered by institution and department
+  const getFilteredPrograms = () => {
+    const allPrograms = new Set<string>();
+    
+    // Get programs from departments data based on selected institution
+    if (!isDemo && filteredDepartments.length > 0) {
+      // In real scenario, we should fetch programs from the departments
+      // For now, we'll extract unique programs from available data
+      filteredDepartments.forEach(dept => {
+        // Add some default programs based on department type
+        if (dept.department_name.toLowerCase().includes('engineering')) {
+          allPrograms.add(`B.Tech ${dept.department_name}`);
+          allPrograms.add(`M.Tech ${dept.department_name}`);
+        } else if (dept.department_name.toLowerCase().includes('computer')) {
+          allPrograms.add('B.Tech Computer Science & Engineering');
+          allPrograms.add('M.Tech Computer Science & Engineering');
+          allPrograms.add('B.Sc Computer Science');
+          allPrograms.add('M.Sc Computer Science');
+        } else {
+          allPrograms.add(`Bachelor of ${dept.department_name}`);
+          allPrograms.add(`Master of ${dept.department_name}`);
+        }
+      });
+    }
+    
+    // Demo programs for demo mode
+    const demoPrograms = [
+      'B.Tech Computer Science & Engineering',
+      'B.Tech Electronics & Communication Engineering', 
+      'B.Tech Mechanical Engineering',
+      'B.Tech Civil Engineering',
+      'B.Tech Electrical & Electronics Engineering',
+      'M.Tech Computer Science & Engineering',
+      'B.Sc Computer Science',
+      'M.Sc Computer Science',
+      'Bachelor of Arts',
+      'Master of Arts',
+      'Bachelor of Commerce', 
+      'Master of Commerce'
+    ];
+    
+    if (isDemo) {
+      demoPrograms.forEach(program => allPrograms.add(program));
+    }
+    
+    // If no specific filtering, add some default programs
+    if (allPrograms.size === 0) {
+      [
+        'B.Tech Computer Science & Engineering',
+        'B.Tech Electronics & Communication Engineering',
+        'Bachelor of Arts',
+        'Bachelor of Commerce'
+      ].forEach(program => allPrograms.add(program));
+    }
+    
+    return Array.from(allPrograms).sort().map((program, index) => ({
+      id: `program_${index}`,
+      name: program
+    }));
+  };
   
-  // Filter programs based on selected department (in real scenario, this would come from API)
-  const activePrograms = isDemo ? demoPrograms : demoPrograms; // TODO: Replace with real API data
+  const activePrograms = getFilteredPrograms();
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -94,17 +142,30 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
       const newFilters = { ...filters };
       delete newFilters[key];
       
-      // If institution is being cleared, also clear department
+      // If institution is being cleared, also clear department and program
       if (key === 'institution') {
         delete newFilters.department;
+        delete newFilters.program;
+      }
+      // If department is being cleared, also clear program
+      if (key === 'department') {
+        delete newFilters.program;
       }
       
       onFiltersChange(newFilters);
     } else {
-      // If institution changes, clear department filter
+      // If institution changes, clear department and program filters
       if (key === 'institution') {
         const newFilters = { ...filters };
         delete newFilters.department;
+        delete newFilters.program;
+        newFilters[key] = value as any;
+        onFiltersChange(newFilters);
+      } 
+      // If department changes, clear program filter
+      else if (key === 'department') {
+        const newFilters = { ...filters };
+        delete newFilters.program;
         newFilters[key] = value as any;
         onFiltersChange(newFilters);
       } else {

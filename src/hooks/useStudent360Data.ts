@@ -302,18 +302,23 @@ export const useStudent360Data = () => {
       setLoading(true);
       setError(null);
 
-      // Always try to fetch real data first, even in demo mode
+      // Try to fetch real data first
       try {
-        console.log('Attempting to fetch real student data...');
+        console.log('Attempting to fetch real student data with filters:', newFilters);
         const apiStudents = await fetchFilteredStudents(newFilters);
         
-        if (apiStudents && apiStudents.length > 0) {
+        if (apiStudents && apiStudents.length >= 0) { // Changed condition to accept empty arrays
           console.log('Successfully loaded real student data:', apiStudents.length, 'students');
           setStudents(apiStudents);
           return; // Exit early if real data is available
         }
       } catch (apiError) {
-        console.warn('Real API failed, checking demo mode:', apiError);
+        console.warn('Real API failed, falling back to demo mode:', apiError);
+        
+        // If not in demo mode, show the error immediately
+        if (!isDemoMode) {
+          throw new Error('Unable to fetch student data. Please check your API configuration or enable demo mode.');
+        }
       }
 
       // Only use demo data if real API failed and demo mode is enabled
@@ -334,13 +339,22 @@ export const useStudent360Data = () => {
 
         if (newFilters.institution) {
           demoStudents = demoStudents.filter(student => 
+            student.institution.includes(newFilters.institution) ||
             student.institution === newFilters.institution
           );
         }
 
         if (newFilters.department) {
           demoStudents = demoStudents.filter(student => 
+            student.department.includes(newFilters.department) ||
             student.department === newFilters.department
+          );
+        }
+
+        if (newFilters.program) {
+          demoStudents = demoStudents.filter(student => 
+            student.program.includes(newFilters.program) ||
+            student.program === newFilters.program
           );
         }
 
@@ -357,9 +371,6 @@ export const useStudent360Data = () => {
         }
 
         setStudents(demoStudents);
-      } else {
-        // If demo mode is off and API failed, show error
-        throw new Error('Unable to fetch student data. Please check your API configuration.');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load student data';
