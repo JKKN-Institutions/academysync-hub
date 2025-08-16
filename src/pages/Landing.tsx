@@ -15,6 +15,9 @@ const Landing = () => {
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Empowering growth through meaningful connections and guided development
           </p>
+          <p className="text-muted-foreground max-w-3xl mx-auto mb-8">
+            When you click the 'Handbook Full Page' button below, the PDF update I provide will be available for download.
+          </p>
         </div>
 
         {/* Handbook Section */}
