@@ -98,7 +98,7 @@ const AllUsers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [institutionFilter, setInstitutionFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
   
@@ -135,7 +135,7 @@ const AllUsers = () => {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, institutionFilter, roleFilter, statusFilter]);
+  }, [users, searchTerm, institutionFilter, roleFilter]);
 
   const fetchDepartments = async () => {
     try {
@@ -265,13 +265,14 @@ const AllUsers = () => {
     let filtered = users.filter(user => {
       const matchesSearch = user.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           user.external_id?.toLowerCase().includes(searchTerm.toLowerCase());
+                           user.external_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.institution?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           user.department?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesInstitution = institutionFilter === 'all' || user.institution === institutionFilter;
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
       
-      return matchesSearch && matchesInstitution && matchesRole && matchesStatus;
+      return matchesSearch && matchesInstitution && matchesRole;
     });
     
     setFilteredUsers(filtered);
@@ -438,9 +439,9 @@ const AllUsers = () => {
     switch (role) {
       case 'super_admin': return 'bg-purple-100 text-purple-800';
       case 'admin': return 'bg-red-100 text-red-800';
-      case 'faculty': return 'bg-blue-100 text-blue-800';
-      case 'staff': return 'bg-green-100 text-green-800';
-      case 'student': return 'bg-gray-100 text-gray-800';
+      case 'mentor': return 'bg-blue-100 text-blue-800';
+      case 'mentee': return 'bg-green-100 text-green-800';
+      case 'dept_lead': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -520,22 +521,11 @@ const AllUsers = () => {
               </SelectTrigger>
               <SelectContent className="bg-background border z-50">
                 <SelectItem value="all">All Roles</SelectItem>
-                {roles.map(role => (
-                  <SelectItem key={role.id} value={role.name}>
-                    {role.name.replace('_', ' ').toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="mentor">Mentor</SelectItem>
+                <SelectItem value="mentee">Mentee</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
+                <SelectItem value="dept_lead">Dept Lead</SelectItem>
               </SelectContent>
             </Select>
 
@@ -546,7 +536,6 @@ const AllUsers = () => {
                 setSearchTerm("");
                 setInstitutionFilter("all");
                 setRoleFilter("all");
-                setStatusFilter("all");
               }}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -673,16 +662,27 @@ const AllUsers = () => {
                             Edit User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                           {roles.map(role => (
-                             <DropdownMenuItem
-                               key={role.id}
-                               onClick={() => handleChangeRole(user, role.name)}
-                               disabled={user.role === role.name}
-                             >
-                               <UserX className="h-4 w-4 mr-2" />
-                               Change to {role.name.replace('_', ' ').toUpperCase()}
-                             </DropdownMenuItem>
-                           ))}
+                           <DropdownMenuItem
+                             onClick={() => handleChangeRole(user, 'mentor')}
+                             disabled={user.role === 'mentor'}
+                           >
+                             <UserX className="h-4 w-4 mr-2" />
+                             Change to Mentor
+                           </DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => handleChangeRole(user, 'mentee')}
+                             disabled={user.role === 'mentee'}
+                           >
+                             <UserX className="h-4 w-4 mr-2" />
+                             Change to Mentee
+                           </DropdownMenuItem>
+                           <DropdownMenuItem
+                             onClick={() => handleChangeRole(user, 'admin')}
+                             disabled={user.role === 'admin'}
+                           >
+                             <UserX className="h-4 w-4 mr-2" />
+                             Change to Admin
+                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <UserX className="h-4 w-4 mr-2" />
                             Deactivate User
@@ -751,11 +751,11 @@ const AllUsers = () => {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {roles.map(role => (
-                    <SelectItem key={role.id} value={role.name}>
-                      {role.name.replace('_', ' ').toUpperCase()}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="mentor">Mentor</SelectItem>
+                  <SelectItem value="mentee">Mentee</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="dept_lead">Dept Lead</SelectItem>
                 </SelectContent>
               </Select>
             </div>
