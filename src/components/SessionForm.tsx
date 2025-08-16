@@ -769,19 +769,24 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                             <div
                               key={student.id}
                               className={cn(
-                                "flex items-center space-x-3 p-2 hover:bg-muted rounded cursor-pointer",
+                                "flex items-center space-x-3 p-2 hover:bg-muted rounded",
                                 isSelected && "bg-muted/50 opacity-60",
                                 isPending && "bg-blue-50 border border-blue-200"
                               )}
-                              onClick={() => !isSelected && toggleStudentSelection(student.id)}
                             >
                               <Checkbox
                                 checked={isPending}
                                 disabled={isSelected}
-                                onChange={() => !isSelected && toggleStudentSelection(student.id)}
-                                className="pointer-events-none"
+                                onCheckedChange={(checked) => {
+                                  if (!isSelected) {
+                                    toggleStudentSelection(student.id);
+                                  }
+                                }}
                               />
-                              <div className="flex-1">
+                              <div 
+                                className="flex-1 cursor-pointer"
+                                onClick={() => !isSelected && toggleStudentSelection(student.id)}
+                              >
                                 <div className="flex items-center gap-2">
                                   <span className={cn("font-medium", isSelected && "text-muted-foreground")}>
                                     {student.name}
