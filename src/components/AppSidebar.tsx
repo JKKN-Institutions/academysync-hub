@@ -131,7 +131,6 @@ export function AppSidebar() {
       icon: BookOpen,
       roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"],
       items: [
-        { title: "Handbook", url: "/handbook", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
         { title: "Help Center", url: "/help", icon: BookOpen, roles: ["admin", "super_admin", "mentor", "mentee", "dept_lead"] },
       ]
     }
@@ -265,6 +264,20 @@ export function AppSidebar() {
             </SidebarGroup>
           );
         })}
+
+        {/* Handbook - Standalone Menu Item */}
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.pathname === "/handbook"}>
+                <NavLink to="/handbook" className="group">
+                  <BookOpen className="h-4 w-4" />
+                  {!isCollapsed && <span>Handbook</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );
