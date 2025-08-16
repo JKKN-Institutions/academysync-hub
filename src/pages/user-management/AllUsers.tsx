@@ -289,7 +289,15 @@ const AllUsers = () => {
         if (!institution && authUser?.email) {
           if (authUser.email.includes('jkkn')) {
             institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
+          } else {
+            // Assign default institution for non-jkkn emails
+            institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
           }
+        }
+        
+        // Ensure all users have an institution assigned
+        if (!institution) {
+          institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
         }
 
         return {
@@ -336,14 +344,22 @@ const AllUsers = () => {
                            user.institution?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            user.department?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesInstitution = institutionFilter === 'all' || 
-                                user.institution === institutionFilter ||
-                                !institutionFilter ||
-                                !user.institution; // Include users without institutions when "all" is selected
+      // Fix institution filtering logic
+      const matchesInstitution = institutionFilter === 'all' || user.institution === institutionFilter;
       
       const matchesRole = roleFilter === 'all' || user.role === roleFilter;
       
       return matchesSearch && matchesInstitution && matchesRole;
+    });
+    
+    console.log('Filtering Debug:', {
+      totalUsers: users.length,
+      institutionFilter,
+      roleFilter,
+      searchTerm,
+      filteredCount: filtered.length,
+      sampleUser: users[0],
+      sampleFilteredUser: filtered[0]
     });
     
     setFilteredUsers(filtered);
@@ -611,6 +627,18 @@ const AllUsers = () => {
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Reset
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setLoading(true);
+                fetchUsers();
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Data
             </Button>
           </div>
         </CardContent>
