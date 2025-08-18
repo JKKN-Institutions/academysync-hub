@@ -63,6 +63,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { useRoles } from "@/hooks/useRoles";
+import { ComprehensiveUserSync } from "@/components/ComprehensiveUserSync";
 
 interface User {
   id: string;
@@ -528,6 +529,9 @@ const AllUsers = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Comprehensive User Sync */}
+      <ComprehensiveUserSync />
 
       {/* Filters */}
       <Card>

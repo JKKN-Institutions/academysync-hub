@@ -54,15 +54,7 @@ export type Database = {
           student_external_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "assignments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -101,15 +93,7 @@ export type Database = {
           old_values?: Json | null
           timestamp?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       counseling_sessions: {
         Row: {
@@ -163,15 +147,7 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "counseling_sessions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       goal_versions: {
         Row: {
@@ -229,13 +205,6 @@ export type Database = {
           version_number?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "goal_versions_changed_by_fkey"
-            columns: ["changed_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "goal_versions_goal_id_fkey"
             columns: ["goal_id"]
@@ -308,13 +277,6 @@ export type Database = {
             referencedRelation: "counseling_sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "goals_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       meeting_logs: {
@@ -368,13 +330,6 @@ export type Database = {
             referencedRelation: "counseling_sessions"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "meeting_logs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
         ]
       }
       mentor_assignments: {
@@ -421,13 +376,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "mentor_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "mentor_assignments_mentor_id_fkey"
             columns: ["mentor_id"]
@@ -645,15 +593,7 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "roles_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       session_feedback: {
         Row: {
@@ -861,15 +801,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "system_settings_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_activity_logs: {
         Row: {
@@ -899,15 +831,7 @@ export type Database = {
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_activity_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_profiles: {
         Row: {
@@ -964,15 +888,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       user_role_assignments: {
         Row: {
@@ -1004,25 +920,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "user_role_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "user_role_assignments_role_id_fkey"
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_role_assignments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1063,15 +965,7 @@ export type Database = {
           users_processed?: number | null
           users_updated?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_sync_logs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -1096,13 +990,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "mentor_assignments_assigned_by_fkey"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-          {
             foreignKeyName: "mentor_assignments_mentor_id_fkey"
             columns: ["mentor_id"]
             isOneToOne: false
@@ -1116,15 +1003,12 @@ export type Database = {
           activity_status: string | null
           department: string | null
           display_name: string | null
-          email: string | null
-          email_confirmed_at: string | null
           external_id: string | null
           goals_created: number | null
           institution: string | null
           is_synced_from_staff: boolean | null
           joined_date: string | null
           last_login: string | null
-          last_sign_in_at: string | null
           login_count: number | null
           recent_activity_count: number | null
           role: string | null
@@ -1154,15 +1038,7 @@ export type Database = {
           sessions_created: number | null
           user_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "comprehensive_user_analytics"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
