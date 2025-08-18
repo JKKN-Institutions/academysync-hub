@@ -24,7 +24,7 @@ import Goals from "./pages/Goals";
 import Meetings from "./pages/Meetings";
 import QnA from "./pages/QnA";
 import Alerts from "./pages/Alerts";
-import AnalyticsDashboard from "./pages/user-management/AnalyticsDashboard";
+import UserAnalyticsDashboard from "./pages/user-management/UserAnalyticsDashboard";
 import AllUsers from "./pages/user-management/AllUsers";
 import RolesAssignment from "./pages/user-management/RolesAssignment";
 import RoleManagement from "./pages/user-management/RoleManagement";
@@ -143,7 +143,7 @@ const App = () => (
                   <UserManagement />
                 </ProtectedRoute>
               }>
-                <Route path="analytics" element={<AnalyticsDashboard />} />
+                <Route path="analytics" element={<UserAnalyticsDashboard />} />
                 <Route path="users" element={<AllUsers />} />
                 <Route path="roles-assignment" element={<RolesAssignment />} />
                 <Route path="role-management" element={<RoleManagement />} />

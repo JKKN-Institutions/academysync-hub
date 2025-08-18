@@ -749,34 +749,88 @@ export type Database = {
         }
         Relationships: []
       }
+      user_activity_logs: {
+        Row: {
+          activity_data: Json | null
+          activity_type: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_data?: Json | null
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_data?: Json | null
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           department: string | null
+          designation: string | null
           display_name: string | null
           external_id: string | null
           id: string
+          institution: string | null
+          is_synced_from_staff: boolean | null
+          last_login: string | null
+          login_count: number | null
+          mobile: string | null
           role: string
+          staff_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           department?: string | null
+          designation?: string | null
           display_name?: string | null
           external_id?: string | null
           id?: string
+          institution?: string | null
+          is_synced_from_staff?: boolean | null
+          last_login?: string | null
+          login_count?: number | null
+          mobile?: string | null
           role?: string
+          staff_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           department?: string | null
+          designation?: string | null
           display_name?: string | null
           external_id?: string | null
           id?: string
+          institution?: string | null
+          is_synced_from_staff?: boolean | null
+          last_login?: string | null
+          login_count?: number | null
+          mobile?: string | null
           role?: string
+          staff_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -820,6 +874,45 @@ export type Database = {
           },
         ]
       }
+      user_sync_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          errors: Json | null
+          id: string
+          sync_status: string | null
+          sync_type: string
+          users_created: number | null
+          users_processed: number | null
+          users_updated: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          id?: string
+          sync_status?: string | null
+          sync_type: string
+          users_created?: number | null
+          users_processed?: number | null
+          users_updated?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errors?: Json | null
+          id?: string
+          sync_status?: string | null
+          sync_type?: string
+          users_created?: number | null
+          users_processed?: number | null
+          users_updated?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       active_mentor_assignments: {
@@ -851,6 +944,27 @@ export type Database = {
           },
         ]
       }
+      user_analytics: {
+        Row: {
+          activity_status: string | null
+          department: string | null
+          display_name: string | null
+          email: string | null
+          email_confirmed_at: string | null
+          goals_created: number | null
+          id: string | null
+          institution: string | null
+          joined_date: string | null
+          last_login: string | null
+          last_sign_in_at: string | null
+          login_count: number | null
+          recent_activity_count: number | null
+          role: string | null
+          sessions_created: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_current_user_role: {
@@ -860,6 +974,15 @@ export type Database = {
       get_user_permissions: {
         Args: { user_uuid?: string }
         Returns: Json
+      }
+      log_user_activity: {
+        Args: {
+          activity_data?: Json
+          activity_type: string
+          user_agent_string?: string
+          user_ip?: string
+        }
+        Returns: undefined
       }
       user_has_permission: {
         Args: { permission_name: string; user_uuid?: string }

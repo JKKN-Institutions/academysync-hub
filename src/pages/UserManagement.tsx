@@ -10,10 +10,10 @@ const UserManagement = () => {
 
   const menuItems = [
     {
-      title: "Analytics Dashboard",
+      title: "User Analytics Dashboard",
       path: "/user-management/analytics",
       icon: BarChart3,
-      description: "User analytics and insights"
+      description: "Comprehensive user analytics and sync management"
     },
     {
       title: "All Users",

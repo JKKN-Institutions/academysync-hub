@@ -198,9 +198,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       password,
     });
     if (error) throw error;
+    
+    // Log user activity
+    try {
+      await supabase.rpc('log_user_activity', {
+        activity_type: 'login',
+        activity_data: { login_method: 'email_password' }
+      });
+    } catch (activityError) {
+      console.warn('Failed to log activity:', activityError);
+    }
   };
 
   const signOut = async () => {
+    // Log user activity before signing out
+    try {
+      await supabase.rpc('log_user_activity', {
+        activity_type: 'logout'
+      });
+    } catch (activityError) {
+      console.warn('Failed to log activity:', activityError);
+    }
+    
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setUser(null);
