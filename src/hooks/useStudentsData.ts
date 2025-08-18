@@ -24,9 +24,26 @@ export const useStudentsData = () => {
         }));
         setStudents(demoStudents);
       } else {
-        // Fetch from myjkkn API
-        const apiStudents = await fetchStudents();
-        setStudents(apiStudents);
+        // Fetch from myjkkn API with fallback to demo data on server error
+        try {
+          const apiStudents = await fetchStudents();
+          setStudents(apiStudents);
+        } catch (apiError) {
+          console.warn('API failed, falling back to demo data:', apiError);
+          // Fallback to demo data when API fails
+          const demoStudents = getDemoStudents().map(student => ({
+            ...student,
+            status: student.status as 'active' | 'inactive'
+          }));
+          setStudents(demoStudents);
+          
+          // Show toast indicating fallback
+          toast({
+            title: 'Using Demo Data',
+            description: 'Student API is unavailable. Showing demo data instead.',
+            variant: 'default'
+          });
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
