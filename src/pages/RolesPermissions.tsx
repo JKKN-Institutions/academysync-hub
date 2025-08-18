@@ -78,10 +78,10 @@ const RolesPermissions = () => {
       if (rolesError) throw rolesError;
       setRoles(rolesData || []);
 
-      // Fetch users with their profiles only (simplified approach)
+      // Fetch users with their profiles including the legacy role field
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, user_id, display_name, department');
+        .select('id, user_id, display_name, department, role');
 
       if (profilesError) throw profilesError;
 
@@ -109,15 +109,23 @@ const RolesPermissions = () => {
         const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
         const userRoleAssignments = (roleAssignments || []).filter((ra: any) => ra.user_id === profile.user_id);
         
+        // Get roles from both new system (user_role_assignments) and legacy system (user_profiles.role)
+        const newSystemRoles = userRoleAssignments
+          .filter(ra => ra?.roles && typeof ra.roles === 'object' && 'name' in ra.roles)
+          .map(ra => (ra.roles as any).name);
+        
+        const legacyRole = profile.role ? [profile.role] : [];
+        
+        // Prefer new system roles, fallback to legacy role
+        const currentRoles = newSystemRoles.length > 0 ? newSystemRoles : legacyRole;
+        
         return {
           id: profile.user_id,
           user_id: profile.user_id,
           display_name: profile.display_name || authUser?.email || 'Unknown User',
           email: authUser?.email || '',
           department: profile.department,
-          current_roles: userRoleAssignments
-            .filter(ra => ra?.roles && typeof ra.roles === 'object' && 'name' in ra.roles)
-            .map(ra => (ra.roles as any).name),
+          current_roles: currentRoles,
           updated_at: new Date().toISOString()
         };
       });
@@ -140,22 +148,33 @@ const RolesPermissions = () => {
       const newRole = roles.find(r => r.name === newRoleName);
       if (!newRole) return;
 
-      // Remove existing role assignments for this user
+      // Update both systems for backward compatibility
+      
+      // 1. Update the user_profiles.role field (legacy system)
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ role: newRoleName })
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      // 2. Remove existing role assignments for this user
       await supabase
         .from('user_role_assignments')
         .delete()
         .eq('user_id', userId);
 
-      // Add new role assignment
-      const { error } = await supabase
+      // 3. Add new role assignment
+      const { error: assignmentError } = await supabase
         .from('user_role_assignments')
         .insert({
           user_id: userId,
           role_id: newRole.id,
-          status: 'active'
+          status: 'active',
+          assigned_by: (await supabase.auth.getUser()).data.user?.id
         });
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Success",
@@ -183,6 +202,12 @@ const RolesPermissions = () => {
 
       // Process bulk assignment
       for (const userId of selectedUsers) {
+        // Update user_profiles.role (legacy system)
+        await supabase
+          .from('user_profiles')
+          .update({ role: bulkRoleAssignment })
+          .eq('user_id', userId);
+
         // Remove existing assignments
         await supabase
           .from('user_role_assignments')
@@ -195,7 +220,8 @@ const RolesPermissions = () => {
           .insert({
             user_id: userId,
             role_id: role.id,
-            status: 'active'
+            status: 'active',
+            assigned_by: (await supabase.auth.getUser()).data.user?.id
           });
       }
 
