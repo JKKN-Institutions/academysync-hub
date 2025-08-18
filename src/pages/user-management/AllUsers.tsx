@@ -190,90 +190,63 @@ const AllUsers = () => {
     try {
       setLoading(true);
       
-      // Fetch user profiles with role assignments including inactive users
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select(`
-          id,
-          user_id,
-          display_name,
-          department,
-          external_id,
-          created_at,
-          role
-        `)
-        .order('created_at', { ascending: false });
+      // Use comprehensive_user_analytics view for complete user data
+      const { data: analyticsData, error: analyticsError } = await supabase
+        .from('comprehensive_user_analytics')
+        .select('*')
+        .order('joined_date', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (analyticsError) throw analyticsError;
 
-      // Get auth users for email data
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
+      // Get auth users for email data (fallback if needed)
+      let authUsers: any = null;
+      try {
+        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+        if (!authError) {
+          authUsers = authData;
+        }
+      } catch (error) {
         console.warn('Cannot fetch auth users (admin access required)');
       }
 
-      // Get staff data for additional info including inactive staff
-      const { data: staffData, error: staffError } = await supabase
-        .from('staff')
-        .select('staff_id, name, email, mobile, department, status');
-
-      if (staffError) throw staffError;
-
-      // Process all profile data to create the user list
-      const allUsers = await Promise.all((profilesData || []).map(async (profile) => {
-        const authUser = authUsers?.users?.find((u: any) => u.id === profile.user_id);
-        const staffInfo = staffData?.find(s => s.email === authUser?.email);
+      // Transform analytics data into user format
+      const allUsers: User[] = (analyticsData || []).map((analytics) => {
+        const authUser = authUsers?.users?.find((u: any) => u.id === analytics.user_id);
         
-        // Determine institution from email domain or use department mapping
-        let institution = 'JKKN College of Arts and Science (Aided)'; // Default
-        
-        if (authUser?.email) {
-          if (authUser.email.includes('jkkn.ac.in') || authUser.email.includes('jkkn.edu')) {
-            // Map emails to different institutions based on email pattern or department
-            if (profile.department === 'Web' || authUser.email.includes('admin')) {
-              institution = institutions.length > 1 ? institutions[1].institution_name : 'JKKN College of Arts and Science (Self)';
-            } else {
-              institution = institutions.length > 0 ? institutions[0].institution_name : 'JKKN College of Arts and Science (Aided)';
-            }
-          }
-        }
+        // Get email from auth user or derive from display_name if it looks like an email
+        const email = authUser?.email || 
+                     (analytics.display_name?.includes('@') ? analytics.display_name : '') || 
+                     '';
 
-        // Determine role - fix role mapping issues
-        let userRole = profile.role || 'mentee';
+        // Map department to institution
+        let institution = analytics.institution || 'JKKN College of Arts and Science (Aided)';
         
-        // Map email patterns to appropriate roles
-        if (authUser?.email) {
-          const email = authUser.email.toLowerCase();
-          if (email.includes('ceo') || email.includes('admin') || profile.role === 'super_admin') {
-            userRole = profile.role === 'super_admin' ? 'super_admin' : 'admin';
-          } else if (email.includes('faculty') || email.includes('prof') || email.includes('dr.')) {
-            userRole = 'mentor';
-          } else if (profile.role === 'mentee' || email.includes('student')) {
-            userRole = 'mentee';
-          }
+        if (analytics.department === 'Web' || email.includes('admin')) {
+          institution = institutions.length > 1 ? institutions[1]?.institution_name : 'JKKN College of Arts and Science (Self)';
+        } else {
+          institution = institutions.length > 0 ? institutions[0]?.institution_name : 'JKKN College of Arts and Science (Aided)';
         }
 
         return {
-          id: profile.id,
-          user_id: profile.user_id,
-          display_name: profile.display_name || authUser?.email?.split('@')[0] || 'Unknown User',
-          email: authUser?.email || '',
-          mobile: staffInfo?.mobile || '',
-          department: profile.department || 'Not Assigned',
+          id: analytics.user_id, // Use user_id as id since we don't have profile id in analytics
+          user_id: analytics.user_id,
+          display_name: analytics.display_name || email.split('@')[0] || 'Unknown User',
+          email: email,
+          mobile: '', // Not available in analytics view
+          department: analytics.department || 'Not Assigned',
           institution: institution,
-          external_id: profile.external_id || authUser?.email?.split('@')[0],
-          role: userRole,
+          external_id: analytics.external_id || analytics.staff_id || email.split('@')[0],
+          role: analytics.role || 'mentee',
           status: 'active' as const,
-          created_at: profile.created_at,
+          created_at: analytics.joined_date || '',
           avatar_url: undefined,
           supervisor_id: undefined,
           supervisor_name: undefined
         };
-      }));
+      });
 
       console.log('Fetched users data:', {
-        totalProfiles: profilesData?.length || 0,
+        totalAnalyticsUsers: analyticsData?.length || 0,
         totalAuthUsers: authUsers?.users?.length || 0,
         processedUsers: allUsers.length,
         userRoles: allUsers.reduce((acc: any, user) => {
