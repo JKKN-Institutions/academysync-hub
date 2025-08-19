@@ -28,17 +28,12 @@ const Login = () => {
     setError('');
 
     try {
-      // Use the current protocol and host for redirect URL
-      const redirectUrl = window.location.origin;
+      const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
+          redirectTo: redirectUrl
         }
       });
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDemoMode } from './useDemoMode';
 import { getDemoStudents } from '@/data/demoData';
@@ -24,41 +23,34 @@ export const useStudentsData = () => {
           status: student.status as 'active' | 'inactive'
         }));
         setStudents(demoStudents);
-        console.log(`Loaded ${demoStudents.length} demo students`);
       } else {
-        // Fetch from myjkkn API with better error handling
-        console.log('Attempting to fetch students from API...');
-        const apiStudents = await fetchStudents();
-        setStudents(apiStudents);
-        console.log(`Successfully fetched ${apiStudents.length} students from API`);
-        
-        // Show success message if we got data
-        if (apiStudents.length > 0) {
+        // Fetch from myjkkn API with fallback to demo data on server error
+        try {
+          const apiStudents = await fetchStudents();
+          setStudents(apiStudents);
+        } catch (apiError) {
+          console.warn('API failed, falling back to demo data:', apiError);
+          // Fallback to demo data when API fails
+          const demoStudents = getDemoStudents().map(student => ({
+            ...student,
+            status: student.status as 'active' | 'inactive'
+          }));
+          setStudents(demoStudents);
+          
+          // Show toast indicating fallback
           toast({
-            title: 'Students Loaded',
-            description: `Successfully loaded ${apiStudents.length} students from MyJKKN API`,
+            title: 'Using Demo Data',
+            description: 'Student API is unavailable. Showing demo data instead.',
+            variant: 'default'
           });
         }
       }
     } catch (err) {
-      console.error('Error in loadStudents:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
       setError(errorMessage);
       
-      // More specific error handling based on error type
-      if (errorMessage.includes('500')) {
-        toast({
-          title: 'Server Error',
-          description: 'MyJKKN API is experiencing issues. Please contact your system administrator.',
-          variant: 'destructive'
-        });
-      } else if (errorMessage.includes('API key')) {
-        toast({
-          title: 'API Configuration Error',
-          description: 'Please check your MyJKKN API key configuration in settings.',
-          variant: 'destructive'
-        });
-      } else {
+      // Show error toast only for API errors (not demo mode)
+      if (!isDemoMode) {
         toast({
           title: 'Error Loading Students',
           description: errorMessage,
@@ -66,7 +58,7 @@ export const useStudentsData = () => {
         });
       }
       
-      // Set empty array on error
+      // Fallback to empty array on error
       setStudents([]);
     } finally {
       setLoading(false);
@@ -78,7 +70,6 @@ export const useStudentsData = () => {
   }, [isDemoMode]);
 
   const refetch = () => {
-    console.log('Refetching students data...');
     loadStudents();
   };
 

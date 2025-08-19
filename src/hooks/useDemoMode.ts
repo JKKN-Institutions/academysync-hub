@@ -32,7 +32,7 @@ export const useDemoMode = () => {
         const demoData = data.setting_value as unknown as DemoModeData;
         setEnabled(demoData.enabled || false);
       } else {
-        // For production users at jkkn.ac.in, always default to live data
+        // Default to disabled if no setting found
         setEnabled(false);
       }
     } catch (err) {

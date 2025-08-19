@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getApiKey } from '@/services/myjkknApi';
 
 export interface CounselingSession {
   id: string;
@@ -49,57 +47,8 @@ export const useCounselingSessions = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching counseling sessions...');
 
-      // Try to fetch from external API first
-      try {
-        const apiKey = await getApiKey();
-        console.log('Attempting to fetch sessions from external API...');
-        
-        const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const apiData = await response.json();
-          const apiSessions = apiData.data || [];
-          
-          // Transform API data to match our interface
-          const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
-            id: session.id,
-            name: session.name || session.title,
-            session_date: session.session_date || session.date,
-            start_time: session.start_time,
-            end_time: session.end_time,
-            location: session.location,
-            description: session.description,
-            session_type: session.session_type || 'one_on_one',
-            status: session.status || 'pending',
-            priority: session.priority || 'normal',
-            created_by: session.created_by,
-            created_at: session.created_at,
-            updated_at: session.updated_at,
-            participants: session.participants || []
-          }));
-
-          setSessions(transformedSessions);
-          console.log(`Successfully fetched ${transformedSessions.length} sessions from external API`);
-          return;
-        } else {
-          console.warn(`External API failed with status: ${response.status}`);
-        }
-      } catch (apiError) {
-        console.warn('External API failed, falling back to local data:', apiError);
-      }
-
-      // Fallback to local Supabase data
-      console.log('Fetching sessions from local Supabase...');
-      const { data: localSessions, error: localError } = await supabase
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from('counseling_sessions')
         .select(`
           *,
@@ -109,39 +58,31 @@ export const useCounselingSessions = () => {
             participation_status
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('session_date', { ascending: false });
 
-      if (localError) {
-        throw localError;
+      if (sessionsError) {
+        throw sessionsError;
       }
 
-      // Transform local data
-      const transformedLocalSessions: CounselingSession[] = (localSessions || []).map(session => ({
+      // Type-safe mapping of database response to our interface
+      const typedSessions: CounselingSession[] = (sessionsData || []).map(session => ({
         ...session,
         session_type: session.session_type as 'one_on_one' | 'group',
         status: session.status as 'pending' | 'completed' | 'cancelled',
         priority: session.priority as 'low' | 'normal' | 'high',
-        participants: (session.session_participants || []).map(participant => ({
-          ...participant,
-          participation_status: participant.participation_status as 'invited' | 'confirmed' | 'attended' | 'missed'
-        }))
+        participants: session.session_participants as SessionParticipant[]
       }));
 
-      setSessions(transformedLocalSessions);
-      console.log(`Successfully fetched ${transformedLocalSessions.length} sessions from local database`);
-
+      setSessions(typedSessions);
     } catch (err) {
       console.error('Error fetching sessions:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sessions';
       setError(errorMessage);
-      
       toast({
         title: 'Error Loading Sessions',
-        description: 'Unable to load counseling sessions. Please check your connection and try again.',
+        description: errorMessage,
         variant: 'destructive'
       });
-      
-      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -149,9 +90,7 @@ export const useCounselingSessions = () => {
 
   const createSession = async (sessionData: CreateSessionData): Promise<CounselingSession | null> => {
     try {
-      console.log('Creating new session:', sessionData);
-      
-      // Create the main session record in local database
+      // Create the main session record
       const { data: session, error: sessionError } = await supabase
         .from('counseling_sessions')
         .insert({
@@ -186,6 +125,7 @@ export const useCounselingSessions = () => {
 
         if (participantsError) {
           console.error('Error creating participants:', participantsError);
+          // Don't throw here as the session was created successfully
         }
       }
 

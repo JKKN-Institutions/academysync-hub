@@ -69,7 +69,7 @@ export class MyjkknApiError extends Error {
 }
 
 // Get API key from Supabase secrets
-export const getApiKey = async (): Promise<string> => {
+const getApiKey = async (): Promise<string> => {
   const { data, error } = await supabase.functions.invoke('get-secret', {
     body: { name: 'MYJKKN_API_KEY' }
   });
@@ -88,22 +88,14 @@ export const getApiKey = async (): Promise<string> => {
 // Base API configuration
 const API_BASE_URL = 'https://myadmin.jkkn.ac.in/api';
 
-// Generic API request function with improved error handling
-export const makeApiRequest = async <T>(
+// Generic API request function
+const makeApiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  let apiKey: string;
-  
   try {
-    apiKey = await getApiKey();
-    console.log(`Making API request to: ${API_BASE_URL}${endpoint}`);
-  } catch (error) {
-    console.error('Failed to get API key:', error);
-    throw new Error('API key not configured. Please check your settings.');
-  }
-  
-  try {
+    const apiKey = await getApiKey();
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       headers: {
@@ -115,45 +107,15 @@ export const makeApiRequest = async <T>(
       ...options,
     });
 
-    console.log(`API Response status: ${response.status} for ${endpoint}`);
-
     if (!response.ok) {
-      // More specific error handling
-      if (response.status === 500) {
-        throw new MyjkknApiError(
-          'MyJKKN server is experiencing issues. Please try again later or contact support.',
-          response.status,
-          response.statusText
-        );
-      } else if (response.status === 401) {
-        throw new MyjkknApiError(
-          'Invalid API key. Please check your authentication credentials.',
-          response.status,
-          response.statusText
-        );
-      } else if (response.status === 403) {
-        throw new MyjkknApiError(
-          'Access denied. Please check your permissions.',
-          response.status,
-          response.statusText
-        );
-      } else if (response.status === 404) {
-        throw new MyjkknApiError(
-          'API endpoint not found. Please check the API configuration.',
-          response.status,
-          response.statusText
-        );
-      } else {
-        throw new MyjkknApiError(
-          `HTTP error! status: ${response.status}`,
-          response.status,
-          response.statusText
-        );
-      }
+      throw new MyjkknApiError(
+        `HTTP error! status: ${response.status}`,
+        response.status,
+        response.statusText
+      );
     }
 
     const data = await response.json();
-    console.log(`API request successful for ${endpoint}`);
     return data;
   } catch (error) {
     if (error instanceof MyjkknApiError) {
@@ -161,21 +123,15 @@ export const makeApiRequest = async <T>(
     }
     
     console.error('Error making API request:', error);
-    
-    // Handle network errors
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('Network error. Please check your internet connection and try again.');
-    }
-    
     throw new Error(
       error instanceof Error 
         ? error.message 
-        : 'Failed to fetch data from MyJKKN API'
+        : 'Failed to fetch data from myjkkn API'
     );
   }
 };
 
-// Fetch students from myjkkn API with improved error handling
+// Fetch students from myjkkn API
 export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
   try {
     console.log('Starting to fetch students with pagination...');
@@ -184,52 +140,36 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
     let allStudents: any[] = [];
     let currentPage = 1;
     let totalPages = 1;
-    let retryCount = 0;
-    const maxRetries = 3;
 
-    // Fetch all pages of students with retry logic
+    // Fetch all pages of students
     do {
-      try {
-        console.log(`Fetching students page ${currentPage}...`);
-        
-        const response = await makeApiRequest<{data: any[], metadata?: any}>(
-          `/api-management/students?page=${currentPage}&limit=100`
-        );
+      console.log(`Fetching students page ${currentPage}...`);
+      
+      const response = await makeApiRequest<{data: any[], metadata?: any}>(
+        `/api-management/students?page=${currentPage}&limit=1000`
+      );
 
-        console.log(`Page ${currentPage} response:`, {
-          studentsCount: response.data?.length || 0,
-          metadata: response.metadata
-        });
+      console.log(`Page ${currentPage} response:`, {
+        studentsCount: response.data?.length || 0,
+        metadata: response.metadata
+      });
 
-        // Add this page's students to our collection
-        if (response.data && Array.isArray(response.data)) {
-          allStudents = [...allStudents, ...response.data];
-        }
-
-        // Update pagination info
-        if (response.metadata) {
-          totalPages = response.metadata.totalPages || response.metadata.total_pages || 1;
-          console.log(`Pagination info: page ${currentPage} of ${totalPages}, total students so far: ${allStudents.length}`);
-        } else {
-          console.log('No metadata found, assuming single page');
-          break;
-        }
-
-        currentPage++;
-        retryCount = 0; // Reset retry count on successful request
-      } catch (pageError) {
-        console.error(`Error fetching page ${currentPage}:`, pageError);
-        retryCount++;
-        
-        if (retryCount >= maxRetries) {
-          throw pageError;
-        }
-        
-        console.log(`Retrying page ${currentPage} (attempt ${retryCount + 1}/${maxRetries})`);
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      // Add this page's students to our collection
+      if (response.data && Array.isArray(response.data)) {
+        allStudents = [...allStudents, ...response.data];
       }
-    } while (currentPage <= totalPages && retryCount < maxRetries);
+
+      // Update pagination info
+      if (response.metadata) {
+        totalPages = response.metadata.totalPages || response.metadata.total_pages || 1;
+        console.log(`Pagination info: page ${currentPage} of ${totalPages}, total students so far: ${allStudents.length}`);
+      } else {
+        console.log('No metadata found, assuming single page');
+        break;
+      }
+
+      currentPage++;
+    } while (currentPage <= totalPages);
 
     console.log(`✅ Successfully fetched all ${allStudents.length} students from ${totalPages} pages`);
 
@@ -245,13 +185,13 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
     const transformedStudents = activeStudents.map(student => ({
       id: student.id,
       studentId: student.id,
-      rollNo: student.roll_number || 'N/A',
+      rollNo: student.roll_number,
       name: student.first_name + (student.last_name ? ` ${student.last_name}` : ''),
-      email: student.student_email || '',
+      email: student.student_email,
       program: student.program?.program_name || 'Unknown Program',
       semesterYear: 1, // Default since not available in API
-      status: 'active' as 'active' | 'inactive',
-      department: student.department?.department_name || 'Unknown Department',
+      status: student.status as 'active' | 'inactive',
+      department: student.department?.department_name,
       avatar: student.student_photo_url || undefined,
       gpa: undefined,
       mentor: null,
