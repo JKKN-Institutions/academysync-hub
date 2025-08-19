@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -48,56 +49,96 @@ export const useCounselingSessions = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching counseling sessions...');
 
-      // Fetch from external API only - no demo data fallbacks
-      const apiKey = await getApiKey();
-      const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      // Try to fetch from external API first
+      try {
+        const apiKey = await getApiKey();
+        console.log('Attempting to fetch sessions from external API...');
+        
+        const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        if (response.ok) {
+          const apiData = await response.json();
+          const apiSessions = apiData.data || [];
+          
+          // Transform API data to match our interface
+          const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
+            id: session.id,
+            name: session.name || session.title,
+            session_date: session.session_date || session.date,
+            start_time: session.start_time,
+            end_time: session.end_time,
+            location: session.location,
+            description: session.description,
+            session_type: session.session_type || 'one_on_one',
+            status: session.status || 'pending',
+            priority: session.priority || 'normal',
+            created_by: session.created_by,
+            created_at: session.created_at,
+            updated_at: session.updated_at,
+            participants: session.participants || []
+          }));
+
+          setSessions(transformedSessions);
+          console.log(`Successfully fetched ${transformedSessions.length} sessions from external API`);
+          return;
+        } else {
+          console.warn(`External API failed with status: ${response.status}`);
+        }
+      } catch (apiError) {
+        console.warn('External API failed, falling back to local data:', apiError);
       }
 
-      const apiData = await response.json();
-      const apiSessions = apiData.data || [];
-      
-      // Transform API data to match our interface
-      const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
-        id: session.id,
-        name: session.name || session.title,
-        session_date: session.session_date || session.date,
-        start_time: session.start_time,
-        end_time: session.end_time,
-        location: session.location,
-        description: session.description,
-        session_type: session.session_type || 'one_on_one',
-        status: session.status || 'pending',
-        priority: session.priority || 'normal',
-        created_by: session.created_by,
-        created_at: session.created_at,
-        updated_at: session.updated_at,
-        participants: session.participants || []
+      // Fallback to local Supabase data
+      console.log('Fetching sessions from local Supabase...');
+      const { data: localSessions, error: localError } = await supabase
+        .from('counseling_sessions')
+        .select(`
+          *,
+          session_participants (
+            id,
+            student_external_id,
+            participation_status
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (localError) {
+        throw localError;
+      }
+
+      // Transform local data
+      const transformedLocalSessions: CounselingSession[] = (localSessions || []).map(session => ({
+        ...session,
+        session_type: session.session_type as 'one_on_one' | 'group',
+        status: session.status as 'pending' | 'completed' | 'cancelled',
+        priority: session.priority as 'low' | 'normal' | 'high',
+        participants: session.session_participants || []
       }));
 
-      setSessions(transformedSessions);
+      setSessions(transformedLocalSessions);
+      console.log(`Successfully fetched ${transformedLocalSessions.length} sessions from local database`);
 
-      // Log success for debugging
-      console.log(`Successfully fetched ${transformedSessions.length} sessions from API`);
     } catch (err) {
       console.error('Error fetching sessions:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sessions';
       setError(errorMessage);
+      
       toast({
         title: 'Error Loading Sessions',
-        description: errorMessage,
+        description: 'Unable to load counseling sessions. Please check your connection and try again.',
         variant: 'destructive'
       });
+      
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -105,7 +146,9 @@ export const useCounselingSessions = () => {
 
   const createSession = async (sessionData: CreateSessionData): Promise<CounselingSession | null> => {
     try {
-      // Create the main session record
+      console.log('Creating new session:', sessionData);
+      
+      // Create the main session record in local database
       const { data: session, error: sessionError } = await supabase
         .from('counseling_sessions')
         .insert({
@@ -140,7 +183,6 @@ export const useCounselingSessions = () => {
 
         if (participantsError) {
           console.error('Error creating participants:', participantsError);
-          // Don't throw here as the session was created successfully
         }
       }
 
