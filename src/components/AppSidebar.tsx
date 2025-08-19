@@ -266,52 +266,26 @@ export function AppSidebar() {
           );
         })}
 
-        {/* Handbook Group */}
+        {/* Direct Handbook and FAQ Links */}
         <SidebarGroup>
-          <Collapsible 
-            open={openGroups.includes('handbook')} 
-            onOpenChange={() => toggleGroup('handbook')}
-          >
-            <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="group/label w-full">
-                <div className="flex items-center gap-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.pathname === "/handbook"}>
+                <NavLink to="/handbook" className="group">
                   <BookOpen className="h-4 w-4" />
-                  {!isCollapsed && (
-                    <>
-                      <span className="flex-1 text-left">Handbook</span>
-                      <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/label:rotate-90" />
-                    </>
-                  )}
-                </div>
-                {(location.pathname === "/handbook" || location.pathname === "/faq") && (
-                  <div className="ml-auto h-2 w-2 rounded-full bg-primary" />
-                )}
-              </CollapsibleTrigger>
-            </SidebarGroupLabel>
-
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === "/handbook"}>
-                      <NavLink to="/handbook" className="group">
-                        <BookOpen className="h-4 w-4" />
-                        {!isCollapsed && <span>Mentoring Guide</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={location.pathname === "/faq"}>
-                      <NavLink to="/faq" className="group">
-                        <HelpCircle className="h-4 w-4" />
-                        {!isCollapsed && <span>FAQ</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
+                  {!isCollapsed && <span>Handbook</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.pathname === "/faq"}>
+                <NavLink to="/faq" className="group">
+                  <HelpCircle className="h-4 w-4" />
+                  {!isCollapsed && <span>FAQ</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
