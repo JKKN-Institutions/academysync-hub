@@ -121,7 +121,10 @@ export const useCounselingSessions = () => {
         session_type: session.session_type as 'one_on_one' | 'group',
         status: session.status as 'pending' | 'completed' | 'cancelled',
         priority: session.priority as 'low' | 'normal' | 'high',
-        participants: session.session_participants || []
+        participants: (session.session_participants || []).map(participant => ({
+          ...participant,
+          participation_status: participant.participation_status as 'invited' | 'confirmed' | 'attended' | 'missed'
+        }))
       }));
 
       setSessions(transformedLocalSessions);
