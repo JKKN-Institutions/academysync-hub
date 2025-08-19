@@ -69,7 +69,7 @@ export class MyjkknApiError extends Error {
 }
 
 // Get API key from Supabase secrets
-const getApiKey = async (): Promise<string> => {
+export const getApiKey = async (): Promise<string> => {
   const { data, error } = await supabase.functions.invoke('get-secret', {
     body: { name: 'MYJKKN_API_KEY' }
   });
@@ -89,7 +89,7 @@ const getApiKey = async (): Promise<string> => {
 const API_BASE_URL = 'https://myadmin.jkkn.ac.in/api';
 
 // Generic API request function
-const makeApiRequest = async <T>(
+export const makeApiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getApiKey } from '@/services/myjkknApi';
 
 export interface CounselingSession {
   id: string;
@@ -48,6 +49,48 @@ export const useCounselingSessions = () => {
       setLoading(true);
       setError(null);
 
+      // Try to fetch from external API first
+      try {
+        const apiKey = await getApiKey();
+        const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const apiData = await response.json();
+          const apiSessions = apiData.data || [];
+          
+          // Transform API data to match our interface
+          const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
+            id: session.id,
+            name: session.name || session.title,
+            session_date: session.session_date || session.date,
+            start_time: session.start_time,
+            end_time: session.end_time,
+            location: session.location,
+            description: session.description,
+            session_type: session.session_type || 'one_on_one',
+            status: session.status || 'pending',
+            priority: session.priority || 'normal',
+            created_by: session.created_by,
+            created_at: session.created_at,
+            updated_at: session.updated_at,
+            participants: session.participants || []
+          }));
+
+          setSessions(transformedSessions);
+          return;
+        }
+      } catch (apiError) {
+        console.warn('External API failed, falling back to Supabase:', apiError);
+      }
+
+      // Fallback to Supabase if API fails
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('counseling_sessions')
         .select(`
