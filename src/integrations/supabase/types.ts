@@ -383,6 +383,13 @@ export type Database = {
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mentor_feedback: {
@@ -996,6 +1003,13 @@ export type Database = {
             referencedRelation: "staff"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_directory"
+            referencedColumns: ["id"]
+          },
         ]
       }
       comprehensive_user_analytics: {
@@ -1016,6 +1030,36 @@ export type Database = {
           staff_id: string | null
           user_id: string | null
           user_type: string | null
+        }
+        Relationships: []
+      }
+      staff_directory: {
+        Row: {
+          avatar_url: string | null
+          department: string | null
+          designation: string | null
+          id: string | null
+          name: string | null
+          staff_id: string | null
+          status: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          department?: string | null
+          designation?: string | null
+          id?: string | null
+          name?: string | null
+          staff_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          department?: string | null
+          designation?: string | null
+          id?: string | null
+          name?: string | null
+          staff_id?: string | null
+          status?: string | null
         }
         Relationships: []
       }
