@@ -50,7 +50,7 @@ const App = () => (
             <Route path="/student-login" element={<Login />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
-              <Route path="/handbook" element={<Help />} />
+              <Route path="/handbook" element={<Landing />} />
               <Route path="/mentors" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
                   <MentorsDirectory />
