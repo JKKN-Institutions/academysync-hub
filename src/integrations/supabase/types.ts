@@ -1024,19 +1024,46 @@ export type Database = {
           activity_status: string | null
           department: string | null
           display_name: string | null
-          email: string | null
-          email_confirmed_at: string | null
           goals_created: number | null
           id: string | null
           institution: string | null
           joined_date: string | null
           last_login: string | null
-          last_sign_in_at: string | null
           login_count: number | null
           recent_activity_count: number | null
           role: string | null
           sessions_created: number | null
           user_id: string | null
+        }
+        Insert: {
+          activity_status?: never
+          department?: string | null
+          display_name?: string | null
+          goals_created?: never
+          id?: string | null
+          institution?: string | null
+          joined_date?: string | null
+          last_login?: string | null
+          login_count?: number | null
+          recent_activity_count?: never
+          role?: string | null
+          sessions_created?: never
+          user_id?: string | null
+        }
+        Update: {
+          activity_status?: never
+          department?: string | null
+          display_name?: string | null
+          goals_created?: never
+          id?: string | null
+          institution?: string | null
+          joined_date?: string | null
+          last_login?: string | null
+          login_count?: number | null
+          recent_activity_count?: never
+          role?: string | null
+          sessions_created?: never
+          user_id?: string | null
         }
         Relationships: []
       }
