@@ -19,6 +19,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Reports from "./pages/Reports";
 import AuditViewer from "./pages/AuditViewer";
 import Help from "./pages/Help";
+import FAQ from "./pages/FAQ";
 import Counseling from "./pages/Counseling";
 import Goals from "./pages/Goals";
 import Meetings from "./pages/Meetings";
@@ -111,6 +112,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/help" element={<Help />} />
+              <Route path="/faq" element={<FAQ />} />
               {/* Main application pages */}
               <Route path="/counseling" element={
                 <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>

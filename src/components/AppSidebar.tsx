@@ -19,7 +19,8 @@ import {
   TrendingUp,
   Activity,
   BarChart,
-  UserCheck
+  UserCheck,
+  HelpCircle
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,7 +59,7 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { state } = useSidebar();
   const location = useLocation();
-  const [openGroups, setOpenGroups] = useState<string[]>(['dashboard', 'people', 'mentoring']);
+  const [openGroups, setOpenGroups] = useState<string[]>(['dashboard', 'people', 'mentoring', 'handbook']);
   
   const isCollapsed = state === "collapsed";
 
@@ -265,18 +266,52 @@ export function AppSidebar() {
           );
         })}
 
-        {/* Handbook - Standalone Menu Item */}
+        {/* Handbook Group */}
         <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={location.pathname === "/handbook"}>
-                <NavLink to="/handbook" className="group">
+          <Collapsible 
+            open={openGroups.includes('handbook')} 
+            onOpenChange={() => toggleGroup('handbook')}
+          >
+            <SidebarGroupLabel asChild>
+              <CollapsibleTrigger className="group/label w-full">
+                <div className="flex items-center gap-2">
                   <BookOpen className="h-4 w-4" />
-                  {!isCollapsed && <span>Handbook</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+                  {!isCollapsed && (
+                    <>
+                      <span className="flex-1 text-left">Handbook</span>
+                      <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/label:rotate-90" />
+                    </>
+                  )}
+                </div>
+                {(location.pathname === "/handbook" || location.pathname === "/faq") && (
+                  <div className="ml-auto h-2 w-2 rounded-full bg-primary" />
+                )}
+              </CollapsibleTrigger>
+            </SidebarGroupLabel>
+
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/handbook"}>
+                      <NavLink to="/handbook" className="group">
+                        <BookOpen className="h-4 w-4" />
+                        {!isCollapsed && <span>Mentoring Guide</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/faq"}>
+                      <NavLink to="/faq" className="group">
+                        <HelpCircle className="h-4 w-4" />
+                        {!isCollapsed && <span>FAQ</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
