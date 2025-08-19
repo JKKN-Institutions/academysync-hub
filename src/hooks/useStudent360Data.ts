@@ -26,20 +26,11 @@ export const useStudent360Data = () => {
       setLoading(true);
       setError(null);
 
-      // Try to fetch real data first
-      try {
-        console.log('Attempting to fetch real student data with filters:', newFilters);
-        const apiStudents = await fetchFilteredStudents(newFilters);
-        
-        if (apiStudents && apiStudents.length >= 0) { // Changed condition to accept empty arrays
-          console.log('Successfully loaded real student data:', apiStudents.length, 'students');
-          setStudents(apiStudents);
-          return; // Exit early if real data is available
-        }
-      } catch (apiError) {
-        console.error('Real API failed:', apiError);
-        throw new Error('Failed to fetch student data from API');
-      }
+      // Fetch from Student360 API only
+      console.log('Fetching student data with filters:', newFilters);
+      const apiStudents = await fetchFilteredStudents(newFilters);
+      console.log('Successfully loaded student data:', apiStudents.length, 'students');
+      setStudents(apiStudents);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load student data';
       setError(errorMessage);
@@ -54,7 +45,7 @@ export const useStudent360Data = () => {
     } finally {
       setLoading(false);
     }
-  }, [isDemoMode, toast]);
+  }, [toast]);
 
   // Load students when filters change
   useEffect(() => {
@@ -75,22 +66,23 @@ export const useStudent360Data = () => {
 
   // Fetch detailed data for a specific student
   const fetchStudentDetails = useCallback(async (studentId: string): Promise<Student360Data | null> => {
-    // Always try to fetch real data first
     try {
-      console.log('Fetching real-time student data for ID:', studentId);
+      console.log('Fetching student data for ID:', studentId);
       const result = await fetchStudent360Data(studentId);
-      
-      if (result && result.name !== "Demo Student") {
-        console.log('Successfully fetched real student data:', result);
-        return result;
-      }
+      console.log('Successfully fetched student data:', result);
+      return result;
     } catch (error) {
-      console.error('Real API failed for student details:', error);
-      throw new Error('Failed to fetch student details from API');
+      console.error('Failed to fetch student details:', error);
+      
+      toast({
+        title: 'Error Loading Student Details',
+        description: 'Failed to fetch student details from API',
+        variant: 'destructive'
+      });
+      
+      return null;
     }
-
-    throw new Error('Student not found in API');
-  }, [isDemoMode]);
+  }, [toast]);
 
   return {
     students,

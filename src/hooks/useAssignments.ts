@@ -110,13 +110,14 @@ export const useAssignments = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch assignments';
       setError(errorMessage);
       
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Assignments',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Show error toast for assignment loading failures
+      toast({
+        title: 'Error Loading Assignments',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+      
+      setAssignments([]);
     } finally {
       setLoading(false);
     }

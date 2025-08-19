@@ -33,16 +33,14 @@ export const useStudentsData = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
       setError(errorMessage);
       
-      // Show error toast only for API errors (not demo mode)
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Students',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Show error toast for API errors
+      toast({
+        title: 'Error Loading Students',
+        description: errorMessage,
+        variant: 'destructive'
+      });
       
-      // Fallback to empty array on error
+      // Set empty array on error - no demo fallback
       setStudents([]);
     } finally {
       setLoading(false);

@@ -83,16 +83,14 @@ export const useDepartmentsData = () => {
       console.error('Error in loadDepartments:', err);
       setError(errorMessage);
       
-      // Show error toast only for API errors (not demo mode)
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Departments',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Show error toast for API failures
+      toast({
+        title: 'Error Loading Departments',
+        description: errorMessage,
+        variant: 'destructive'
+      });
       
-      // Fallback to empty array on error
+      // Set empty array on error - no demo fallback
       setDepartments([]);
     } finally {
       setLoading(false);

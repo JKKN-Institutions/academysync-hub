@@ -59,16 +59,14 @@ export const useStaffData = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load staff';
       setError(errorMessage);
       
-      // Show error toast only for API errors (not demo mode)
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Staff',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Show error toast for API failures
+      toast({
+        title: 'Error Loading Staff',
+        description: errorMessage,
+        variant: 'destructive'
+      });
       
-      // Fallback to empty array on error
+      // Set empty array on error - no demo fallback
       setStaff([]);
     } finally {
       setLoading(false);

@@ -55,16 +55,14 @@ export const useInstitutionsData = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load institutions';
       setError(errorMessage);
       
-      // Show error toast only for API errors (not demo mode)
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Institutions',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Show error toast for API failures
+      toast({
+        title: 'Error Loading Institutions',
+        description: errorMessage,
+        variant: 'destructive'
+      });
       
-      // Fallback to empty array on error
+      // Set empty array on error - no demo fallback
       setInstitutions([]);
     } finally {
       setLoading(false);
