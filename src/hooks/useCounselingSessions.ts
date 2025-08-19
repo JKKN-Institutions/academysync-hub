@@ -49,74 +49,46 @@ export const useCounselingSessions = () => {
       setLoading(true);
       setError(null);
 
-      // Try to fetch from external API first
-      try {
-        const apiKey = await getApiKey();
-        const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
+      // Fetch from external API only - no demo data fallbacks
+      const apiKey = await getApiKey();
+      const response = await fetch('https://myadmin.jkkn.ac.in/api/api-management/counseling-sessions', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (response.ok) {
-          const apiData = await response.json();
-          const apiSessions = apiData.data || [];
-          
-          // Transform API data to match our interface
-          const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
-            id: session.id,
-            name: session.name || session.title,
-            session_date: session.session_date || session.date,
-            start_time: session.start_time,
-            end_time: session.end_time,
-            location: session.location,
-            description: session.description,
-            session_type: session.session_type || 'one_on_one',
-            status: session.status || 'pending',
-            priority: session.priority || 'normal',
-            created_by: session.created_by,
-            created_at: session.created_at,
-            updated_at: session.updated_at,
-            participants: session.participants || []
-          }));
-
-          setSessions(transformedSessions);
-          return;
-        }
-      } catch (apiError) {
-        console.warn('External API failed, falling back to Supabase:', apiError);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
-      // Fallback to Supabase if API fails
-      const { data: sessionsData, error: sessionsError } = await supabase
-        .from('counseling_sessions')
-        .select(`
-          *,
-          session_participants (
-            id,
-            student_external_id,
-            participation_status
-          )
-        `)
-        .order('session_date', { ascending: false });
-
-      if (sessionsError) {
-        throw sessionsError;
-      }
-
-      // Type-safe mapping of database response to our interface
-      const typedSessions: CounselingSession[] = (sessionsData || []).map(session => ({
-        ...session,
-        session_type: session.session_type as 'one_on_one' | 'group',
-        status: session.status as 'pending' | 'completed' | 'cancelled',
-        priority: session.priority as 'low' | 'normal' | 'high',
-        participants: session.session_participants as SessionParticipant[]
+      const apiData = await response.json();
+      const apiSessions = apiData.data || [];
+      
+      // Transform API data to match our interface
+      const transformedSessions: CounselingSession[] = apiSessions.map((session: any) => ({
+        id: session.id,
+        name: session.name || session.title,
+        session_date: session.session_date || session.date,
+        start_time: session.start_time,
+        end_time: session.end_time,
+        location: session.location,
+        description: session.description,
+        session_type: session.session_type || 'one_on_one',
+        status: session.status || 'pending',
+        priority: session.priority || 'normal',
+        created_by: session.created_by,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        participants: session.participants || []
       }));
 
-      setSessions(typedSessions);
+      setSessions(transformedSessions);
+
+      // Log success for debugging
+      console.log(`Successfully fetched ${transformedSessions.length} sessions from API`);
     } catch (err) {
       console.error('Error fetching sessions:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sessions';
