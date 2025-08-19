@@ -313,19 +313,16 @@ export const useStudent360Data = () => {
           return; // Exit early if real data is available
         }
       } catch (apiError) {
-        console.warn('Real API failed, falling back to demo mode:', apiError);
+        console.warn('Real API failed, will use demo data as fallback:', apiError);
         
-        // If not in demo mode, show the error immediately
-        if (!isDemoMode) {
-          throw new Error('Unable to fetch student data. Please check your API configuration or enable demo mode.');
-        }
+        // Always fall back to demo data if API fails, regardless of demo mode setting
+        console.log('Using demo data as fallback since API is not available');
       }
 
-      // Only use demo data if real API failed and demo mode is enabled
-      if (isDemoMode) {
-        console.log('Using demo data as fallback');
-        // Filter demo data
-        let demoStudents = getDemoStudents();
+      // Use demo data as fallback when API fails
+      console.log('Loading demo data as fallback');
+      // Filter demo data
+      let demoStudents = getDemoStudents();
         
         if (newFilters.searchTerm) {
           const searchLower = newFilters.searchTerm.toLowerCase();
@@ -370,8 +367,7 @@ export const useStudent360Data = () => {
           );
         }
 
-        setStudents(demoStudents);
-      }
+      setStudents(demoStudents);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load student data';
       setError(errorMessage);
@@ -417,19 +413,13 @@ export const useStudent360Data = () => {
         return result;
       }
     } catch (error) {
-      console.warn('Real API failed for student details:', error);
+      console.warn('Real API failed for student details, using demo data as fallback:', error);
     }
 
-    // Fallback to demo data only if demo mode is enabled and real API failed
-    if (isDemoMode) {
-      console.log('Using demo data as fallback for student details');
-      const demoStudents = getDemoStudents();
-      return demoStudents.find(s => s.id === studentId) || null;
-    }
-
-    // If not in demo mode and real API failed, return null
-    console.error('Unable to fetch student details - API failed and demo mode is disabled');
-    return null;
+    // Always fallback to demo data when API fails
+    console.log('Using demo data as fallback for student details');
+    const demoStudents = getDemoStudents();
+    return demoStudents.find(s => s.id === studentId) || null;
   }, [isDemoMode]);
 
   return {
