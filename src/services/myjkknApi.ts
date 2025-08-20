@@ -46,6 +46,9 @@ export interface MyjkknInstitution {
   status: 'active' | 'inactive';
   created_at?: string;
   updated_at?: string;
+  counselling_code?: string;
+  category?: string;
+  institution_type?: string;
 }
 
 export interface MyjkknApiResponse<T> {
@@ -87,16 +90,19 @@ const getApiKey = async (): Promise<string> => {
 
 // Base API configuration
 const API_BASE_URL = 'https://myadmin.jkkn.ac.in/api';
+const MOBILE_API_BASE_URL = 'https://m.jkkn.ac.in/api';
 
 // Generic API request function
 const makeApiRequest = async <T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  useMobileApi: boolean = false
 ): Promise<T> => {
   try {
     const apiKey = await getApiKey();
+    const baseUrl = useMobileApi ? MOBILE_API_BASE_URL : API_BASE_URL;
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -393,9 +399,18 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
 // Fetch institutions from myjkkn API
 export const fetchInstitutions = async (): Promise<MyjkknInstitution[]> => {
   try {
-    const response = await makeApiRequest<{data: any[]}>(
-      '/api-management/organizations/institutions'
+    console.log('Fetching institutions from mobile API...');
+    
+    const response = await makeApiRequest<{data: any[], metadata?: any}>(
+      '/api-management/organizations/institutions',
+      {},
+      true // Use mobile API
     );
+
+    console.log('Institutions API response:', {
+      dataCount: response.data?.length || 0,
+      metadata: response.metadata
+    });
 
     // The API returns {data: [...]} format
     if (!response.data || !Array.isArray(response.data)) {
@@ -403,14 +418,20 @@ export const fetchInstitutions = async (): Promise<MyjkknInstitution[]> => {
     }
 
     // Transform API response to match our expected format
-    return response.data.map(institution => ({
+    const transformedInstitutions = response.data.map(institution => ({
       id: institution.id,
       institution_name: institution.name, // API returns 'name', not 'institution_name'
-      description: institution.website || institution.email || 'Institution',
+      description: institution.counselling_code || institution.category || 'Institution',
       status: institution.is_active ? 'active' : 'inactive' as 'active' | 'inactive',
       created_at: institution.created_at,
-      updated_at: institution.updated_at
+      updated_at: institution.updated_at,
+      counselling_code: institution.counselling_code,
+      category: institution.category,
+      institution_type: institution.institution_type
     }));
+
+    console.log(`✅ Successfully fetched and transformed ${transformedInstitutions.length} institutions`);
+    return transformedInstitutions;
   } catch (error) {
     console.error('Error fetching institutions:', error);
     throw error;

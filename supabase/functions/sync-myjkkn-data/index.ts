@@ -72,7 +72,26 @@ serve(async (req) => {
     if (!entities || entities.includes('institutions')) {
       console.log('Fetching institutions...')
       try {
-        const institutionsResponse = await makeApiRequest<{data: any[]}>('/api-management/organizations/institutions')
+        // Try mobile API first for institutions
+        const mobileApiUrl = 'https://m.jkkn.ac.in/api'
+        console.log(`Making request to: ${mobileApiUrl}/api-management/organizations/institutions`)
+        
+        const response = await fetch(`${mobileApiUrl}/api-management/organizations/institutions`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${myjkknApiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`Mobile API Error ${response.status}:`, errorText)
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const institutionsResponse = await response.json()
         const institutions = institutionsResponse.data || []
         
         console.log(`Fetched ${institutions.length} institutions`)
@@ -81,7 +100,7 @@ serve(async (req) => {
           data: institutions.map(inst => ({
             institution_id: inst.id,
             institution_name: inst.name,
-            description: inst.website || inst.email || 'Institution',
+            description: inst.counselling_code || inst.category || 'Institution',
             status: inst.is_active ? 'active' : 'inactive',
             created_at: inst.created_at,
             updated_at: inst.updated_at
