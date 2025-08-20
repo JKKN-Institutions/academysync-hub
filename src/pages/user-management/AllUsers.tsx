@@ -250,15 +250,19 @@ const AllUsers = () => {
         };
       });
 
+      const roleBreakdown = allUsers.reduce((acc: any, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+      }, {});
+      
       console.log('Fetched users data:', {
         totalProfileUsers: profilesData?.length || 0,
         processedUsers: allUsers.length,
-        userRoles: allUsers.reduce((acc: any, user) => {
-          acc[user.role] = (acc[user.role] || 0) + 1;
-          return acc;
-        }, {}),
+        userRoles: roleBreakdown,
         sampleUsers: allUsers.slice(0, 3)
       });
+      
+      console.log('User role breakdown:', roleBreakdown);
       
       setUsers(allUsers);
       setTotalUsers(allUsers.length);

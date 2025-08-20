@@ -30,7 +30,13 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !userLoading) {
-      navigate(from, { replace: true });
+      // Redirect to appropriate page based on role
+      const targetPath = user.role === 'admin' || user.role === 'super_admin' 
+        ? '/user-management' 
+        : from === '/' || from === '/login' 
+          ? '/assignments' 
+          : from;
+      navigate(targetPath, { replace: true });
     }
   }, [user, userLoading, navigate, from]);
 

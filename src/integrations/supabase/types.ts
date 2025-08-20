@@ -1233,6 +1233,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      make_user_admin: {
+        Args: { target_email: string }
+        Returns: boolean
+      }
+      set_user_role: {
+        Args: { new_role: string; target_email: string }
+        Returns: boolean
+      }
       user_has_permission: {
         Args: { permission_name: string; user_uuid?: string }
         Returns: boolean
