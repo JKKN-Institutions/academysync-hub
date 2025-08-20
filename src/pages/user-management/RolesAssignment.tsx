@@ -20,6 +20,7 @@ import { useStudentsData } from "@/hooks/useStudentsData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserWithRoles {
   id: string;
@@ -45,7 +46,37 @@ const RolesAssignment = () => {
   const { roles, loading: rolesLoading, assignRoleToUser } = useRoles();
   const { staff, loading: staffLoading } = useStaffData();
   const { students, loading: studentsLoading } = useStudentsData();
+  const { user } = useAuth();
   const { toast } = useToast();
+
+  // Define role hierarchy - higher number means higher privilege
+  const roleHierarchy = {
+    'mentee': 1,
+    'mentor': 2,
+    'dept_lead': 3,
+    'admin': 4,
+    'super_admin': 5
+  };
+
+  // Get assignable roles based on current user's role
+  const getAssignableRoles = () => {
+    if (!user?.role) return [];
+    
+    const currentUserLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+    
+    return roles.filter(role => {
+      const roleLevel = roleHierarchy[role.name as keyof typeof roleHierarchy] || 0;
+      
+      // Super admin can assign any role
+      if (user.role === 'super_admin') return true;
+      
+      // Admin can assign roles below their level (cannot create other admins or super admins)
+      if (user.role === 'admin') return roleLevel < currentUserLevel;
+      
+      // Other roles cannot assign roles
+      return false;
+    });
+  };
 
   // Fetch users with their current roles
   const fetchUsersWithRoles = async () => {
@@ -329,7 +360,7 @@ const RolesAssignment = () => {
                     <SelectValue placeholder={rolesLoading ? "Loading roles..." : "Choose a role"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role) => (
+                    {getAssignableRoles().map((role) => (
                       <SelectItem key={role.id} value={role.id}>
                         <div>
                           <div className="font-medium">{role.name}</div>
@@ -366,7 +397,9 @@ const RolesAssignment = () => {
               </Button>
 
               <div className="space-y-2">
-                <h4 className="text-sm font-medium">Available Roles</h4>
+                <h4 className="text-sm font-medium">
+                  {user?.role === 'super_admin' ? 'All Available Roles' : 'Assignable Roles'}
+                </h4>
                 {rolesLoading ? (
                   <div className="space-y-2">
                     {[...Array(3)].map((_, i) => (
@@ -374,7 +407,7 @@ const RolesAssignment = () => {
                     ))}
                   </div>
                 ) : (
-                  roles.map((role) => (
+                  getAssignableRoles().map((role) => (
                     <div key={role.id} className="p-2 border rounded text-sm">
                       <div className="font-medium">{role.name}</div>
                       <div className="text-xs text-muted-foreground">
@@ -385,6 +418,11 @@ const RolesAssignment = () => {
                       </div>
                     </div>
                   ))
+                )}
+                {getAssignableRoles().length === 0 && !rolesLoading && (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    You don't have permission to assign roles
+                  </div>
                 )}
               </div>
             </CardContent>
