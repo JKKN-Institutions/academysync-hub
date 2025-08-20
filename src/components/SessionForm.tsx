@@ -259,7 +259,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     return Array.from(sections.values());
   }, [students, selectedDepartment, selectedProgram, selectedSemester, filteredDepartments]);
 
-  // Get students for selected section
+  // Get students for selected section or filtered by department/program/semester
   const getFilteredStudents = () => {
     // If a section is selected, return only students from that section
     if (selectedSection && selectedSection !== 'all') {
@@ -267,7 +267,41 @@ export const SessionForm: React.FC<SessionFormProps> = ({
       return section ? section.students : [];
     }
     
-    return [];
+    // If no section selected but filters are applied, show filtered students
+    let filteredByDepartment = availableStudents;
+    
+    if (selectedDepartment && selectedDepartment !== 'all') {
+      const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+      filteredByDepartment = availableStudents.filter(student => 
+        student.department === selectedDeptName
+      );
+    }
+    
+    if (selectedProgram && selectedProgram !== 'all') {
+      filteredByDepartment = filteredByDepartment.filter(student => 
+        student.program === selectedProgram
+      );
+    }
+    
+    if (selectedSemester && selectedSemester !== 'all') {
+      const semesterYear = selectedSemester.replace('Year ', '');
+      filteredByDepartment = filteredByDepartment.filter(student => {
+        const studentSemester = students?.find(s => s.id === student.id)?.semesterYear;
+        return studentSemester === parseInt(semesterYear);
+      });
+    }
+    
+    return filteredByDepartment;
+  };
+
+  // Get student count for each department (for display purposes)
+  const getDepartmentStudentCount = (departmentId: string) => {
+    const deptName = departments.find(d => d.id === departmentId)?.department_name;
+    if (!deptName) return 0;
+    
+    return availableStudents.filter(student => 
+      student.department === deptName
+    ).length;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
