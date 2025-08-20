@@ -18,7 +18,18 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const { action = 'sync_all', sync_students = true, sync_staff = true } = await req.json();
+    // Handle empty request body
+    let requestBody = {};
+    try {
+      const body = await req.text();
+      if (body.trim()) {
+        requestBody = JSON.parse(body);
+      }
+    } catch (parseError) {
+      console.log('Failed to parse request body, using defaults:', parseError);
+    }
+
+    const { action = 'sync_all', sync_students = true, sync_staff = true } = requestBody;
 
     console.log('Starting comprehensive user sync operation:', { action, sync_students, sync_staff });
 
