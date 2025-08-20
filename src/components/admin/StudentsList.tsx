@@ -11,12 +11,14 @@ import { useInstitutionsData } from '@/hooks/useInstitutionsData';
 import { useStudentsData } from '@/hooks/useStudentsData';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import StudentDetails from './StudentDetails';
 
 export default function StudentsList() {
   const { students, loading, error, refetch } = useStudentsData();
   const { institutions } = useInstitutionsData();
   const { toast } = useToast();
   const [syncing, setSyncing] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     institution_id: '',
@@ -90,6 +92,16 @@ export default function StudentsList() {
   // Get unique programs and departments for filters
   const uniquePrograms = [...new Set(students?.map(s => s.program).filter(Boolean) || [])];
   const uniqueDepartments = [...new Set(students?.map(s => s.department).filter(Boolean) || [])];
+
+  // Show student details if selected
+  if (selectedStudentId) {
+    return (
+      <StudentDetails 
+        studentId={selectedStudentId} 
+        onBack={() => setSelectedStudentId(null)} 
+      />
+    );
+  }
 
 
   if (loading) {
@@ -185,10 +197,15 @@ export default function StudentsList() {
       ) : (
         <div className="space-y-4">
           {filteredStudents.map((student) => (
-            <Card key={student.id} className="p-4">
-              <div className="flex flex-col md:flex-row justify-between gap-4">
+            <Card key={student.id} className="p-4 cursor-pointer hover:shadow-md transition-shadow">
+              <div 
+                className="flex flex-col md:flex-row justify-between gap-4"
+                onClick={() => setSelectedStudentId(student.id)}
+              >
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-lg">{student.name}</h3>
+                  <h3 className="font-semibold text-lg hover:text-primary transition-colors">
+                    {student.name}
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     {student.rollNo ? `Roll No: ${student.rollNo}` : 'No Roll Number'}
                   </p>
