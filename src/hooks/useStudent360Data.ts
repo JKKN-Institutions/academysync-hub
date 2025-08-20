@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useDemoMode } from './useDemoMode';
-import { fetchFilteredStudents, fetchStudent360Data, Student360Data } from '@/services/student360Api';
+import { useStudentsData } from './useStudentsData';
+import { supabase } from '@/integrations/supabase/client';
+import { fetchStudent360Data, Student360Data } from '@/services/student360Api';
 
 export interface Student360Filters {
   institution?: string;
@@ -14,6 +16,7 @@ export interface Student360Filters {
 
 export const useStudent360Data = () => {
   const { isDemoMode } = useDemoMode();
+  const { students: rawStudents, loading: studentsLoading, error: studentsError, refetch: refetchStudents } = useStudentsData();
   const [students, setStudents] = useState<Student360Data[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,34 +302,119 @@ export const useStudent360Data = () => {
 
   const loadFilteredStudents = useCallback(async (newFilters: Student360Filters) => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoading(studentsLoading);
+      setError(studentsError);
 
-      // Try to fetch real data first
-      try {
-        console.log('Attempting to fetch real student data with filters:', newFilters);
-        const apiStudents = await fetchFilteredStudents(newFilters);
+      // Use existing student data from useStudentsData hook
+      if (rawStudents && rawStudents.length > 0) {
+        console.log('Using existing student data:', rawStudents.length, 'students');
         
-        if (apiStudents && apiStudents.length >= 0) { // Changed condition to accept empty arrays
-          console.log('Successfully loaded real student data:', apiStudents.length, 'students');
-          setStudents(apiStudents);
-          return; // Exit early if real data is available
+        // Transform students data to Student360Data format
+        let transformedStudents: Student360Data[] = rawStudents.map(student => ({
+          id: student.id,
+          studentId: student.studentId,
+          rollNo: student.rollNo || '',
+          name: student.name,
+          email: student.email || '',
+          phone: '', // Not available in current student data
+          program: student.program || 'Unknown Program',
+          department: student.department || 'Unknown Department', 
+          institution: 'JKKN Institutions', // Default institution
+          degree: 'Bachelor of Technology', // Default degree
+          section: 'A', // Default section
+          semester: student.semesterYear || 1,
+          year: Math.ceil((student.semesterYear || 1) / 2),
+          status: 'active' as const,
+          avatar: student.avatar,
+          // Initialize with empty data - will be loaded on demand
+          attendance: {
+            total_classes: 0,
+            attended_classes: 0,
+            percentage: 0,
+            monthly_breakdown: [],
+            subject_wise: []
+          },
+          leave_records: [],
+          assignments: [],
+          results: [],
+          requests: [],
+          fees: {
+            total_fees: 0,
+            paid_amount: 0,
+            pending_amount: 0,
+            due_date: '',
+            fee_structure: [],
+            payment_history: []
+          },
+          bus_payments: {
+            total_bus_fees: 0,
+            paid_amount: 0,
+            pending_amount: 0,
+            route: '',
+            stop_name: '',
+            monthly_fee: 0,
+            payment_history: []
+          },
+          academic_dates: {
+            join_date: new Date().toISOString(),
+            expected_completion_date: new Date().toISOString(),
+            course_duration_years: 4,
+            current_academic_year: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+            current_semester: student.semesterYear || 1
+          }
+        }));
+
+        // Apply filters
+        if (newFilters.searchTerm) {
+          const searchLower = newFilters.searchTerm.toLowerCase();
+          transformedStudents = transformedStudents.filter(student => 
+            student.name.toLowerCase().includes(searchLower) ||
+            student.rollNo.toLowerCase().includes(searchLower) ||
+            student.email.toLowerCase().includes(searchLower) ||
+            student.department.toLowerCase().includes(searchLower)
+          );
         }
-      } catch (apiError) {
-        console.warn('Real API failed, falling back to demo mode:', apiError);
-        
-        // If not in demo mode, show the error immediately
-        if (!isDemoMode) {
-          throw new Error('Unable to fetch student data. Please check your API configuration or enable demo mode.');
+
+        if (newFilters.institution) {
+          transformedStudents = transformedStudents.filter(student => 
+            student.institution.toLowerCase().includes(newFilters.institution.toLowerCase())
+          );
         }
+
+        if (newFilters.department) {
+          transformedStudents = transformedStudents.filter(student => 
+            student.department.toLowerCase().includes(newFilters.department.toLowerCase())
+          );
+        }
+
+        if (newFilters.program) {
+          transformedStudents = transformedStudents.filter(student => 
+            student.program.toLowerCase().includes(newFilters.program.toLowerCase())
+          );
+        }
+
+        if (newFilters.section) {
+          transformedStudents = transformedStudents.filter(student => 
+            student.section === newFilters.section
+          );
+        }
+
+        if (newFilters.semester) {
+          transformedStudents = transformedStudents.filter(student => 
+            student.semester === newFilters.semester
+          );
+        }
+
+        setStudents(transformedStudents);
+        return;
       }
 
-      // Only use demo data if real API failed and demo mode is enabled
-      if (isDemoMode) {
+      // Fallback to demo data if no real data and demo mode is enabled
+      if (isDemoMode && (!rawStudents || rawStudents.length === 0)) {
         console.log('Using demo data as fallback');
-        // Filter demo data
         let demoStudents = getDemoStudents();
         
+        // Apply same filtering logic for demo data
         if (newFilters.searchTerm) {
           const searchLower = newFilters.searchTerm.toLowerCase();
           demoStudents = demoStudents.filter(student => 
@@ -339,22 +427,19 @@ export const useStudent360Data = () => {
 
         if (newFilters.institution) {
           demoStudents = demoStudents.filter(student => 
-            student.institution.includes(newFilters.institution) ||
-            student.institution === newFilters.institution
+            student.institution.toLowerCase().includes(newFilters.institution.toLowerCase())
           );
         }
 
         if (newFilters.department) {
           demoStudents = demoStudents.filter(student => 
-            student.department.includes(newFilters.department) ||
-            student.department === newFilters.department
+            student.department.toLowerCase().includes(newFilters.department.toLowerCase())
           );
         }
 
         if (newFilters.program) {
           demoStudents = demoStudents.filter(student => 
-            student.program.includes(newFilters.program) ||
-            student.program === newFilters.program
+            student.program.toLowerCase().includes(newFilters.program.toLowerCase())
           );
         }
 
@@ -371,6 +456,9 @@ export const useStudent360Data = () => {
         }
 
         setStudents(demoStudents);
+      } else if (!isDemoMode && (!rawStudents || rawStudents.length === 0)) {
+        setError('No student data available. Please sync student data first.');
+        setStudents([]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load student data';
@@ -383,10 +471,8 @@ export const useStudent360Data = () => {
       });
       
       setStudents([]);
-    } finally {
-      setLoading(false);
     }
-  }, [isDemoMode, toast]);
+  }, [rawStudents, studentsLoading, studentsError, isDemoMode, toast]);
 
   // Load students when filters change
   useEffect(() => {
@@ -402,8 +488,9 @@ export const useStudent360Data = () => {
   }, []);
 
   const refetch = useCallback(() => {
+    refetchStudents(); // Refetch the raw student data
     loadFilteredStudents(filters);
-  }, [filters, loadFilteredStudents]);
+  }, [filters, loadFilteredStudents, refetchStudents]);
 
   // Fetch detailed data for a specific student
   const fetchStudentDetails = useCallback(async (studentId: string): Promise<Student360Data | null> => {
@@ -434,8 +521,8 @@ export const useStudent360Data = () => {
 
   return {
     students,
-    loading,
-    error,
+    loading: loading || studentsLoading,
+    error: error || studentsError,
     filters,
     updateFilters,
     clearFilters,
