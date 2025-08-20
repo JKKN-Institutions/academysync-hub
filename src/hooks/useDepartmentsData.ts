@@ -1,39 +1,59 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useDemoMode } from './useDemoMode';
-import { fetchDepartments, MyjkknDepartment } from '@/services/myjkknApi';
 import { useToast } from '@/hooks/use-toast';
 
+export interface Department {
+  id: string;
+  department_id: string;
+  department_name: string;
+  description?: string;
+  institution_id?: string;
+  status: 'active' | 'inactive';
+  created_at?: string;
+  updated_at?: string;
+  synced_at?: string;
+}
+
 // Demo departments data
-const getDemoDepartments = (): MyjkknDepartment[] => [
+const getDemoDepartments = (): Department[] => [
   {
     id: 'dept1',
+    department_id: 'dept1',
     department_name: 'Computer Science',
     description: 'Department of Computer Science and Engineering',
-    status: 'active'
+    status: 'active',
+    institution_id: 'jkkn-engineering'
   },
   {
     id: 'dept2',
+    department_id: 'dept2',
     department_name: 'Electrical Engineering',
     description: 'Department of Electrical and Electronics Engineering',
-    status: 'active'
+    status: 'active',
+    institution_id: 'jkkn-engineering'
   },
   {
     id: 'dept3',
+    department_id: 'dept3',
     department_name: 'Mechanical Engineering',
     description: 'Department of Mechanical Engineering',
-    status: 'active'
+    status: 'active',
+    institution_id: 'jkkn-engineering'
   },
   {
     id: 'dept4',
+    department_id: 'dept4',
     department_name: 'Department of Nursing (UG)',
     description: 'Department of Nursing - Undergraduate',
-    status: 'active'
+    status: 'active',
+    institution_id: 'jkkn-nursing'
   }
 ];
 
 export const useDepartmentsData = () => {
   const { isDemoMode } = useDemoMode();
-  const [departments, setDepartments] = useState<MyjkknDepartment[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -42,48 +62,28 @@ export const useDepartmentsData = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('Loading departments, isDemoMode:', isDemoMode);
 
       if (isDemoMode) {
         // Use demo data
-        console.log('Using demo departments data');
         setDepartments(getDemoDepartments());
       } else {
-        // Fetch from myjkkn API
-        console.log('Fetching departments from API...');
-        const apiDepartments = await fetchDepartments();
-        console.log('Raw API departments received:', apiDepartments);
-        
-        // DETAILED ANALYSIS: Let's see exactly what we're getting
-        console.log('=== DEPARTMENTS API ANALYSIS ===');
-        console.log('Total departments returned:', apiDepartments.length);
-        
-        // Group by institution_id to see the distribution
-        const byInstitution = apiDepartments.reduce((acc, dept) => {
-          if (!acc[dept.institution_id]) {
-            acc[dept.institution_id] = [];
-          }
-          acc[dept.institution_id].push(dept.department_name);
-          return acc;
-        }, {} as Record<string, string[]>);
-        
-        console.log('Departments grouped by institution_id:', byInstitution);
-        console.log('Number of unique institutions with departments:', Object.keys(byInstitution).length);
-        
-        // Get unique institution IDs from departments
-        const departmentInstitutionIds = [...new Set(apiDepartments.map(dept => dept.institution_id))];
-        console.log('Unique institution IDs found in departments:', departmentInstitutionIds);
-        
-        const activeDepartments = apiDepartments.filter(dept => dept.status === 'active');
-        console.log('Active departments filtered:', activeDepartments.length, 'out of', apiDepartments.length);
-        setDepartments(activeDepartments);
+        // Fetch from Supabase database (synced from MyJKKN API)
+        const { data, error: dbError } = await supabase
+          .from('departments')
+          .select('*')
+          .eq('status', 'active')
+          .order('department_name');
+
+        if (dbError) {
+          throw dbError;
+        }
+
+        setDepartments((data || []) as Department[]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load departments';
-      console.error('Error in loadDepartments:', err);
       setError(errorMessage);
       
-      // Show error toast only for API errors (not demo mode)
       if (!isDemoMode) {
         toast({
           title: 'Error Loading Departments',
@@ -92,7 +92,6 @@ export const useDepartmentsData = () => {
         });
       }
       
-      // Fallback to empty array on error
       setDepartments([]);
     } finally {
       setLoading(false);

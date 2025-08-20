@@ -79,13 +79,34 @@ serve(async (req) => {
         results.institutions = {
           fetched: institutions.length,
           data: institutions.map(inst => ({
-            id: inst.id,
+            institution_id: inst.id,
             institution_name: inst.name,
             description: inst.website || inst.email || 'Institution',
             status: inst.is_active ? 'active' : 'inactive',
             created_at: inst.created_at,
             updated_at: inst.updated_at
           }))
+        }
+
+        // If action is 'sync', also update the institutions table
+        if (action === 'sync') {
+          const institutionsToSync = results.institutions.data
+
+          console.log(`Syncing ${institutionsToSync.length} institutions to database...`)
+          const { error: institutionsError } = await supabase
+            .from('institutions')
+            .upsert(institutionsToSync, { 
+              onConflict: 'institution_id',
+              ignoreDuplicates: false 
+            })
+
+          if (institutionsError) {
+            console.error('Error syncing institutions:', institutionsError)
+            results.institutions.syncError = institutionsError.message
+          } else {
+            results.institutions.synced = institutionsToSync.length
+            console.log(`Successfully synced ${institutionsToSync.length} institutions`)
+          }
         }
       } catch (error) {
         console.error('Error fetching institutions:', error)
@@ -125,27 +146,49 @@ serve(async (req) => {
         )
 
         console.log(`Fetched ${allDepartments.length} departments, ${activeDepartments.length} active`)
+        
+        const transformedDepartments = activeDepartments.map(dept => {
+          let departmentName = 'Unknown Department'
+          if (typeof dept.department_name === 'string') {
+            departmentName = dept.department_name
+          } else if (dept.department_name && typeof dept.department_name === 'object') {
+            departmentName = dept.department_name.value || dept.department_name.text || dept.department_name.name || 'Unknown Department'
+          }
+
+          return {
+            department_id: dept.id,
+            department_name: departmentName,
+            description: dept.department_code || departmentName,
+            institution_id: dept.institution_id,
+            status: 'active',
+            created_at: dept.created_at,
+            updated_at: dept.updated_at
+          }
+        })
+
         results.departments = {
           fetched: allDepartments.length,
           active: activeDepartments.length,
-          data: activeDepartments.map(dept => {
-            let departmentName = 'Unknown Department'
-            if (typeof dept.department_name === 'string') {
-              departmentName = dept.department_name
-            } else if (dept.department_name && typeof dept.department_name === 'object') {
-              departmentName = dept.department_name.value || dept.department_name.text || dept.department_name.name || 'Unknown Department'
-            }
+          data: transformedDepartments
+        }
 
-            return {
-              id: dept.id,
-              department_name: departmentName,
-              description: dept.department_code || departmentName,
-              status: 'active',
-              institution_id: dept.institution_id,
-              created_at: dept.created_at,
-              updated_at: dept.updated_at
-            }
-          })
+        // If action is 'sync', also update the departments table
+        if (action === 'sync') {
+          console.log(`Syncing ${transformedDepartments.length} departments to database...`)
+          const { error: departmentsError } = await supabase
+            .from('departments')
+            .upsert(transformedDepartments, { 
+              onConflict: 'department_id',
+              ignoreDuplicates: false 
+            })
+
+          if (departmentsError) {
+            console.error('Error syncing departments:', departmentsError)
+            results.departments.syncError = departmentsError.message
+          } else {
+            results.departments.synced = transformedDepartments.length
+            console.log(`Successfully synced ${transformedDepartments.length} departments`)
+          }
         }
       } catch (error) {
         console.error('Error fetching departments:', error)
@@ -292,6 +335,37 @@ serve(async (req) => {
           } else {
             results.students.synced = studentsToSync.length
             console.log(`Successfully synced ${studentsToSync.length} students`)
+          }
+
+          // Extract and sync unique programs
+          const programs = new Set<string>()
+          results.students.data.forEach(student => {
+            if (student.program && student.program !== 'Unknown Program') {
+              programs.add(student.program)
+            }
+          })
+
+          const programsToSync = Array.from(programs).map(programName => ({
+            program_name: programName,
+            status: 'active'
+          }))
+
+          if (programsToSync.length > 0) {
+            console.log(`Syncing ${programsToSync.length} programs to database...`)
+            const { error: programsError } = await supabase
+              .from('programs')
+              .upsert(programsToSync, { 
+                onConflict: 'program_name',
+                ignoreDuplicates: false 
+              })
+
+            if (programsError) {
+              console.error('Error syncing programs:', programsError)
+              results.programs = { syncError: programsError.message }
+            } else {
+              results.programs = { synced: programsToSync.length }
+              console.log(`Successfully synced ${programsToSync.length} programs`)
+            }
           }
         }
       } catch (error) {

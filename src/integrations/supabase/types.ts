@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      departments: {
+        Row: {
+          created_at: string | null
+          department_id: string
+          department_name: string
+          description: string | null
+          id: string
+          institution_id: string | null
+          status: string | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id: string
+          department_name: string
+          description?: string | null
+          id?: string
+          institution_id?: string | null
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string
+          department_name?: string
+          description?: string | null
+          id?: string
+          institution_id?: string | null
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       goal_versions: {
         Row: {
           action_plan: string | null
@@ -278,6 +314,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      institutions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          institution_id: string
+          institution_name: string
+          status: string | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          institution_id: string
+          institution_name: string
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          institution_id?: string
+          institution_name?: string
+          status?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       meeting_logs: {
         Row: {
@@ -563,6 +632,36 @@ export type Database = {
           type?: string
           user_external_id?: string
           user_type?: string
+        }
+        Relationships: []
+      }
+      programs: {
+        Row: {
+          created_at: string | null
+          department_id: string | null
+          id: string
+          institution_id: string | null
+          program_name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          institution_id?: string | null
+          program_name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_id?: string | null
+          id?: string
+          institution_id?: string | null
+          program_name?: string
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
