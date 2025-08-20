@@ -262,52 +262,119 @@ serve(async (req) => {
         let allStudents: any[] = []
         let currentPage = 1
         let totalPages = 1
+        let attempts = 0
+        const maxAttempts = 3
 
         do {
-          const response = await makeApiRequest<{data: any[], metadata?: any}>(
-            `/api-management/students?page=${currentPage}&limit=1000`
-          )
+          attempts++
+          console.log(`Fetching students page ${currentPage}, attempt ${attempts}...`)
+          
+          try {
+            // Try different endpoint parameters to avoid 500 errors
+            let endpoint = `/api-management/students?page=${currentPage}&limit=100`
+            
+            // For first attempt, try smaller limit
+            if (attempts === 1 && currentPage === 1) {
+              endpoint = `/api-management/students?page=1&limit=50`
+            }
+            
+            const response = await makeApiRequest<{data: any[], metadata?: any}>(endpoint)
 
-          if (response.data && Array.isArray(response.data)) {
-            allStudents = [...allStudents, ...response.data]
+            console.log(`Students API response for page ${currentPage}:`, {
+              hasData: !!response.data,
+              dataLength: response.data?.length || 0,
+              metadata: response.metadata
+            })
+
+            if (response.data && Array.isArray(response.data)) {
+              allStudents = [...allStudents, ...response.data]
+              attempts = 0 // Reset attempts on success
+            }
+
+            if (response.metadata) {
+              totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
+              console.log(`Page ${currentPage} of ${totalPages}, total students so far: ${allStudents.length}`)
+            } else {
+              console.log('No metadata found, assuming single page')
+              break
+            }
+
+            currentPage++
+          } catch (pageError) {
+            console.error(`Error fetching students page ${currentPage}, attempt ${attempts}:`, pageError.message)
+            
+            if (attempts >= maxAttempts) {
+              // If we've tried multiple times and still failing, try alternative approaches
+              if (currentPage === 1) {
+                // For the first page, try without pagination
+                console.log('Trying to fetch students without pagination...')
+                try {
+                  const simpleResponse = await makeApiRequest<{data: any[]}>(`/api-management/students`)
+                  if (simpleResponse.data && Array.isArray(simpleResponse.data)) {
+                    allStudents = simpleResponse.data
+                    console.log(`Fetched ${allStudents.length} students without pagination`)
+                    break
+                  }
+                } catch (simpleError) {
+                  console.error('Simple fetch also failed:', simpleError.message)
+                  throw new Error(`Students API is experiencing issues: ${pageError.message}. Please try again later or contact the API administrator.`)
+                }
+              } else {
+                // If we've already got some data, break the loop
+                console.log(`Got partial data (${allStudents.length} students), stopping due to API errors`)
+                break
+              }
+            } else {
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempts))
+            }
           }
+        } while (currentPage <= totalPages && attempts < maxAttempts)
 
-          if (response.metadata) {
-            totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
-          } else {
-            break
-          }
-
-          currentPage++
-        } while (currentPage <= totalPages)
+        if (allStudents.length === 0) {
+          throw new Error('No student data could be retrieved from the API. The API may be experiencing technical difficulties.')
+        }
 
         // Filter active students
-        const activeStudents = allStudents.filter(student => 
-          student.status === 'active' || student.status === 'Active' || student.status === 1 || student.status === '1'
-        )
+        const activeStudents = allStudents.filter(student => {
+          // Be more flexible with status checking
+          const status = student.status || student.is_active
+          return status === 'active' || status === 'Active' || status === 1 || status === '1' || status === true
+        })
 
         console.log(`Fetched ${allStudents.length} students, ${activeStudents.length} active`)
+        
+        const transformedStudents = activeStudents.map(s => {
+          // Handle different possible field names from the API
+          const firstName = s.first_name || s.student_name || s.name || ''
+          const lastName = s.last_name || ''
+          const fullName = firstName + (lastName ? ` ${lastName}` : '')
+          
+          return {
+            id: s.id,
+            student_id: s.id,
+            roll_no: s.roll_number || s.rollNo || s.roll_no || '',
+            name: fullName || 'Unknown Student',
+            email: s.student_email || s.email || '',
+            program: s.program?.program_name || s.program_name || 'Unknown Program',
+            semester_year: s.semester_year || s.semesterYear || 1,
+            status: 'active',
+            department: s.department?.department_name || s.department_name || 'Unknown Department',
+            avatar_url: s.student_photo_url || s.avatar_url || s.photo_url,
+            mobile: s.mobile || s.phone || s.student_mobile,
+            gpa: s.gpa || s.cgpa
+          }
+        })
+
         results.students = {
           fetched: allStudents.length,
           active: activeStudents.length,
-          data: activeStudents.map(s => ({
-            id: s.id,
-            student_id: s.id,
-            roll_no: s.roll_number,
-            name: s.first_name + (s.last_name ? ` ${s.last_name}` : ''),
-            email: s.student_email,
-            program: s.program?.program_name || 'Unknown Program',
-            semester_year: 1,
-            status: 'active',
-            department: s.department?.department_name,
-            avatar_url: s.student_photo_url,
-            mobile: s.mobile
-          }))
+          data: transformedStudents
         }
 
         // If action is 'sync', also update the students table
         if (action === 'sync') {
-          const studentsToSync = results.students.data.map(s => ({
+          const studentsToSync = transformedStudents.map(s => ({
             student_id: s.student_id,
             roll_no: s.roll_no,
             name: s.name,
@@ -318,6 +385,7 @@ serve(async (req) => {
             department: s.department,
             avatar_url: s.avatar_url,
             mobile: s.mobile,
+            gpa: s.gpa,
             synced_at: new Date().toISOString()
           }))
 
@@ -339,7 +407,7 @@ serve(async (req) => {
 
           // Extract and sync unique programs
           const programs = new Set<string>()
-          results.students.data.forEach(student => {
+          transformedStudents.forEach(student => {
             if (student.program && student.program !== 'Unknown Program') {
               programs.add(student.program)
             }
@@ -370,7 +438,11 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('Error fetching students:', error)
-        results.students = { error: error.message }
+        results.students = { 
+          error: `Students API Error: ${error.message}. This appears to be a server-side issue with the MyJKKN API. Please try again later.`,
+          fetched: 0,
+          active: 0
+        }
       }
     }
 
