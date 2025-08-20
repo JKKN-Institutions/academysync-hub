@@ -58,16 +58,21 @@ export const ComprehensiveUserSync = () => {
       console.log('Starting comprehensive user sync...');
       
       const { data, error } = await supabase.functions.invoke('sync-all-users', {
-        body: {
+        body: JSON.stringify({
           action: 'sync_all',
           sync_staff: syncStaff,
           sync_students: syncStudents
-        }
+        })
       });
 
       if (error) {
         console.error('Sync error:', error);
-        throw error;
+        toast({
+          title: 'Sync API Error',
+          description: `${error.message}. Please check if MYJKKN_API_KEY is configured correctly.`,
+          variant: 'destructive',
+        });
+        return;
       }
 
       console.log('Sync completed:', data);
