@@ -41,7 +41,7 @@ export const useStudentsData = () => {
         }));
         setStudents(demoStudents);
       } else {
-        // Fetch from Supabase database (synced from MyJKKN API)
+        // First try to fetch from Supabase database (synced from MyJKKN API)
         const { data, error: dbError } = await supabase
           .from('students')
           .select('*')
@@ -50,6 +50,44 @@ export const useStudentsData = () => {
 
         if (dbError) {
           throw dbError;
+        }
+
+        // If no students in database, fetch directly from MyJKKN API
+        if (!data || data.length === 0) {
+          console.log('No students in local database, fetching from MyJKKN API...');
+          
+          try {
+            // Import the fetchStudents function
+            const { fetchStudents } = await import('@/services/myjkknApi');
+            const apiStudents = await fetchStudents();
+            
+            console.log(`Fetched ${apiStudents.length} students from MyJKKN API`);
+            
+            // Transform API data to match expected interface (API already transformed in fetchStudents)
+            const transformedStudents = apiStudents.map(student => ({
+              id: student.id,
+              studentId: student.studentId,
+              rollNo: student.rollNo || '',
+              name: student.name,
+              email: student.email || '',
+              program: student.program || 'Unknown Program',
+              semesterYear: student.semesterYear || 1,
+              status: student.status,
+              department: student.department || 'Unknown Department',
+              avatar: student.avatar,
+              mobile: undefined, // Not available in the interface
+              gpa: student.gpa,
+              mentor: student.mentor,
+              interests: student.interests || []
+            }));
+
+            setStudents(transformedStudents);
+            return;
+          } catch (apiError) {
+            console.warn('Failed to fetch from MyJKKN API, using empty array:', apiError);
+            setStudents([]);
+            return;
+          }
         }
 
         // Transform database data to match expected interface
