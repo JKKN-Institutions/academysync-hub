@@ -64,6 +64,7 @@ import { TableSkeleton } from "@/components/ui/loading-skeleton";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { useRoles } from "@/hooks/useRoles";
 import { ComprehensiveUserSync } from "@/components/ComprehensiveUserSync";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface User {
   id: string;
@@ -120,9 +121,36 @@ const AllUsers = () => {
     supervisor_id: ""
   });
 
-  const { toast } = useToast();
   const { institutions, loading: institutionsLoading } = useInstitutionsData();
   const { roles, loading: rolesLoading } = useRoles();
+  const { user: authUser } = useAuth();
+  const { toast } = useToast();
+
+  // Define role hierarchy - higher number means higher privilege
+  const roleHierarchy = {
+    'mentee': 1,
+    'mentor': 2,
+    'dept_lead': 3,
+    'admin': 4,
+    'super_admin': 5
+  };
+
+  // Check if current user can assign a specific role
+  const canAssignRole = (targetRole: string) => {
+    if (!authUser?.role) return false;
+    
+    const currentUserLevel = roleHierarchy[authUser.role as keyof typeof roleHierarchy] || 0;
+    const targetRoleLevel = roleHierarchy[targetRole as keyof typeof roleHierarchy] || 0;
+    
+    // Super admin can assign any role
+    if (authUser.role === 'super_admin') return true;
+    
+    // Admin can assign roles below their level (cannot create other admins or super admins)
+    if (authUser.role === 'admin') return targetRoleLevel < currentUserLevel;
+    
+    // Other roles cannot assign roles
+    return false;
+  };
 
   // Available departments/institutions
   const [departments, setDepartments] = useState<string[]>([]);
@@ -378,6 +406,16 @@ const AllUsers = () => {
   };
 
   const handleChangeRole = async (user: User, newRole: string) => {
+    // Check if current user has permission to assign this role
+    if (!canAssignRole(newRole)) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to assign this role",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_profiles')
@@ -666,28 +704,52 @@ const AllUsers = () => {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit User
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                           <DropdownMenuItem
-                             onClick={() => handleChangeRole(user, 'mentor')}
-                             disabled={user.role === 'mentor'}
-                           >
-                             <UserX className="h-4 w-4 mr-2" />
-                             Change to Mentor
-                           </DropdownMenuItem>
-                           <DropdownMenuItem
-                             onClick={() => handleChangeRole(user, 'mentee')}
-                             disabled={user.role === 'mentee'}
-                           >
-                             <UserX className="h-4 w-4 mr-2" />
-                             Change to Mentee
-                           </DropdownMenuItem>
-                           <DropdownMenuItem
-                             onClick={() => handleChangeRole(user, 'admin')}
-                             disabled={user.role === 'admin'}
-                           >
-                             <UserX className="h-4 w-4 mr-2" />
-                             Change to Admin
-                           </DropdownMenuItem>
+                           <DropdownMenuSeparator />
+                           {canAssignRole('mentor') && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user, 'mentor')}
+                              disabled={user.role === 'mentor'}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Change to Mentor
+                            </DropdownMenuItem>
+                           )}
+                           {canAssignRole('mentee') && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user, 'mentee')}
+                              disabled={user.role === 'mentee'}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Change to Mentee
+                            </DropdownMenuItem>
+                           )}
+                           {canAssignRole('dept_lead') && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user, 'dept_lead')}
+                              disabled={user.role === 'dept_lead'}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Change to Dept Lead
+                            </DropdownMenuItem>
+                           )}
+                           {canAssignRole('admin') && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user, 'admin')}
+                              disabled={user.role === 'admin'}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Change to Admin
+                            </DropdownMenuItem>
+                           )}
+                           {canAssignRole('super_admin') && (
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user, 'super_admin')}
+                              disabled={user.role === 'super_admin'}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Change to Super Admin
+                            </DropdownMenuItem>
+                           )}
                           <DropdownMenuItem>
                             <UserX className="h-4 w-4 mr-2" />
                             Deactivate User
@@ -756,11 +818,11 @@ const AllUsers = () => {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  <SelectItem value="mentor">Mentor</SelectItem>
-                  <SelectItem value="mentee">Mentee</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                  <SelectItem value="dept_lead">Dept Lead</SelectItem>
+                  {canAssignRole('mentor') && <SelectItem value="mentor">Mentor</SelectItem>}
+                  {canAssignRole('mentee') && <SelectItem value="mentee">Mentee</SelectItem>}
+                  {canAssignRole('dept_lead') && <SelectItem value="dept_lead">Dept Lead</SelectItem>}
+                  {canAssignRole('admin') && <SelectItem value="admin">Admin</SelectItem>}
+                  {canAssignRole('super_admin') && <SelectItem value="super_admin">Super Admin</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
