@@ -190,64 +190,68 @@ const AllUsers = () => {
     try {
       setLoading(true);
       
-      // Use comprehensive_user_analytics view for complete user data
-      const { data: analyticsData, error: analyticsError } = await supabase
-        .from('comprehensive_user_analytics')
-        .select('*')
-        .order('joined_date', { ascending: false });
+      // Get all user profiles with complete data
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          user_id,
+          display_name,
+          department,
+          institution,
+          external_id,
+          role,
+          staff_id,
+          mobile,
+          avatar_url,
+          created_at,
+          is_synced_from_staff
+        `)
+        .order('created_at', { ascending: false });
 
-      if (analyticsError) throw analyticsError;
+      if (profilesError) throw profilesError;
 
-      // Get auth users for email data (fallback if needed)
-      let authUsers: any = null;
-      try {
-        const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-        if (!authError) {
-          authUsers = authData;
+      // Transform profiles data into user format with proper email handling
+      const allUsers: User[] = (profilesData || []).map((profile) => {
+        // Derive email from display_name if it looks like an email, otherwise use a placeholder
+        let email = '';
+        if (profile.display_name?.includes('@')) {
+          email = profile.display_name;
+        } else {
+          // Try to construct email from staff_id or external_id
+          const identifier = profile.staff_id || profile.external_id || profile.display_name;
+          email = identifier ? `${identifier}@jkkn.ac.in` : `user${profile.user_id.slice(0, 8)}@example.com`;
         }
-      } catch (error) {
-        console.warn('Cannot fetch auth users (admin access required)');
-      }
 
-      // Transform analytics data into user format
-      const allUsers: User[] = (analyticsData || []).map((analytics) => {
-        const authUser = authUsers?.users?.find((u: any) => u.id === analytics.user_id);
+        // Map department to institution based on available institutions
+        let institution = profile.institution || 'JKKN College of Arts and Science (Aided)';
         
-        // Get email from auth user or derive from display_name if it looks like an email
-        const email = authUser?.email || 
-                     (analytics.display_name?.includes('@') ? analytics.display_name : '') || 
-                     '';
-
-        // Map department to institution
-        let institution = analytics.institution || 'JKKN College of Arts and Science (Aided)';
-        
-        if (analytics.department === 'Web' || email.includes('admin')) {
+        if (profile.department === 'Web' || email.includes('admin') || profile.display_name?.toLowerCase().includes('admin')) {
           institution = institutions.length > 1 ? institutions[1]?.institution_name : 'JKKN College of Arts and Science (Self)';
         } else {
           institution = institutions.length > 0 ? institutions[0]?.institution_name : 'JKKN College of Arts and Science (Aided)';
         }
 
         return {
-          id: analytics.user_id, // Use user_id as id since we don't have profile id in analytics
-          user_id: analytics.user_id,
-          display_name: analytics.display_name || email.split('@')[0] || 'Unknown User',
+          id: profile.id,
+          user_id: profile.user_id,
+          display_name: profile.display_name || email.split('@')[0] || 'Unknown User',
           email: email,
-          mobile: '', // Not available in analytics view
-          department: analytics.department || 'Not Assigned',
+          mobile: profile.mobile || '',
+          department: profile.department || 'Not Assigned',
           institution: institution,
-          external_id: analytics.external_id || analytics.staff_id || email.split('@')[0],
-          role: analytics.role || 'mentee',
+          external_id: profile.external_id || profile.staff_id || '',
+          role: profile.role || 'mentee',
           status: 'active' as const,
-          created_at: analytics.joined_date || '',
-          avatar_url: undefined,
+          created_at: profile.created_at || '',
+          avatar_url: profile.avatar_url,
           supervisor_id: undefined,
           supervisor_name: undefined
         };
       });
 
       console.log('Fetched users data:', {
-        totalAnalyticsUsers: analyticsData?.length || 0,
-        totalAuthUsers: authUsers?.users?.length || 0,
+        totalProfileUsers: profilesData?.length || 0,
         processedUsers: allUsers.length,
         userRoles: allUsers.reduce((acc: any, user) => {
           acc[user.role] = (acc[user.role] || 0) + 1;
@@ -302,44 +306,11 @@ const AllUsers = () => {
 
   const handleAddUser = async () => {
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: addUserForm.email,
-        password: 'TempPassword123!', // Temporary password
-        email_confirm: true
-      });
-
-      if (authError) throw authError;
-
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          user_id: authData.user.id,
-          display_name: addUserForm.display_name,
-          department: addUserForm.department,
-          role: addUserForm.role
-        });
-
-      if (profileError) throw profileError;
-
       toast({
-        title: "Success",
-        description: "User created successfully",
+        title: "Info",
+        description: "User registration is now available on the login page. Users can sign up with email/password or Google.",
       });
-
       setIsAddUserOpen(false);
-      setAddUserForm({
-        display_name: "",
-        email: "",
-        mobile: "",
-        role: "",
-        department: "",
-        institution: "",
-        supervisor_id: ""
-      });
-      
-      await fetchUsers();
     } catch (error: any) {
       console.error('Error adding user:', error);
       toast({
@@ -352,24 +323,17 @@ const AllUsers = () => {
 
   const handleDeleteUser = async (user: User) => {
     try {
-      // Delete user profile
+      // Delete user profile (auth user deletion would require service role)
       const { error: profileError } = await supabase
         .from('user_profiles')
         .delete()
-        .eq('user_id', user.user_id);
+        .eq('id', user.id);
 
       if (profileError) throw profileError;
 
-      // Delete auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.user_id);
-      
-      if (authError) {
-        console.warn('Could not delete auth user:', authError);
-      }
-
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "User profile deleted successfully",
       });
 
       await fetchUsers();
@@ -414,13 +378,13 @@ const AllUsers = () => {
       const { error } = await supabase
         .from('user_profiles')
         .update({ role: newRole })
-        .eq('user_id', user.user_id);
+        .eq('id', user.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "User role updated successfully",
+        description: `User role updated to ${newRole}`,
       });
 
       await fetchUsers();
