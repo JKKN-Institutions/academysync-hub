@@ -10,6 +10,7 @@ import { AlertCircle, CheckCircle, Clock, Database, Settings, Shield, RotateCcw 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AssignmentModeSettings } from "@/components/AssignmentModeSettings";
+import { MyjkknDataFetcher } from "@/components/MyjkknDataFetcher";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -99,10 +100,14 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="integrations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="integrations">
               <Database className="w-4 h-4 mr-2" />
               Integrations
+            </TabsTrigger>
+            <TabsTrigger value="myjkkn">
+              <Database className="w-4 h-4 mr-2" />
+              MyJKKN API
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
@@ -293,6 +298,10 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="myjkkn">
+            <MyjkknDataFetcher />
           </TabsContent>
 
           <TabsContent value="settings">

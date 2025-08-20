@@ -78,7 +78,7 @@ const UserAnalyticsDashboard = () => {
         .order('joined_date', { ascending: false });
 
       if (error) throw error;
-      setAnalytics(data || []);
+      setAnalytics((data || []) as UserAnalytics[]);
     } catch (error: any) {
       console.error('Error fetching analytics:', error);
       toast({
