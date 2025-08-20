@@ -1,123 +1,96 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useInstitutionsData } from '@/hooks/useInstitutionsData';
+import { useStudentsData } from '@/hooks/useStudentsData';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-interface Student {
-  id: string;
-  student_name: string;
-  roll_number: string;
-  student_email: string;
-  student_mobile: string;
-  institution: { id: string; name: string };
-  department: { id: string; department_name: string };
-  program: { id: string; program_name: string };
-  is_profile_complete: boolean;
-}
-
-interface ApiResponse {
-  data: Student[];
-  metadata: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-interface StudentsFilterProps {
-  apiKey: string;
-}
-
-export default function StudentsList({ apiKey }: StudentsFilterProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [students, setStudents] = useState<ApiResponse | null>(null);
+export default function StudentsList() {
+  const { students, loading, error, refetch } = useStudentsData();
   const { institutions } = useInstitutionsData();
+  const { toast } = useToast();
+  const [syncing, setSyncing] = useState(false);
   const [filters, setFilters] = useState({
-    page: 1,
-    limit: 10,
     search: '',
     institution_id: '',
-    is_profile_complete: ''
+    program: '',
+    department: ''
   });
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Build query parameters
-        const queryParams = new URLSearchParams();
-        
-        queryParams.append('page', filters.page.toString());
-        queryParams.append('limit', filters.limit.toString());
-        if (filters.search) queryParams.append('search', filters.search);
-        if (filters.institution_id) queryParams.append('institution_id', filters.institution_id);
-        if (filters.is_profile_complete) 
-          queryParams.append('is_profile_complete', filters.is_profile_complete);
-        
-        const url = `https://myadmin.jkkn.ac.in/api/api-management/students?${queryParams.toString()}`;
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch students: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setStudents(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Error fetching students:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Filter students based on search criteria
+  const filteredStudents = useMemo(() => {
+    if (!students) return [];
+    
+    return students.filter(student => {
+      const matchesSearch = !filters.search || 
+        student.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        student.rollNo.toLowerCase().includes(filters.search.toLowerCase()) ||
+        student.email.toLowerCase().includes(filters.search.toLowerCase());
+      
+      const matchesProgram = !filters.program || 
+        student.program.toLowerCase().includes(filters.program.toLowerCase());
+      
+      const matchesDepartment = !filters.department || 
+        (student.department && student.department.toLowerCase().includes(filters.department.toLowerCase()));
+      
+      return matchesSearch && matchesProgram && matchesDepartment;
+    });
+  }, [students, filters]);
 
-    if (apiKey) {
-      fetchStudents();
+  // Sync data from MyJKKN API
+  const handleSync = async () => {
+    try {
+      setSyncing(true);
+      const { data, error } = await supabase.functions.invoke('sync-myjkkn-data', {
+        body: { action: 'sync', entities: ['students'] }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Sync Successful',
+        description: `Synced ${data?.results?.students?.synced || 0} students`,
+      });
+      
+      // Refresh data
+      refetch();
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({
+        title: 'Sync Failed',
+        description: error instanceof Error ? error.message : 'Failed to sync data',
+        variant: 'destructive'
+      });
+    } finally {
+      setSyncing(false);
     }
-  }, [apiKey, filters]);
+  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }));
+    setFilters(prev => ({ ...prev, search: e.target.value }));
   };
 
-  const handleInstitutionChange = (value: string) => {
-    setFilters(prev => ({ ...prev, institution_id: value, page: 1 }));
+  const handleProgramChange = (value: string) => {
+    setFilters(prev => ({ ...prev, program: value }));
   };
 
-  const handleProfileStatusChange = (value: string) => {
-    setFilters(prev => ({ ...prev, is_profile_complete: value, page: 1 }));
+  const handleDepartmentChange = (value: string) => {
+    setFilters(prev => ({ ...prev, department: value }));
   };
 
-  const handlePageChange = (newPage: number) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
-  };
+  // Get unique programs and departments for filters
+  const uniquePrograms = [...new Set(students?.map(s => s.program).filter(Boolean) || [])];
+  const uniqueDepartments = [...new Set(students?.map(s => s.department).filter(Boolean) || [])];
 
-  if (!apiKey) {
-    return (
-      <div className="py-8 text-center">
-        <p className="text-muted-foreground">API key required to fetch students</p>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -129,142 +102,134 @@ export default function StudentsList({ apiKey }: StudentsFilterProps) {
 
   if (error) {
     return (
-      <div className="py-8 text-center">
+      <div className="py-8 text-center space-y-4">
         <p className="text-destructive">{error}</p>
-        <Button 
-          onClick={() => setFilters({
-            page: 1,
-            limit: 10,
-            search: '',
-            institution_id: '',
-            is_profile_complete: ''
-          })}
-          variant="outline" 
-          className="mt-4"
-        >
-          Reset and try again
-        </Button>
+        <div className="flex gap-2 justify-center">
+          <Button onClick={refetch} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+          <Button onClick={handleSync} disabled={syncing} variant="default">
+            {syncing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Sync from API
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Students Directory</h2>
+        <Button onClick={handleSync} disabled={syncing} variant="outline">
+          {syncing ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4 mr-2" />
+          )}
+          Sync Data
+        </Button>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search students..."
+            placeholder="Search students by name, roll number, or email..."
             className="pl-8"
             value={filters.search}
             onChange={handleSearchChange}
           />
         </div>
         
-        <Select
-          value={filters.institution_id}
-          onValueChange={handleInstitutionChange}
-        >
+        <Select value={filters.program} onValueChange={handleProgramChange}>
           <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Institution" />
+            <SelectValue placeholder="Program" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Institutions</SelectItem>
-            {institutions.map((institution) => (
-              <SelectItem key={institution.id} value={institution.id}>
-                {institution.institution_name}
+            <SelectItem value="">All Programs</SelectItem>
+            {uniquePrograms.map((program) => (
+              <SelectItem key={program} value={program}>
+                {program}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         
-        <Select
-          value={filters.is_profile_complete}
-          onValueChange={handleProfileStatusChange}
-        >
+        <Select value={filters.department} onValueChange={handleDepartmentChange}>
           <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Profile Status" />
+            <SelectValue placeholder="Department" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Profiles</SelectItem>
-            <SelectItem value="true">Complete</SelectItem>
-            <SelectItem value="false">Incomplete</SelectItem>
+            <SelectItem value="">All Departments</SelectItem>
+            {uniqueDepartments.map((department) => (
+              <SelectItem key={department} value={department}>
+                {department}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
       
-      {students?.data.length === 0 ? (
+      {filteredStudents.length === 0 ? (
         <div className="text-center py-12 border rounded-lg">
-          <p className="text-muted-foreground">No students found matching your criteria</p>
+          <p className="text-muted-foreground">
+            {students?.length === 0 ? 'No students data available. Try syncing from the API.' : 'No students found matching your criteria'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {students?.data.map((student) => (
+          {filteredStudents.map((student) => (
             <Card key={student.id} className="p-4">
               <div className="flex flex-col md:flex-row justify-between gap-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{student.student_name}</h3>
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-lg">{student.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {student.roll_number ? `Roll No: ${student.roll_number}` : 'No Roll Number'}
+                    {student.rollNo ? `Roll No: ${student.rollNo}` : 'No Roll Number'}
                   </p>
-                  <p className="text-sm">
-                    {student.institution?.name} • {student.program?.program_name}
+                  <p className="text-sm font-medium">
+                    {student.program}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Department: {student.department?.department_name}
-                  </p>
+                  {student.department && (
+                    <p className="text-sm text-muted-foreground">
+                      Department: {student.department}
+                    </p>
+                  )}
+                  {student.gpa && (
+                    <p className="text-sm">
+                      GPA: <span className="font-medium">{student.gpa}</span>
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col items-start md:items-end gap-2">
-                  <Badge variant={student.is_profile_complete ? "default" : "outline"}>
-                    {student.is_profile_complete ? "Complete" : "Incomplete"}
+                  <Badge variant={student.status === 'active' ? "default" : "secondary"}>
+                    {student.status}
                   </Badge>
                   <div className="text-sm text-muted-foreground">
-                    {student.student_email}
+                    {student.email}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {student.student_mobile}
-                  </div>
+                  {student.avatar && (
+                    <img 
+                      src={student.avatar} 
+                      alt={student.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  )}
                 </div>
               </div>
             </Card>
           ))}
-          
-          {/* Pagination */}
-          {students && students.metadata.totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={filters.page === 1}
-                onClick={() => handlePageChange(filters.page - 1)}
-              >
-                Previous
-              </Button>
-              
-              <div className="flex items-center px-4">
-                <span className="text-sm">
-                  Page {filters.page} of {students.metadata.totalPages}
-                </span>
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={filters.page >= students.metadata.totalPages}
-                onClick={() => handlePageChange(filters.page + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
         </div>
       )}
       
-      {students && (
-        <div className="text-sm text-muted-foreground text-center">
-          Showing {students.data.length} of {students.metadata.total} students
-        </div>
-      )}
+      <div className="text-sm text-muted-foreground text-center">
+        Showing {filteredStudents.length} of {students?.length || 0} students
+      </div>
     </div>
   );
 }
