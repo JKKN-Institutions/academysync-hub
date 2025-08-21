@@ -11,6 +11,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AssignmentModeSettings } from "@/components/AssignmentModeSettings";
 import { MyjkknDataFetcher } from "@/components/MyjkknDataFetcher";
+import { StudentForm } from "@/components/admin/StudentForm";
+import StudentsList from "@/components/admin/StudentsList";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -100,7 +102,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="integrations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="integrations">
               <Database className="w-4 h-4 mr-2" />
               Integrations
@@ -108,6 +110,10 @@ const Admin = () => {
             <TabsTrigger value="myjkkn">
               <Database className="w-4 h-4 mr-2" />
               MyJKKN API
+            </TabsTrigger>
+            <TabsTrigger value="students">
+              <Database className="w-4 h-4 mr-2" />
+              Students
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="w-4 h-4 mr-2" />
@@ -302,6 +308,30 @@ const Admin = () => {
 
           <TabsContent value="myjkkn">
             <MyjkknDataFetcher />
+          </TabsContent>
+
+          <TabsContent value="students">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Student Management</CardTitle>
+                  <CardDescription>Add and manage student records manually</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StudentForm onRefetch={() => window.location.reload()} />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Students List</CardTitle>
+                  <CardDescription>View and manage existing students</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StudentsList />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings">
