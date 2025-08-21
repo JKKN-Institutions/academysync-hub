@@ -13,6 +13,7 @@ import { AssignmentModeSettings } from "@/components/AssignmentModeSettings";
 import { MyjkknDataFetcher } from "@/components/MyjkknDataFetcher";
 import { StudentForm } from "@/components/admin/StudentForm";
 import StudentsList from "@/components/admin/StudentsList";
+import { AutoStudentSync } from "@/components/admin/AutoStudentSync";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -314,18 +315,18 @@ const Admin = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Student Management</CardTitle>
-                  <CardDescription>Add and manage student records manually</CardDescription>
+                  <CardTitle>Auto-Sync Students from MyJKKN</CardTitle>
+                  <CardDescription>Automatically fetch and sync all student details from the MyJKKN API</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StudentForm onRefetch={() => window.location.reload()} />
+                  <AutoStudentSync />
                 </CardContent>
               </Card>
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Students List</CardTitle>
-                  <CardDescription>View and manage existing students</CardDescription>
+                  <CardTitle>Students Directory</CardTitle>
+                  <CardDescription>View all synced students from MyJKKN API</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <StudentsList />
