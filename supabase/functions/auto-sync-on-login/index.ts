@@ -51,10 +51,62 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Parse request body for special operations
+    let requestBody: any = {}
+    try {
+      requestBody = await req.json()
+    } catch {
+      // No body or invalid JSON, continue with normal sync
+    }
+
     // Get MyJKKN API key
     const apiKey = Deno.env.get('MYJKKN_API_KEY')
     if (!apiKey) {
       throw new Error('MyJKKN API key not configured')
+    }
+
+    // Handle connectivity test request
+    if (requestBody.test_connectivity) {
+      console.log('Running connectivity test...')
+      try {
+        // Test a simple API endpoint
+        const testResponse = await fetch(`https://my.jkkn.ac.in/api/api-management/staff?limit=1`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          }
+        })
+
+        return new Response(
+          JSON.stringify({
+            success: testResponse.ok,
+            status: testResponse.status,
+            connectivity_test: true,
+            api_key_valid: testResponse.ok,
+            timestamp: new Date().toISOString()
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        )
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            connectivity_test: true,
+            api_key_valid: false,
+            error: error.message,
+            timestamp: new Date().toISOString()
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        )
+      }
     }
 
     console.log('Starting automatic data sync from MyJKKN API on login...')

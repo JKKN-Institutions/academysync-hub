@@ -9,14 +9,26 @@ import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 interface EndpointTest {
   name: string;
   url: string;
-  status: 'idle' | 'testing' | 'success' | 'error';
+  status: 'idle' | 'testing' | 'success' | 'error' | 'warning';
   result?: any;
   error?: string;
   responseTime?: number;
+  corsError?: boolean;
+  authError?: boolean;
+  networkError?: boolean;
+}
+
+interface DiagnosticResult {
+  apiKeyValid: boolean;
+  corsIssues: boolean;
+  networkConnectivity: boolean;
+  serverResponding: boolean;
+  firewallBlocking: boolean;
 }
 
 export const SimpleApiTester = () => {
   const [apiKey, setApiKey] = useState<string>('');
+  const [diagnostics, setDiagnostics] = useState<DiagnosticResult | null>(null);
   const [tests, setTests] = useState<EndpointTest[]>([
     { name: 'Students', url: 'https://my.jkkn.ac.in/api/api-management/students?page=1&limit=5', status: 'idle' },
     { name: 'Staff', url: 'https://my.jkkn.ac.in/api/api-management/staff?limit=5', status: 'idle' },
@@ -48,12 +60,64 @@ export const SimpleApiTester = () => {
     }
   };
 
+  const runDiagnostics = async (key: string) => {
+    console.log('🔍 Running comprehensive diagnostics...');
+    
+    const diagnostics: DiagnosticResult = {
+      apiKeyValid: false,
+      corsIssues: false,
+      networkConnectivity: false,
+      serverResponding: false,
+      firewallBlocking: false
+    };
+
+    // Test 1: Basic connectivity to MyJKKN domain
+    try {
+      console.log('🌐 Testing basic connectivity...');
+      const pingResponse = await fetch('https://my.jkkn.ac.in', { 
+        method: 'HEAD',
+        mode: 'no-cors' 
+      });
+      diagnostics.networkConnectivity = true;
+      diagnostics.serverResponding = true;
+    } catch (error) {
+      console.warn('⚠️ Basic connectivity failed:', error);
+      diagnostics.networkConnectivity = false;
+    }
+
+    // Test 2: Test via edge function to bypass CORS
+    try {
+      console.log('🔧 Testing via edge function...');
+      const { data, error } = await supabase.functions.invoke('auto-sync-on-login', {
+        body: { test_connectivity: true }
+      });
+      
+      if (!error && data) {
+        diagnostics.apiKeyValid = true;
+        diagnostics.corsIssues = false;
+      }
+    } catch (error) {
+      console.warn('⚠️ Edge function test failed:', error);
+    }
+
+    setDiagnostics(diagnostics);
+    return diagnostics;
+  };
+
   const testEndpoint = async (endpoint: EndpointTest, key: string) => {
     const startTime = Date.now();
     
     setTests(prev => prev.map(t => 
       t.name === endpoint.name 
-        ? { ...t, status: 'testing', error: undefined, result: undefined }
+        ? { 
+            ...t, 
+            status: 'testing', 
+            error: undefined, 
+            result: undefined,
+            corsError: false,
+            authError: false,
+            networkError: false
+          }
         : t
     ));
 
@@ -90,6 +154,11 @@ export const SimpleApiTester = () => {
         dataStructure: typeof result === 'object' ? Object.keys(result) : 'not object'
       });
 
+      // Analyze response for specific error types
+      const isAuthError = response.status === 401 || response.status === 403;
+      const isCorsError = false; // CORS would throw in catch block
+      const isNetworkError = response.status >= 500;
+
       if (!response.ok) {
         const errorMsg = typeof result === 'object' && result?.error 
           ? result.error 
@@ -101,7 +170,9 @@ export const SimpleApiTester = () => {
                 ...t, 
                 status: 'error', 
                 error: errorMsg,
-                responseTime 
+                responseTime,
+                authError: isAuthError,
+                networkError: isNetworkError
               }
             : t
         ));
@@ -128,13 +199,20 @@ export const SimpleApiTester = () => {
       const responseTime = Date.now() - startTime;
       console.error(`❌ ${endpoint.name} failed:`, error);
       
+      // Determine error type
+      const errorMessage = error instanceof Error ? error.message : 'Network error';
+      const isCorsError = errorMessage.includes('CORS') || errorMessage.includes('cors');
+      const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network');
+      
       setTests(prev => prev.map(t => 
         t.name === endpoint.name 
           ? { 
               ...t, 
               status: 'error', 
-              error: error instanceof Error ? error.message : 'Network error',
-              responseTime 
+              error: errorMessage,
+              responseTime,
+              corsError: isCorsError,
+              networkError: isNetworkError
             }
           : t
       ));
@@ -144,6 +222,9 @@ export const SimpleApiTester = () => {
   const testAllEndpoints = async () => {
     try {
       const key = await getApiKey();
+      
+      // Run diagnostics first
+      await runDiagnostics(key);
       
       // Test endpoints sequentially to avoid overwhelming the API
       for (const endpoint of tests) {
@@ -161,9 +242,17 @@ export const SimpleApiTester = () => {
     switch (status) {
       case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'error': return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
       case 'testing': return <Clock className="h-4 w-4 text-blue-500 animate-spin" />;
       default: return <AlertTriangle className="h-4 w-4 text-gray-400" />;
     }
+  };
+
+  const getDiagnosticBadge = (test: EndpointTest) => {
+    if (test.corsError) return <Badge variant="destructive" className="ml-2">CORS Issue</Badge>;
+    if (test.authError) return <Badge variant="destructive" className="ml-2">Auth Error</Badge>;
+    if (test.networkError) return <Badge variant="destructive" className="ml-2">Network Error</Badge>;
+    return null;
   };
 
   return (
@@ -181,6 +270,29 @@ export const SimpleApiTester = () => {
       </CardHeader>
       
       <CardContent>
+        {diagnostics && (
+          <Alert className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>System Diagnostics:</strong>
+              <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                <div className={diagnostics.networkConnectivity ? 'text-green-600' : 'text-red-600'}>
+                  Network: {diagnostics.networkConnectivity ? '✅ Connected' : '❌ Failed'}
+                </div>
+                <div className={diagnostics.serverResponding ? 'text-green-600' : 'text-red-600'}>
+                  Server: {diagnostics.serverResponding ? '✅ Responding' : '❌ Unavailable'}
+                </div>
+                <div className={diagnostics.apiKeyValid ? 'text-green-600' : 'text-red-600'}>
+                  API Key: {diagnostics.apiKeyValid ? '✅ Valid' : '❌ Invalid/Expired'}
+                </div>
+                <div className={!diagnostics.corsIssues ? 'text-green-600' : 'text-red-600'}>
+                  CORS: {!diagnostics.corsIssues ? '✅ No Issues' : '❌ Blocked'}
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {apiKey && (
           <Alert className="mb-4">
             <AlertTriangle className="h-4 w-4" />
@@ -199,7 +311,9 @@ export const SimpleApiTester = () => {
                   <h3 className="font-semibold">{test.name}</h3>
                   {test.status === 'success' && <Badge variant="secondary" className="bg-green-100 text-green-800">Success</Badge>}
                   {test.status === 'error' && <Badge variant="destructive">Error</Badge>}
+                  {test.status === 'warning' && <Badge variant="outline" className="border-yellow-500 text-yellow-700">Warning</Badge>}
                   {test.status === 'testing' && <Badge variant="outline">Testing...</Badge>}
+                  {getDiagnosticBadge(test)}
                 </div>
                 {test.responseTime && (
                   <span className="text-sm text-muted-foreground">{test.responseTime}ms</span>
@@ -231,13 +345,21 @@ export const SimpleApiTester = () => {
           <Alert variant="destructive" className="mt-4">
             <XCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Common Issues:</strong>
+              <strong>Detected Issues & Solutions:</strong>
               <ul className="list-disc ml-4 mt-1">
-                <li>API server may be down or unreachable</li>
-                <li>CORS policy blocking requests from this domain</li>
-                <li>Invalid or expired API key</li>
-                <li>Network connectivity issues</li>
-                <li>Wrong endpoint URLs</li>
+                {tests.some(t => t.corsError) && (
+                  <li><strong>CORS Policy Restriction:</strong> Browser blocking cross-origin requests. Use the sync function instead of direct API calls.</li>
+                )}
+                {tests.some(t => t.authError) && (
+                  <li><strong>Authentication Failed:</strong> API key invalid or expired. Update the MYJKKN_API_KEY secret in Supabase settings.</li>
+                )}
+                {tests.some(t => t.networkError) && (
+                  <li><strong>Network/Server Issues:</strong> MyJKKN API server may be down or experiencing issues. Try again later.</li>
+                )}
+                {!diagnostics?.networkConnectivity && (
+                  <li><strong>Connectivity Issues:</strong> Unable to reach MyJKKN servers. Check internet connection or firewall settings.</li>
+                )}
+                <li><strong>Recommended:</strong> Use the "Trigger Manual Sync" button in Student Demo page which bypasses browser limitations.</li>
               </ul>
             </AlertDescription>
           </Alert>
