@@ -128,16 +128,16 @@ serve(async (req) => {
     const transformedStudents = activeStudents.map(student => ({
       student_id: student.student_id || student.id,
       roll_no: student.roll_number || null,
-      name: `${student.first_name}${student.last_name ? ` ${student.last_name}` : ''}`,
+      name: `${student.first_name}${student.last_name ? ` ${student.last_name}` : ''}`.trim(),
       email: student.student_email || null,
       program: student.program?.program_name || null,
       department: student.department?.department_name || null,
       semester_year: student.semester_year || null,
-      gpa: student.gpa || null,
+      gpa: student.gpa ? parseFloat(student.gpa.toString()) : null,
       mobile: student.mobile || null,
       status: 'active',
       synced_at: new Date().toISOString()
-    }))
+    })).filter(student => student.student_id && student.name) // Filter out invalid records
 
     console.log(`Prepared ${transformedStudents.length} students for database sync`)
 
