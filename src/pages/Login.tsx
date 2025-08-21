@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Loader2, GraduationCap, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Loader2, GraduationCap, Eye, EyeOff, Bug } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { SimpleApiTester } from '@/components/SimpleApiTester';
 
 const Login = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -352,6 +354,28 @@ const Login = () => {
           {/* Footer */}
           <div className="text-center mt-8 text-blue-200/60 text-sm animate-fade-in">
             © 2025 JKKN Educational Institutions
+          </div>
+
+          {/* Debug API Button */}
+          <div className="fixed bottom-4 right-4">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  <Bug className="h-4 w-4 mr-2" />
+                  Debug API
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>API Endpoint Diagnostics</DialogTitle>
+                </DialogHeader>
+                <SimpleApiTester />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
