@@ -1223,6 +1223,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_current_user_role_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_permissions: {
         Args: { user_uuid?: string }
         Returns: Json
