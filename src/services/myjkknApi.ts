@@ -157,46 +157,15 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
     let currentPage = 1;
     let totalPages = 1;
 
-    // Try multiple possible endpoints for students
-    const possibleEndpoints = [
-      `/api-management/students?limit=1000`,
-      `/api-management/organizations/students?limit=1000`, 
-      `/api-management/student?limit=1000`,
-      `/students?limit=1000`,
-      `/api-management/students`
-    ];
-
-    let response: {data: any[], metadata?: any} | null = null;
-    let workingEndpoint: string = '';
-
-    // Try each endpoint until we find one that works
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`Trying endpoint: ${endpoint}`);
-        response = await makeApiRequest<{data: any[], metadata?: any}>(endpoint);
-        workingEndpoint = endpoint;
-        console.log(`✅ Endpoint ${endpoint} worked!`);
-        break;
-      } catch (error) {
-        console.log(`❌ Endpoint ${endpoint} failed:`, error);
-        continue;
-      }
-    }
-
-    if (!response) {
-      throw new Error('All student API endpoints failed. Please check API configuration.');
-    }
-
-    // Now fetch all pages using the working endpoint
+    // Use the correct students endpoint
     do {
-      console.log(`Fetching students page ${currentPage} from ${workingEndpoint}...`);
+      console.log(`Fetching students page ${currentPage}...`);
       
-      if (currentPage > 1) {
-        // Add pagination parameters for subsequent pages
-        const separator = workingEndpoint.includes('?') ? '&' : '?';
-        const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
-        response = await makeApiRequest<{data: any[], metadata?: any}>(paginatedEndpoint);
-      }
+      const endpoint = currentPage === 1 
+        ? `/api-management/students?limit=1000`
+        : `/api-management/students?limit=1000&page=${currentPage}`;
+        
+      const response = await makeApiRequest<{data: any[], metadata?: any}>(endpoint);
 
       console.log(`Page ${currentPage} response:`, {
         studentsCount: response.data?.length || 0,
@@ -222,26 +191,22 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
 
     console.log(`✅ Successfully fetched all ${allStudents.length} students from ${totalPages} pages`);
 
-    // Filter for active students only
-    const activeStudents = allStudents.filter(student => {
-      const isActive = student.status === 'active' || student.status === 'Active' || student.status === 1 || student.status === '1';
-      return isActive;
-    });
-
-    console.log(`Filtered to ${activeStudents.length} active students out of ${allStudents.length} total`);
+    // No need to filter by status since API structure doesn't show status field
+    // Instead, assume all returned students are active
+    console.log(`Processing ${allStudents.length} students from API`);
 
     // Transform API response to match our expected format
-    const transformedStudents = activeStudents.map(student => ({
+    const transformedStudents = allStudents.map(student => ({
       id: student.id,
       studentId: student.id,
-      rollNo: student.roll_number,
-      name: student.first_name + (student.last_name ? ` ${student.last_name}` : ''),
-      email: student.student_email,
+      rollNo: student.roll_number || 'N/A',
+      name: student.student_name || 'Unknown Student',
+      email: student.student_email || '',
       program: student.program?.program_name || 'Unknown Program',
       semesterYear: 1, // Default since not available in API
-      status: student.status as 'active' | 'inactive',
-      department: student.department?.department_name,
-      avatar: student.student_photo_url || undefined,
+      status: 'active' as 'active' | 'inactive', // Assume active since no status field
+      department: student.department?.department_name || 'Unknown Department',
+      avatar: undefined, // No avatar field in the provided structure
       gpa: undefined,
       mentor: null,
       interests: []
