@@ -164,6 +164,7 @@ serve(async (req) => {
             department_name: departmentName,
             description: dept.department_code || departmentName,
             institution_id: dept.institution_id,
+            degree_id: dept.degree_id, // Include degree_id from API
             status: 'active',
             created_at: dept.created_at,
             updated_at: dept.updated_at
