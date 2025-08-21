@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { fetchDepartments, MyjkknDepartment } from '@/services/myjkknApi';
+import { ApiDiagnostics } from './ApiDiagnostics';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const TestDepartments = () => {
   const [departments, setDepartments] = useState<MyjkknDepartment[]>([]);
@@ -30,41 +32,56 @@ export const TestDepartments = () => {
   }, []);
 
   return (
-    <Card className="max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Department API Test</CardTitle>
-        <Button onClick={testDepartmentsFetch} disabled={loading}>
-          {loading ? 'Testing...' : 'Test Department Fetch'}
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="text-red-600 mb-4">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
+    <div className="max-w-6xl mx-auto space-y-6">
+      <Tabs defaultValue="diagnostics" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="diagnostics">Full API Diagnostics</TabsTrigger>
+          <TabsTrigger value="departments">Department Test</TabsTrigger>
+        </TabsList>
         
-        {departments.length > 0 && (
-          <div>
-            <h3 className="font-semibold mb-2">Found {departments.length} departments:</h3>
-            <div className="space-y-2">
-              {departments.map((dept) => (
-                <div key={dept.id} className="border p-2 rounded">
-                  <div><strong>ID:</strong> {dept.id}</div>
-                  <div><strong>Name:</strong> {dept.department_name}</div>
-                  <div><strong>Description:</strong> {dept.description}</div>
-                  <div><strong>Status:</strong> {dept.status}</div>
-                  <div><strong>Institution ID:</strong> {dept.institution_id}</div>
+        <TabsContent value="diagnostics">
+          <ApiDiagnostics />
+        </TabsContent>
+        
+        <TabsContent value="departments">
+          <Card>
+            <CardHeader>
+              <CardTitle>Department API Test</CardTitle>
+              <Button onClick={testDepartmentsFetch} disabled={loading}>
+                {loading ? 'Testing...' : 'Test Department Fetch'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <div className="text-red-600 mb-4">
+                  <strong>Error:</strong> {error}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              )}
+              
+              {departments.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Found {departments.length} departments:</h3>
+                  <div className="space-y-2">
+                    {departments.map((dept) => (
+                      <div key={dept.id} className="border p-2 rounded">
+                        <div><strong>ID:</strong> {dept.id}</div>
+                        <div><strong>Name:</strong> {dept.department_name}</div>
+                        <div><strong>Description:</strong> {dept.description}</div>
+                        <div><strong>Status:</strong> {dept.status}</div>
+                        <div><strong>Institution ID:</strong> {dept.institution_id}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {!loading && departments.length === 0 && !error && (
-          <div className="text-gray-600">No departments found</div>
-        )}
-      </CardContent>
-    </Card>
+              {!loading && departments.length === 0 && !error && (
+                <div className="text-gray-600">No departments found</div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
