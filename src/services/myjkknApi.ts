@@ -432,12 +432,12 @@ export const fetchDepartments = async (): Promise<MyjkknDepartment[]> => {
 // Fetch institutions from myjkkn API
 export const fetchInstitutions = async (): Promise<MyjkknInstitution[]> => {
   try {
-    console.log('Fetching institutions from mobile API...');
+    console.log('Fetching institutions from main API...');
     
     const response = await makeApiRequest<{data: any[], metadata?: any}>(
       '/api-management/organizations/institutions',
       {},
-      true // Use mobile API
+      false // Use main API
     );
 
     console.log('Institutions API response:', {

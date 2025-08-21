@@ -72,26 +72,11 @@ serve(async (req) => {
     if (!entities || entities.includes('institutions')) {
       console.log('Fetching institutions...')
       try {
-        // Try mobile API first for institutions
-        const mobileApiUrl = 'https://m.jkkn.ac.in/api'
-        console.log(`Making request to: ${mobileApiUrl}/api-management/organizations/institutions`)
-        
-        const response = await fetch(`${mobileApiUrl}/api-management/organizations/institutions`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${myjkknApiKey}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          }
-        });
+        // Use main API for institutions (matching user's working example)
+        const institutionsResponse = await makeApiRequest<{data: any[], metadata?: any}>(
+          '/api-management/organizations/institutions'
+        );
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`Mobile API Error ${response.status}:`, errorText)
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-
-        const institutionsResponse = await response.json()
         const institutions = institutionsResponse.data || []
         
         console.log(`Fetched ${institutions.length} institutions`)
