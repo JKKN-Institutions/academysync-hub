@@ -82,7 +82,7 @@ serve(async (req) => {
       return data
     }
 
-    // Sync Students using the exact same pattern as sync-myjkkn-data
+    // Sync Students using multiple endpoint discovery like myjkknApi
     console.log('Syncing students...')
     let allStudents: MyjkknStudent[] = []
     let studentError: string | null = null
@@ -94,13 +94,46 @@ serve(async (req) => {
       let currentPage = 1
       let totalPages = 1
 
-      // Use the exact same endpoint pattern that works in sync-myjkkn-data
+      // Try multiple possible endpoints for students like myjkknApi does
+      const possibleEndpoints = [
+        `/api-management/students?limit=1000`,
+        `/api-management/organizations/students?limit=1000`, 
+        `/api-management/student?limit=1000`,
+        `/students?limit=1000`,
+        `/api-management/students`
+      ];
+
+      let response: {data: MyjkknStudent[], metadata?: any} | null = null;
+      let workingEndpoint: string = '';
+
+      // Try each endpoint until we find one that works
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(endpoint);
+          workingEndpoint = endpoint;
+          console.log(`✅ Endpoint ${endpoint} worked!`);
+          break;
+        } catch (error) {
+          console.log(`❌ Endpoint ${endpoint} failed:`, error);
+          continue;
+        }
+      }
+
+      if (!response) {
+        throw new Error('All student API endpoints failed. Please check API configuration.');
+      }
+
+      // Now fetch all pages using the working endpoint
       do {
-        console.log(`Fetching students page ${currentPage}...`)
+        console.log(`Fetching students page ${currentPage} from ${workingEndpoint}...`)
         
-        const response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(
-          `/api-management/students?page=${currentPage}&limit=1000`
-        )
+        if (currentPage > 1) {
+          // Add pagination parameters for subsequent pages
+          const separator = workingEndpoint.includes('?') ? '&' : '?';
+          const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
+          response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(paginatedEndpoint);
+        }
 
         console.log(`Page ${currentPage} response:`, {
           studentsCount: response.data?.length || 0,
