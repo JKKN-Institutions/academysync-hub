@@ -38,8 +38,8 @@ export const ApiDiagnostics = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  const API_BASE_URL = 'https://myadmin.jkkn.ac.in/api';
-  const MOBILE_API_BASE_URL = 'https://m.jkkn.ac.in/api';
+  const API_BASE_URL = 'https://my.jkkn.ac.in/api';
+  const MOBILE_API_BASE_URL = 'https://my.jkkn.ac.in/api';
 
   const endpoints: ApiEndpoint[] = [
     {
