@@ -82,64 +82,52 @@ serve(async (req) => {
       return data
     }
 
-    // Sync Students
+    // Sync Students using the exact same pattern as sync-myjkkn-data
     console.log('Syncing students...')
     let allStudents: MyjkknStudent[] = []
+    let studentError: string | null = null
 
-    // Try multiple possible endpoints for students
-    const possibleEndpoints = [
-      `/api-management/students?limit=1000`,
-      `/api-management/organizations/students?limit=1000`, 
-      `/api-management/student?limit=1000`,
-      `/students?limit=1000`,
-      `/api-management/students`
-    ]
-
-    let response: {data: MyjkknStudent[], metadata?: any} | null = null
-    let workingEndpoint: string = ''
-
-    // Try each endpoint until we find one that works
-    for (const endpoint of possibleEndpoints) {
-      try {
-        console.log(`Trying student endpoint: ${endpoint}`)
-        response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(endpoint)
-        workingEndpoint = endpoint
-        console.log(`✅ Student endpoint ${endpoint} worked!`)
-        break
-      } catch (error) {
-        console.log(`❌ Student endpoint ${endpoint} failed:`, error)
-        continue
-      }
-    }
-
-    if (!response) {
-      console.log('All student API endpoints failed, continuing with staff sync...')
-    } else {
-      // Fetch all pages using the working endpoint
+    try {
+      console.log('Starting to fetch students with pagination...')
+      console.log('=== STUDENTS API PAGINATION FETCH ===')
+      
       let currentPage = 1
       let totalPages = 1
 
+      // Use the exact same endpoint pattern that works in sync-myjkkn-data
       do {
-        console.log(`Syncing students page ${currentPage} from ${workingEndpoint}...`)
+        console.log(`Fetching students page ${currentPage}...`)
         
-        if (currentPage > 1) {
-          const separator = workingEndpoint.includes('?') ? '&' : '?'
-          const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`
-          response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(paginatedEndpoint)
-        }
+        const response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(
+          `/api-management/students?page=${currentPage}&limit=1000`
+        )
 
+        console.log(`Page ${currentPage} response:`, {
+          studentsCount: response.data?.length || 0,
+          metadata: response.metadata
+        })
+
+        // Add this page's students to our collection
         if (response.data && Array.isArray(response.data)) {
           allStudents = [...allStudents, ...response.data]
         }
 
+        // Update pagination info
         if (response.metadata) {
           totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
+          console.log(`Pagination info: page ${currentPage} of ${totalPages}, total students so far: ${allStudents.length}`)
         } else {
+          console.log('No metadata found, assuming single page')
           break
         }
 
         currentPage++
       } while (currentPage <= totalPages)
+
+      console.log(`✅ Successfully fetched all ${allStudents.length} students from ${totalPages} pages`)
+    } catch (error) {
+      console.error('Error fetching students:', error)
+      studentError = `Failed to fetch students: ${error.message}`
     }
 
     // Filter and transform students
@@ -162,70 +150,102 @@ serve(async (req) => {
       synced_at: new Date().toISOString()
     })).filter(student => student.student_id && student.name)
 
-    // Upsert students
-    const { error: studentError, count: studentCount } = await supabase
-      .from('students')
-      .upsert(transformedStudents, { 
-        onConflict: 'student_id',
-        count: 'exact'
-      })
-
-    if (studentError) {
-      console.error('Student sync error:', studentError)
+    // Upsert students only if we have data and no fetch error
+    let studentCount = 0
+    let studentSyncError: any = null
+    
+    if (!studentError && transformedStudents.length > 0) {
+      console.log(`Syncing ${transformedStudents.length} students to database...`)
+      const { error: syncError, count } = await supabase
+        .from('students')
+        .upsert(transformedStudents, { 
+          onConflict: 'student_id',
+          count: 'exact'
+        })
+      
+      studentCount = count || 0
+      studentSyncError = syncError
+      
+      if (syncError) {
+        console.error('Student sync error:', syncError)
+      } else {
+        console.log(`Successfully synced ${studentCount} students`)
+      }
     }
 
-    // Sync Staff
+    // Sync Staff with proper variable scoping
     console.log('Syncing staff...')
     let allStaff: MyjkknStaff[] = []
-    currentPage = 1
-    totalPages = 1
+    let staffError: string | null = null
+    let staffCount = 0
+    let staffSyncError: any = null
 
-    do {
-      const response = await makeApiRequest<{data: MyjkknStaff[], metadata?: any}>(
-        `/api-management/staff?page=${currentPage}&limit=1000`
+    try {
+      let staffCurrentPage = 1
+      let staffTotalPages = 1
+
+      do {
+        console.log(`Fetching staff page ${staffCurrentPage}...`)
+        
+        const response = await makeApiRequest<{data: MyjkknStaff[], metadata?: any}>(
+          `/api-management/staff?page=${staffCurrentPage}&limit=1000`
+        )
+
+        if (response.data && Array.isArray(response.data)) {
+          allStaff = [...allStaff, ...response.data]
+        }
+
+        if (response.metadata) {
+          staffTotalPages = response.metadata.totalPages || response.metadata.total_pages || 1
+        } else {
+          break
+        }
+
+        staffCurrentPage++
+      } while (staffCurrentPage <= staffTotalPages)
+
+      console.log(`✅ Successfully fetched all ${allStaff.length} staff members`)
+
+      // Filter and transform staff
+      const activeStaff = allStaff.filter(staff => 
+        (staff.status === 'active' || staff.status === 'Active' || 
+         staff.status === 1 || staff.status === '1') && staff.id && staff.email
       )
 
-      if (response.data && Array.isArray(response.data)) {
-        allStaff = [...allStaff, ...response.data]
+      const transformedStaff = activeStaff.map(staff => ({
+        staff_id: staff.id,
+        name: `${staff.first_name}${staff.last_name ? ` ${staff.last_name}` : ''}`.trim(),
+        email: staff.email,
+        department: staff.department?.department_name || null,
+        designation: staff.designation || null,
+        mobile: staff.mobile || null,
+        status: 'active',
+        avatar_url: staff.staff_photo_url || null,
+        synced_at: new Date().toISOString()
+      })).filter(staff => staff.staff_id && staff.name && staff.email)
+
+      // Upsert staff
+      if (transformedStaff.length > 0) {
+        console.log(`Syncing ${transformedStaff.length} staff to database...`)
+        const { error: syncError, count } = await supabase
+          .from('staff')
+          .upsert(transformedStaff, { 
+            onConflict: 'staff_id',
+            count: 'exact'
+          })
+
+        staffCount = count || 0
+        staffSyncError = syncError
+        
+        if (syncError) {
+          console.error('Staff sync error:', syncError)
+        } else {
+          console.log(`Successfully synced ${staffCount} staff members`)
+        }
       }
-
-      if (response.metadata) {
-        totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
-      } else {
-        break
-      }
-
-      currentPage++
-    } while (currentPage <= totalPages)
-
-    // Filter and transform staff
-    const activeStaff = allStaff.filter(staff => 
-      (staff.status === 'active' || staff.status === 'Active' || 
-       staff.status === 1 || staff.status === '1') && staff.id && staff.email
-    )
-
-    const transformedStaff = activeStaff.map(staff => ({
-      staff_id: staff.id,
-      name: `${staff.first_name}${staff.last_name ? ` ${staff.last_name}` : ''}`.trim(),
-      email: staff.email,
-      department: staff.department?.department_name || null,
-      designation: staff.designation || null,
-      mobile: staff.mobile || null,
-      status: 'active',
-      avatar_url: staff.staff_photo_url || null,
-      synced_at: new Date().toISOString()
-    })).filter(staff => staff.staff_id && staff.name && staff.email)
-
-    // Upsert staff
-    const { error: staffError, count: staffCount } = await supabase
-      .from('staff')
-      .upsert(transformedStaff, { 
-        onConflict: 'staff_id',
-        count: 'exact'
-      })
-
-    if (staffError) {
-      console.error('Staff sync error:', staffError)
+    } catch (error) {
+      console.error('Error fetching staff:', error)
+      staffError = `Failed to fetch staff: ${error.message}`
     }
 
     const syncResult = {
@@ -234,8 +254,10 @@ serve(async (req) => {
       staff_synced: staffCount || 0,
       timestamp: new Date().toISOString(),
       errors: [
-        ...(studentError ? [`Student sync: ${studentError.message}`] : []),
-        ...(staffError ? [`Staff sync: ${staffError.message}`] : [])
+        ...(studentError ? [`Student fetch: ${studentError}`] : []),
+        ...(studentSyncError ? [`Student sync: ${studentSyncError.message}`] : []),
+        ...(staffError ? [`Staff fetch: ${staffError}`] : []),
+        ...(staffSyncError ? [`Staff sync: ${staffSyncError.message}`] : [])
       ]
     }
 
