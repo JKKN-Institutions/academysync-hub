@@ -49,21 +49,62 @@ export const useStudentsData = () => {
           .order('name');
 
         if (dbError) {
+          console.error('Database error fetching students:', dbError);
           throw dbError;
         }
 
-        // If no students in database, fetch directly from MyJKKN API
+        // If no students in database, trigger sync and try to fetch again
         if (!data || data.length === 0) {
-          console.log('No students in local database, fetching from MyJKKN API...');
+          console.log('No students in local database, triggering sync from MyJKKN API...');
           
           try {
-            // Import the fetchStudents function
+            // Trigger auto-sync first
+            const syncResponse = await supabase.functions.invoke('auto-sync-on-login');
+            console.log('Sync response:', syncResponse);
+            
+            // Wait a moment for sync to complete, then try fetching again
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const { data: syncedData, error: syncedError } = await supabase
+              .from('students')
+              .select('*')
+              .eq('status', 'active')
+              .order('name');
+              
+            if (syncedError) {
+              throw syncedError;
+            }
+            
+            if (syncedData && syncedData.length > 0) {
+              console.log(`Found ${syncedData.length} students after sync`);
+              // Use synced data and continue to transform
+              const transformedStudents = syncedData.map(student => ({
+                id: student.id,
+                studentId: student.student_id,
+                rollNo: student.roll_no || '',
+                name: student.name,
+                email: student.email || '',
+                program: student.program || 'Unknown Program',
+                semesterYear: student.semester_year || 1,
+                status: student.status as 'active' | 'inactive',
+                department: student.department,
+                avatar: student.avatar_url,
+                mobile: student.mobile,
+                gpa: student.gpa ? Number(student.gpa) : undefined,
+                mentor: null,
+                interests: []
+              }));
+              setStudents(transformedStudents);
+              return;
+            }
+            
+            // If still no data, try direct API fallback
+            console.log('Still no students after sync, trying direct API...');
             const { fetchStudents } = await import('@/services/myjkknApi');
             const apiStudents = await fetchStudents();
             
-            console.log(`Fetched ${apiStudents.length} students from MyJKKN API`);
+            console.log(`Fetched ${apiStudents.length} students directly from MyJKKN API`);
             
-            // Transform API data to match expected interface (API already transformed in fetchStudents)
             const transformedStudents = apiStudents.map(student => ({
               id: student.id,
               studentId: student.studentId,
@@ -75,7 +116,7 @@ export const useStudentsData = () => {
               status: student.status,
               department: student.department || 'Unknown Department',
               avatar: student.avatar,
-              mobile: undefined, // Not available in the interface
+              mobile: undefined,
               gpa: student.gpa,
               mentor: student.mentor,
               interests: student.interests || []
@@ -84,7 +125,7 @@ export const useStudentsData = () => {
             setStudents(transformedStudents);
             return;
           } catch (apiError) {
-            console.warn('Failed to fetch from MyJKKN API, using empty array:', apiError);
+            console.error('Failed to sync and fetch students:', apiError);
             setStudents([]);
             return;
           }

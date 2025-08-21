@@ -1,9 +1,67 @@
 project_id = "pbzndbvxjdvfmgoonxee"
 
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54327
+file_size_limit = "50MiB"
+image_transformation_enabled = true
+
 [auth]
 enabled = true
+port = 54328
 external_url = "https://pbzndbvxjdvfmgoonxee.supabase.co"
 site_url = "https://fc7e4294-9481-4401-8e77-f1b15efcab0a.lovableproject.com"
+jwt_expiry = 3600
+enable_signup = true
+enable_email_confirmations = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.auto-sync-on-login]
+verify_jwt = false
+
+[functions.sync-students]
+verify_jwt = false
+
+[functions.sync-staff-users]
+verify_jwt = false
+
+[functions.sync-myjkkn-data]
+verify_jwt = false
+
+[functions.sync-all-users]
+verify_jwt = false
+
+[functions.get-secret]
+verify_jwt = false
 
 [functions.people-webhook]
+verify_jwt = false
+
+[functions.superface-integration]
 verify_jwt = false

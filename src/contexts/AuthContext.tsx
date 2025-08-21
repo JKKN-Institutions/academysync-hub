@@ -137,11 +137,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             externalId: undefined
           });
           
-          // Defer profile fetching to avoid deadlock
+          // Defer profile fetching and auto-sync to avoid deadlock
           setTimeout(async () => {
             if (!mounted) return;
             
             try {
+              // First, trigger auto-sync to ensure latest data from MyJKKN API
+              if (event === 'SIGNED_IN') {
+                console.log('Triggering auto-sync for new login...');
+                try {
+                  await supabase.functions.invoke('auto-sync-on-login');
+                  console.log('Auto-sync completed successfully');
+                } catch (syncError) {
+                  console.warn('Auto-sync failed, continuing with existing data:', syncError);
+                }
+              }
+              
+              // Then fetch user profile
               const profile = await fetchUserProfile(session.user.id);
               if (mounted) {
                 setUser(prevUser => prevUser ? {
@@ -153,7 +165,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 } : null);
               }
             } catch (error) {
-              console.error('Error fetching user profile:', error);
+              console.error('Error in authentication flow:', error);
             }
           }, 0);
         } else {
