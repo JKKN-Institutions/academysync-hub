@@ -1,5 +1,6 @@
 import React from 'react';
 import StudentDataFetcher from '@/components/StudentDataFetcher';
+import StudentSyncDebugger from '@/components/StudentSyncDebugger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Code, Database, Shield, Zap } from 'lucide-react';
@@ -124,6 +125,9 @@ const StudentDemo: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Debug and Sync Component */}
+        <StudentSyncDebugger />
+        
         {/* Student Data Component */}
         <StudentDataFetcher />
 

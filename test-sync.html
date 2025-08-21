@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Student Sync</title>
+</head>
+<body>
+    <h1>Testing MyJKKN Student Sync</h1>
+    <button onclick="testSync()">Test Auto Sync</button>
+    <pre id="result"></pre>
+    
+    <script>
+        async function testSync() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Testing sync...';
+            
+            try {
+                const response = await fetch('https://pbzndbvxjdvfmgoonxee.supabase.co/functions/v1/auto-sync-on-login', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiem5kYnZ4amR2Zm1nb29ueGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTg5NzQsImV4cCI6MjA2OTg3NDk3NH0.12mw6uOwJAL5nDRMqCf78xLGMJQg8D6HM3KCalwOXaA',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                resultEl.textContent = JSON.stringify(result, null, 2);
+                
+                if (result.students_synced > 0) {
+                    alert(`Success! Synced ${result.students_synced} students`);
+                } else {
+                    alert('Sync completed but no students synced. Check the errors.');
+                }
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
