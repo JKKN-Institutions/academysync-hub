@@ -69,7 +69,7 @@ serve(async (req) => {
       if (sync_staff) {
         console.log('=== SYNCING STAFF ===');
         
-        const staffResponse = await fetch('https://myadmin.jkkn.ac.in/api/api-management/staff', {
+        const staffResponse = await fetch('https://my.jkkn.ac.in/api/api-management/staff', {
           headers: baseHeaders
         });
 
@@ -229,7 +229,7 @@ serve(async (req) => {
         do {
           console.log(`Fetching students page ${currentPage}...`);
           
-          const studentsResponse = await fetch(`https://myadmin.jkkn.ac.in/api/api-management/students?page=${currentPage}&limit=1000`, {
+          const studentsResponse = await fetch(`https://my.jkkn.ac.in/api/api-management/students?page=${currentPage}&limit=1000`, {
             headers: baseHeaders
           });
 

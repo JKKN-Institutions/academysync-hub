@@ -53,7 +53,7 @@ serve(async (req) => {
       console.log('Fetching staff data from external API...');
       
       // Fetch staff from external API
-      const staffResponse = await fetch('https://myadmin.jkkn.ac.in/api/api-management/staff', {
+      const staffResponse = await fetch('https://my.jkkn.ac.in/api/api-management/staff', {
         headers: {
           'Authorization': `Bearer ${myjkknApiKey}`,
           'Content-Type': 'application/json'
