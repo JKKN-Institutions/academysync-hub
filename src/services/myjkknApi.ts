@@ -223,18 +223,30 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
 // Fetch single student by ID
 export const fetchStudentById = async (studentId: string): Promise<MyjkknStudent | null> => {
   try {
-    const response = await makeApiRequest<MyjkknApiResponse<MyjkknStudent>>(
+    const response = await makeApiRequest<{data: any}>(
       `/api-management/students/${studentId}`
     );
 
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to fetch student');
+    if (!response.data) {
+      return null;
     }
 
+    const student = response.data;
+
     return {
-      ...response.data,
-      id: response.data.studentId || response.data.id,
-      avatar: response.data.avatar || `https://images.unsplash.com/photo-1441057206919-63d19fac2369?w=400&h=400&fit=crop&crop=face`,
+      id: student.id,
+      studentId: student.id,
+      rollNo: student.roll_number || 'N/A',
+      name: student.student_name || 'Unknown Student',
+      email: student.student_email || '',
+      program: student.program?.program_name || 'Unknown Program',
+      semesterYear: 1, // Default since not available in API
+      status: 'active' as 'active' | 'inactive', // Assume active
+      department: student.department?.department_name || 'Unknown Department',
+      avatar: undefined, // No avatar field in the provided structure
+      gpa: undefined,
+      mentor: null,
+      interests: []
     };
   } catch (error) {
     console.error('Error fetching student:', error);
