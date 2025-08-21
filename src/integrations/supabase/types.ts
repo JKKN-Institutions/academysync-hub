@@ -946,6 +946,7 @@ export type Database = {
           department: string | null
           designation: string | null
           display_name: string | null
+          email: string | null
           external_id: string | null
           id: string
           institution: string | null
@@ -964,6 +965,7 @@ export type Database = {
           department?: string | null
           designation?: string | null
           display_name?: string | null
+          email?: string | null
           external_id?: string | null
           id?: string
           institution?: string | null
@@ -982,6 +984,7 @@ export type Database = {
           department?: string | null
           designation?: string | null
           display_name?: string | null
+          email?: string | null
           external_id?: string | null
           id?: string
           institution?: string | null
