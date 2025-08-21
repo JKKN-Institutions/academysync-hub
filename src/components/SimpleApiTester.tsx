@@ -91,13 +91,16 @@ export const SimpleApiTester = () => {
       });
 
       if (!response.ok) {
+        const errorMsg = typeof result === 'object' && result?.error 
+          ? result.error 
+          : `HTTP ${response.status}: ${response.statusText}`;
+          
         setTests(prev => prev.map(t => 
           t.name === endpoint.name 
             ? { 
                 ...t, 
                 status: 'error', 
-                error: `HTTP ${response.status}: ${response.statusText}`, 
-                result,
+                error: errorMsg,
                 responseTime 
               }
             : t
