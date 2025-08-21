@@ -46,51 +46,19 @@ export const StudentSyncDebugger: React.FC = () => {
     setResult(null);
     
     try {
-      console.log('🔄 Triggering MyJKKN student sync...');
+      console.log('Triggering auto-sync-on-login function...');
       
       const { data, error } = await supabase.functions.invoke('auto-sync-on-login', {
-        body: { 
-          manual_trigger: true,
-          trigger_source: 'debug_panel',
-          timestamp: new Date().toISOString()
-        }
+        body: { manual_trigger: true }
       });
 
-      console.log('📡 Edge function response:', { data, error });
-
       if (error) {
-        console.error('❌ Function invocation error:', error);
-        
-        // Check for specific error types
-        if (error.message?.includes('API key')) {
-          setResult({
-            success: false,
-            error: 'API Key Configuration Error: MyJKKN API key is not properly configured.',
-            details: error,
-            troubleshooting: [
-              'Check if MYJKKN_API_KEY secret is set in Supabase',
-              'Verify the API key format is correct (jk_xxxxx_xxxxx)',
-              'Contact administrator to update the API key'
-            ]
-          });
-        } else if (error.message?.includes('timeout')) {
-          setResult({
-            success: false,
-            error: 'Connection Timeout: Unable to reach MyJKKN API.',
-            details: error,
-            troubleshooting: [
-              'Check internet connectivity',
-              'MyJKKN API servers may be temporarily unavailable',
-              'Try again in a few minutes'
-            ]
-          });
-        } else {
-          setResult({
-            success: false,
-            error: error.message,
-            details: error
-          });
-        }
+        console.error('Function invocation error:', error);
+        setResult({
+          success: false,
+          error: error.message,
+          details: error
+        });
         
         toast({
           title: "Sync Failed",
@@ -100,54 +68,41 @@ export const StudentSyncDebugger: React.FC = () => {
         return;
       }
 
-      console.log('✅ Sync result:', data);
+      console.log('Sync result:', data);
       setResult(data);
       
       if (data?.students_synced > 0) {
         toast({
-          title: "✅ Sync Successful!",
-          description: `Successfully synced ${data.students_synced} students and ${data.staff_synced || 0} staff members`,
+          title: "Sync Successful",
+          description: `Synced ${data.students_synced} students and ${data.staff_synced || 0} staff members`,
         });
-        
-        // Wait a moment then refresh database stats
-        setTimeout(async () => {
-          await checkDatabase();
-        }, 1500);
       } else if (data?.errors && data.errors.length > 0) {
         toast({
-          title: "⚠️ Sync Completed with Errors",
+          title: "Sync Completed with Errors",
           description: data.errors[0],
-          variant: "destructive",
-        });
-      } else if (data?.success === false) {
-        toast({
-          title: "❌ Sync Failed",
-          description: data.error || "Unknown sync error occurred",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "ℹ️ Sync Completed",
-          description: "Sync completed but no students were found or synced. Check API configuration.",
+          title: "Sync Completed",
+          description: "No new data synced. Check API configuration.",
           variant: "default",
         });
       }
+
+      // Refresh database stats
+      await checkDatabase();
       
     } catch (error) {
-      console.error('💥 Sync error:', error);
+      console.error('Sync error:', error);
       setResult({
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        details: error,
-        troubleshooting: [
-          'Check browser console for detailed error logs',
-          'Verify Supabase connection is working',
-          'Contact technical support if the issue persists'
-        ]
+        details: error
       });
       
       toast({
-        title: "❌ Sync Failed",
+        title: "Sync Failed",
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: "destructive",
       });
@@ -225,52 +180,34 @@ export const StudentSyncDebugger: React.FC = () => {
             <Alert variant={result.success === false ? "destructive" : "default"}>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <strong>Status:</strong> 
-                    <Badge variant={result.success ? "default" : "destructive"}>
-                      {result.success ? '✅ Success' : '❌ Failed'}
-                    </Badge>
-                  </div>
+                <div className="space-y-2">
+                  <div><strong>Status:</strong> {result.success ? 'Success' : 'Failed'}</div>
                   
                   {result.students_synced !== undefined && (
-                    <div><strong>Students Synced:</strong> <span className="text-green-600 font-mono">{result.students_synced}</span></div>
+                    <div><strong>Students Synced:</strong> {result.students_synced}</div>
                   )}
                   
                   {result.staff_synced !== undefined && (
-                    <div><strong>Staff Synced:</strong> <span className="text-blue-600 font-mono">{result.staff_synced}</span></div>
+                    <div><strong>Staff Synced:</strong> {result.staff_synced}</div>
                   )}
                   
                   {result.error && (
-                    <div className="p-3 bg-destructive/10 rounded border">
-                      <strong>Error:</strong> {result.error}
-                    </div>
-                  )}
-                  
-                  {result.troubleshooting && result.troubleshooting.length > 0 && (
-                    <div className="p-3 bg-yellow-50 rounded border border-yellow-200">
-                      <strong>💡 Troubleshooting Steps:</strong>
-                      <ul className="list-disc ml-4 mt-1">
-                        {result.troubleshooting.map((step: string, index: number) => (
-                          <li key={index} className="text-sm">{step}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    <div><strong>Error:</strong> {result.error}</div>
                   )}
                   
                   {result.errors && result.errors.length > 0 && (
                     <div>
-                      <strong>Detailed Errors:</strong>
-                      <ul className="list-disc ml-4 mt-1">
+                      <strong>Errors:</strong>
+                      <ul className="list-disc ml-4">
                         {result.errors.map((error: string, index: number) => (
-                          <li key={index} className="text-sm font-mono bg-red-50 p-1 rounded">{error}</li>
+                          <li key={index}>{error}</li>
                         ))}
                       </ul>
                     </div>
                   )}
                   
                   {result.timestamp && (
-                    <div className="text-xs text-muted-foreground border-t pt-2">
+                    <div className="text-xs text-muted-foreground">
                       <strong>Timestamp:</strong> {new Date(result.timestamp).toLocaleString()}
                     </div>
                   )}
