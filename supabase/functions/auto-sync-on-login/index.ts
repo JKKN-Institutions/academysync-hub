@@ -85,26 +85,62 @@ serve(async (req) => {
     // Sync Students
     console.log('Syncing students...')
     let allStudents: MyjkknStudent[] = []
-    let currentPage = 1
-    let totalPages = 1
 
-    do {
-      const response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(
-        `/api-management/students?page=${currentPage}&limit=1000`
-      )
+    // Try multiple possible endpoints for students
+    const possibleEndpoints = [
+      `/api-management/students?limit=1000`,
+      `/api-management/organizations/students?limit=1000`, 
+      `/api-management/student?limit=1000`,
+      `/students?limit=1000`,
+      `/api-management/students`
+    ]
 
-      if (response.data && Array.isArray(response.data)) {
-        allStudents = [...allStudents, ...response.data]
-      }
+    let response: {data: MyjkknStudent[], metadata?: any} | null = null
+    let workingEndpoint: string = ''
 
-      if (response.metadata) {
-        totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
-      } else {
+    // Try each endpoint until we find one that works
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`Trying student endpoint: ${endpoint}`)
+        response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(endpoint)
+        workingEndpoint = endpoint
+        console.log(`✅ Student endpoint ${endpoint} worked!`)
         break
+      } catch (error) {
+        console.log(`❌ Student endpoint ${endpoint} failed:`, error)
+        continue
       }
+    }
 
-      currentPage++
-    } while (currentPage <= totalPages)
+    if (!response) {
+      console.log('All student API endpoints failed, continuing with staff sync...')
+    } else {
+      // Fetch all pages using the working endpoint
+      let currentPage = 1
+      let totalPages = 1
+
+      do {
+        console.log(`Syncing students page ${currentPage} from ${workingEndpoint}...`)
+        
+        if (currentPage > 1) {
+          const separator = workingEndpoint.includes('?') ? '&' : '?'
+          const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`
+          response = await makeApiRequest<{data: MyjkknStudent[], metadata?: any}>(paginatedEndpoint)
+        }
+
+        if (response.data && Array.isArray(response.data)) {
+          allStudents = [...allStudents, ...response.data]
+        }
+
+        if (response.metadata) {
+          totalPages = response.metadata.totalPages || response.metadata.total_pages || 1
+        } else {
+          break
+        }
+
+        currentPage++
+      } while (currentPage <= totalPages)
+    }
 
     // Filter and transform students
     const activeStudents = allStudents.filter(student => 
