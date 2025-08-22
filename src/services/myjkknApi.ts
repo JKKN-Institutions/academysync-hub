@@ -226,22 +226,52 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
     // Instead, assume all returned students are active
     console.log(`Processing ${allStudents.length} students from API`);
 
+    // Debug: Log the actual API response structure
+    console.log('Sample student data from API:', allStudents[0]);
+    console.log('All available fields in first student:', Object.keys(allStudents[0] || {}));
+    
     // Transform API response to match our expected format
-    const transformedStudents = allStudents.map(student => ({
-      id: student.id,
-      studentId: student.id,
-      rollNo: student.roll_number || 'N/A',
-      name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student',
-      email: student.student_email || '',
-      program: student.program?.program_name || 'Unknown Program',
-      semesterYear: 1, // Default since not available in API
-      status: 'active' as 'active' | 'inactive', // Assume active since no status field
-      department: student.department?.department_name || 'Unknown Department',
-      avatar: undefined, // No avatar field in the provided structure
-      gpa: undefined,
-      mentor: null,
-      interests: []
-    }));
+    const transformedStudents = allStudents.map(student => {
+      console.log('Processing student:', student);
+      
+      // Try different possible name field combinations
+      let studentName = 'Unknown Student';
+      
+      // Check for various name field patterns
+      if (student.name) {
+        studentName = student.name;
+      } else if (student.student_name) {
+        studentName = student.student_name;
+      } else if (student.full_name) {
+        studentName = student.full_name;
+      } else if (student.first_name || student.last_name) {
+        const firstName = student.first_name || '';
+        const lastName = student.last_name || '';
+        studentName = `${firstName} ${lastName}`.trim();
+      } else if (student.firstName || student.lastName) {
+        const firstName = student.firstName || '';
+        const lastName = student.lastName || '';
+        studentName = `${firstName} ${lastName}`.trim();
+      }
+      
+      console.log('Final student name:', studentName);
+      
+      return {
+        id: student.id,
+        studentId: student.id,
+        rollNo: student.roll_number || 'N/A',
+        name: studentName || 'Unknown Student',
+        email: student.student_email || '',
+        program: student.program?.program_name || 'Unknown Program',
+        semesterYear: 1, // Default since not available in API
+        status: 'active' as 'active' | 'inactive', // Assume active since no status field
+        department: student.department?.department_name || 'Unknown Department',
+        avatar: undefined, // No avatar field in the provided structure
+        gpa: undefined,
+        mentor: null,
+        interests: []
+      };
+    });
 
     console.log(`🎉 Successfully transformed ${transformedStudents.length} students`);
     return transformedStudents;
