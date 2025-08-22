@@ -231,7 +231,7 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
       id: student.id,
       studentId: student.id,
       rollNo: student.roll_number || 'N/A',
-      name: student.student_name || 'Unknown Student',
+      name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student',
       email: student.student_email || '',
       program: student.program?.program_name || 'Unknown Program',
       semesterYear: 1, // Default since not available in API
@@ -268,7 +268,7 @@ export const fetchStudentById = async (studentId: string): Promise<MyjkknStudent
       id: student.id,
       studentId: student.id,
       rollNo: student.roll_number || 'N/A',
-      name: student.student_name || 'Unknown Student',
+      name: `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student',
       email: student.student_email || '',
       program: student.program?.program_name || 'Unknown Program',
       semesterYear: 1, // Default since not available in API
