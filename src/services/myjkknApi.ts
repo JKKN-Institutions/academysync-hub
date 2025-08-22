@@ -157,15 +157,46 @@ export const fetchStudents = async (): Promise<MyjkknStudent[]> => {
     let currentPage = 1;
     let totalPages = 1;
 
-    // Use the correct students endpoint
+    // Try multiple possible endpoints for students like auto-sync does
+    const possibleEndpoints = [
+      `/api-management/students?limit=1000`,
+      `/api-management/organizations/students?limit=1000`, 
+      `/api-management/student?limit=1000`,
+      `/students?limit=1000`,
+      `/api-management/students`
+    ];
+
+    let workingEndpoint: string = '';
+    let response: {data: any[], metadata?: any} | null = null;
+
+    // Try each endpoint until we find one that works
+    for (const baseEndpoint of possibleEndpoints) {
+      try {
+        console.log(`Trying endpoint: ${baseEndpoint}`);
+        response = await makeApiRequest<{data: any[], metadata?: any}>(baseEndpoint);
+        workingEndpoint = baseEndpoint;
+        console.log(`✅ Endpoint ${baseEndpoint} worked!`);
+        break;
+      } catch (error) {
+        console.log(`❌ Endpoint ${baseEndpoint} failed:`, error);
+        continue;
+      }
+    }
+
+    if (!response) {
+      throw new Error('All student API endpoints failed. Please check API configuration.');
+    }
+
+    // Now fetch all pages using the working endpoint
     do {
-      console.log(`Fetching students page ${currentPage}...`);
+      console.log(`Fetching students page ${currentPage} from ${workingEndpoint}...`);
       
-      const endpoint = currentPage === 1 
-        ? `/api-management/students?limit=1000`
-        : `/api-management/students?limit=1000&page=${currentPage}`;
-        
-      const response = await makeApiRequest<{data: any[], metadata?: any}>(endpoint);
+      if (currentPage > 1) {
+        // Add pagination parameters for subsequent pages
+        const separator = workingEndpoint.includes('?') ? '&' : '?';
+        const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
+        response = await makeApiRequest<{data: any[], metadata?: any}>(paginatedEndpoint);
+      }
 
       console.log(`Page ${currentPage} response:`, {
         studentsCount: response.data?.length || 0,
