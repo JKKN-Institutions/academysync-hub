@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { FormSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorState } from "@/components/ui/error-state";
 import { EtiquetteTip, MentoringStage } from "@/components/ui/etiquette-tip";
+import { TimeInput } from "@/components/ui/time-input";
 import { useStudentsData } from "@/hooks/useStudentsData";
 import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
@@ -488,30 +489,22 @@ export const SessionForm: React.FC<SessionFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
+                <TimeInput
+                  id="startTime"
+                  value={formData.startTime}
+                  onChange={(value) => setFormData({ ...formData, startTime: value })}
+                  placeholder="Select start time"
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="endTime">End Time</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
+                <TimeInput
+                  id="endTime"
+                  value={formData.endTime}
+                  onChange={(value) => setFormData({ ...formData, endTime: value })}
+                  placeholder="Select end time"
+                />
               </div>
             </div>
 

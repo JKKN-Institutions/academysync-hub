@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CounselingSession } from "@/hooks/useCounselingSessions";
 import { SessionEditModal } from "@/components/SessionEditModal";
+import { StudentManagementModal } from "@/components/StudentManagementModal";
 import { MentorFeedbackForm } from "@/components/MentorFeedbackForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -74,6 +75,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [studentManagementModalOpen, setStudentManagementModalOpen] = useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const { toast } = useToast();
   const { students } = useStudentsData();
@@ -125,8 +127,9 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const formatTime = (time?: string) => {
     if (!time) return '';
     return new Date(`2000-01-01T${time}`).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -201,6 +204,12 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const handleEditSuccess = () => {
     onSessionUpdated?.();
     setEditModalOpen(false);
+  };
+
+  const handleStudentManagementSuccess = () => {
+    fetchSessionDetails(session.id); // Refresh session details to show updated participants
+    onSessionUpdated?.();
+    setStudentManagementModalOpen(false);
   };
 
   if (!session || !isOpen) return null;
@@ -454,7 +463,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                       {session.status === 'pending' && (
                         <Button 
                           variant="outline"
-                          onClick={() => setEditModalOpen(true)}
+                          onClick={() => setStudentManagementModalOpen(true)}
                           className="flex items-center gap-2"
                         >
                           <UserPlus className="w-4 h-4" />
@@ -535,6 +544,17 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
             open={editModalOpen}
             onOpenChange={setEditModalOpen}
             onSuccess={handleEditSuccess}
+          />
+        )}
+
+        {/* Student Management Modal */}
+        {studentManagementModalOpen && session && (
+          <StudentManagementModal
+            open={studentManagementModalOpen}
+            onOpenChange={setStudentManagementModalOpen}
+            sessionId={session.id}
+            currentStudents={session.participants?.map(p => p.student_external_id) || []}
+            onSuccess={handleStudentManagementSuccess}
           />
         )}
 
