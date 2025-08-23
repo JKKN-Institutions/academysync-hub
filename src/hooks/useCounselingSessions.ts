@@ -119,7 +119,8 @@ export const useCounselingSessions = () => {
           description: sessionData.description,
           session_type: sessionData.session_type,
           priority: sessionData.priority || 'normal',
-          status: 'pending'
+          status: 'pending',
+          created_by: (await supabase.auth.getUser()).data.user?.id // Explicitly set creator
         })
         .select()
         .single();

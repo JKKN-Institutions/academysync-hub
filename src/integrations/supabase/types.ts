@@ -99,7 +99,7 @@ export type Database = {
         Row: {
           cancellation_reason: string | null
           created_at: string
-          created_by: string | null
+          created_by: string
           description: string | null
           end_time: string | null
           id: string
@@ -116,7 +116,7 @@ export type Database = {
         Insert: {
           cancellation_reason?: string | null
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           description?: string | null
           end_time?: string | null
           id?: string
@@ -133,7 +133,7 @@ export type Database = {
         Update: {
           cancellation_reason?: string | null
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           description?: string | null
           end_time?: string | null
           id?: string
