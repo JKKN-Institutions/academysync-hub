@@ -123,9 +123,6 @@ export const ProfileDropdown = () => {
                 <p className="text-sm font-medium text-gray-900 truncate">
                   {user.displayName || 'Unknown User'}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {user.email}
-                </p>
               </div>
             </div>
             <Badge 
