@@ -8,6 +8,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStaffData } from "@/hooks/useStaffData";
 import { useDemoMode } from "@/hooks/useDemoMode";
+import { useDepartmentsData } from "@/hooks/useDepartmentsData";
+import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { DemoModeBanner } from "@/components/ui/demo-mode-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -18,6 +20,8 @@ import { MentorFilters, type MentorFilters as MentorFiltersType } from "@/compon
 const MentorsDirectory = () => {
   const { isDemoMode } = useDemoMode();
   const { staff: mentors, loading, error, refetch } = useStaffData();
+  const { departments } = useDepartmentsData();
+  const { institutions } = useInstitutionsData();
   const navigate = useNavigate();
   
   const [filters, setFilters] = useState<MentorFiltersType>({
@@ -37,9 +41,23 @@ const MentorsDirectory = () => {
       mentor.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
       mentor.staffId?.toLowerCase().includes(filters.search.toLowerCase());
 
-    // Institution filter - currently not implemented as staff table doesn't have institution field
-    // All staff are considered part of "all" institutions for now
-    const institutionMatch = !filters.institution || filters.institution === "all";
+    // Institution filter - match through department-institution relationship
+    const institutionMatch = (() => {
+      if (!filters.institution || filters.institution === "all") return true;
+      
+      // In demo mode, we don't have real institution-department relationships
+      if (isDemoMode) return true;
+      
+      // Get departments for the selected institution
+      const selectedInstitution = institutions.find(inst => inst.institution_name === filters.institution);
+      if (!selectedInstitution) return false;
+      
+      const institutionDepartments = departments
+        .filter(dept => dept.institution_id === selectedInstitution.id)
+        .map(dept => dept.department_name);
+      
+      return institutionDepartments.includes(mentor.department);
+    })();
 
     // Department filter - exact match with staff department
     const departmentMatch = !filters.department || filters.department === "all" || 

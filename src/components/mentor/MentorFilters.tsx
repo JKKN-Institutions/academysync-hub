@@ -80,13 +80,36 @@ export const MentorFilters = ({
     ? ['active', 'inactive'] 
     : getUniqueValues('status');
 
-  // For departments, if we have staff data, get unique departments from staff
-  // Otherwise use the departments table
-  const departmentOptions = isDemo 
-    ? demoDepartments.map(d => d.department_name)
-    : staffData.length > 0 
-      ? getUniqueValues('department')
-      : availableDepartments.map(d => d.department_name);
+  // Filter departments based on selected institution
+  const getDepartmentsByInstitution = () => {
+    if (isDemo) {
+      return demoDepartments.map(d => d.department_name);
+    }
+    
+    if (filters.institution === 'all' || !filters.institution) {
+      // Show all departments
+      return staffData.length > 0 
+        ? getUniqueValues('department')
+        : availableDepartments.map(d => d.department_name);
+    }
+    
+    // Filter departments by institution
+    const institutionDepartments = availableDepartments
+      .filter(dept => {
+        const institution = activeInstitutions.find(inst => inst.institution_name === filters.institution);
+        return institution && ('institution_id' in dept ? dept.institution_id === institution.id : true);
+      })
+      .map(d => d.department_name);
+    
+    // Also include departments from staff data that exist in the institution
+    const staffDepartments = staffData
+      .map(staff => staff.department)
+      .filter(dept => dept && institutionDepartments.includes(dept));
+    
+    return [...new Set([...institutionDepartments, ...staffDepartments])].sort();
+  };
+
+  const departmentOptions = getDepartmentsByInstitution();
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
