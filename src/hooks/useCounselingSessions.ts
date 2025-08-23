@@ -107,6 +107,17 @@ export const useCounselingSessions = () => {
 
   const createSession = async (sessionData: CreateSessionData, sendEmails: boolean = false, mentorName?: string): Promise<CounselingSession | null> => {
     try {
+      // Get current user info for debugging
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('role, institution, department')
+        .eq('user_id', userData.user?.id)
+        .single();
+
+      console.log('Creating session with user profile:', profileData);
+      console.log('Session data:', sessionData);
+
       // Create the main session record
       const { data: session, error: sessionError } = await supabase
         .from('counseling_sessions')
@@ -120,12 +131,19 @@ export const useCounselingSessions = () => {
           session_type: sessionData.session_type,
           priority: sessionData.priority || 'normal',
           status: 'pending',
-          created_by: (await supabase.auth.getUser()).data.user?.id // Explicitly set creator
+          created_by: userData.user?.id // Explicitly set creator
         })
         .select()
         .single();
 
       if (sessionError) {
+        console.error('Session creation error:', sessionError);
+        console.error('Session error details:', {
+          code: sessionError.code,
+          message: sessionError.message,
+          details: sessionError.details,
+          hint: sessionError.hint
+        });
         throw sessionError;
       }
 
