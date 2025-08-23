@@ -17,6 +17,7 @@ export interface CounselingSession {
   created_at: string;
   updated_at: string;
   participants?: SessionParticipant[];
+  can_view_details?: boolean; // Indicates if user can see full details
 }
 
 export interface SessionParticipant {
@@ -48,32 +49,48 @@ export const useCounselingSessions = () => {
       setLoading(true);
       setError(null);
 
+      // First, get sessions from the limited view which handles access control
       const { data: sessionsData, error: sessionsError } = await supabase
-        .from('counseling_sessions')
-        .select(`
-          *,
-          session_participants (
-            id,
-            student_external_id,
-            participation_status
-          )
-        `)
+        .from('session_limited_view')
+        .select('*')
         .order('session_date', { ascending: false });
 
       if (sessionsError) {
         throw sessionsError;
       }
 
-      // Type-safe mapping of database response to our interface
-      const typedSessions: CounselingSession[] = (sessionsData || []).map(session => ({
-        ...session,
-        session_type: session.session_type as 'one_on_one' | 'group',
-        status: session.status as 'pending' | 'completed' | 'cancelled',
-        priority: session.priority as 'low' | 'normal' | 'high',
-        participants: session.session_participants as SessionParticipant[]
-      }));
+      // For sessions where user can view details, fetch participants
+      const sessionsWithParticipants = await Promise.all(
+        (sessionsData || []).map(async (session) => {
+          let participants: SessionParticipant[] = [];
+          
+          // Only fetch participants if user can view details
+          if (session.can_view_details) {
+            const { data: participantsData, error: participantsError } = await supabase
+              .from('session_participants')
+              .select(`
+                id,
+                student_external_id,
+                participation_status
+              `)
+              .eq('session_id', session.id);
 
-      setSessions(typedSessions);
+            if (!participantsError && participantsData) {
+              participants = participantsData as SessionParticipant[];
+            }
+          }
+
+          return {
+            ...session,
+            session_type: session.session_type as 'one_on_one' | 'group',
+            status: session.status as 'pending' | 'completed' | 'cancelled',
+            priority: session.priority as 'low' | 'normal' | 'high',
+            participants: participants
+          };
+        })
+      );
+
+      setSessions(sessionsWithParticipants);
     } catch (err) {
       console.error('Error fetching sessions:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sessions';

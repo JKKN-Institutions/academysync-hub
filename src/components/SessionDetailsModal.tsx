@@ -247,7 +247,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                     </div>
                   )}
                   
-                  {session.location && (
+                  {session.location && session.can_view_details && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium">Location:</span>
@@ -272,7 +272,7 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                   )}
                 </div>
                 
-                {session.description && (
+                {session.description && session.can_view_details && (
                   <div className="space-y-2">
                     <span className="font-medium">Description:</span>
                     <p className="text-muted-foreground bg-muted/50 p-3 rounded-md">
@@ -280,11 +280,19 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                     </p>
                   </div>
                 )}
+
+                {!session.can_view_details && (
+                  <div className="bg-muted/30 p-3 rounded-md border-l-4 border-l-blue-500">
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Note:</strong> You can only view limited session details. Full details are restricted to the session creator and administrators.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Participants */}
-            {session.participants && session.participants.length > 0 && (
+            {/* Participants - Only show if user can view details */}
+            {session.can_view_details && session.participants && session.participants.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -326,8 +334,8 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
               </Card>
             )}
 
-            {/* Meeting Logs */}
-            {meetingLogs.length > 0 && (
+            {/* Meeting Logs - Only show if user can view details */}
+            {session.can_view_details && meetingLogs.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -373,8 +381,8 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
               </Card>
             )}
 
-            {/* Goals */}
-            {goals.length > 0 && (
+            {/* Goals - Only show if user can view details */}
+            {session.can_view_details && goals.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -427,80 +435,92 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 flex-wrap">
-                  {/* Edit Session Button - Always available for pending sessions */}
-                  {session.status === 'pending' && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => setEditModalOpen(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit Session
-                    </Button>
-                  )}
-
-                  {/* Add Students Button - For pending sessions */}
-                  {session.status === 'pending' && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => setEditModalOpen(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <UserPlus className="w-4 h-4" />
-                      Add Students
-                    </Button>
-                  )}
-
-                  {session.status === 'pending' && (
+                  {/* Only show actions if user can view details (is creator or admin) */}
+                  {session.can_view_details && (
                     <>
-                      <Button 
-                        onClick={handleMarkAsComplete}
-                        className="flex items-center gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Mark as Completed
-                      </Button>
-                      {/* Only super admins can cancel sessions */}
-                      {hasPermission('full_system_access') && (
+                      {/* Edit Session Button - Available for pending sessions */}
+                      {session.status === 'pending' && (
                         <Button 
-                          variant="destructive"
-                          onClick={() => handleStatusUpdate('cancelled')}
+                          variant="outline"
+                          onClick={() => setEditModalOpen(true)}
                           className="flex items-center gap-2"
                         >
-                          <XCircle className="w-4 h-4" />
-                          Cancel Session
+                          <Edit className="w-4 h-4" />
+                          Edit Session
+                        </Button>
+                      )}
+
+                      {/* Add Students Button - For pending sessions */}
+                      {session.status === 'pending' && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => setEditModalOpen(true)}
+                          className="flex items-center gap-2"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Add Students
+                        </Button>
+                      )}
+
+                      {session.status === 'pending' && (
+                        <>
+                          <Button 
+                            onClick={handleMarkAsComplete}
+                            className="flex items-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Mark as Completed
+                          </Button>
+                          {/* Only super admins can cancel sessions */}
+                          {hasPermission('full_system_access') && (
+                            <Button 
+                              variant="destructive"
+                              onClick={() => handleStatusUpdate('cancelled')}
+                              className="flex items-center gap-2"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Cancel Session
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* Reopen and Edit for completed sessions */}
+                      {session.status === 'completed' && (
+                        <>
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              handleStatusUpdate('pending');
+                              setEditModalOpen(true);
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Reopen & Edit
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Reopen for cancelled sessions */}
+                      {session.status === 'cancelled' && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleStatusUpdate('pending')}
+                          className="flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Reopen Session
                         </Button>
                       )}
                     </>
                   )}
                   
-                  {/* Reopen and Edit for completed sessions */}
-                  {session.status === 'completed' && (
-                    <>
-                      <Button 
-                        variant="outline"
-                        onClick={() => {
-                          handleStatusUpdate('pending');
-                          setEditModalOpen(true);
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Reopen & Edit
-                      </Button>
-                    </>
-                  )}
-
-                  {/* Reopen for cancelled sessions */}
-                  {session.status === 'cancelled' && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleStatusUpdate('pending')}
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Reopen Session
-                    </Button>
+                  {/* Show message if user cannot view details */}
+                  {!session.can_view_details && (
+                    <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md border-l-4 border-l-orange-500">
+                      <strong>Limited Access:</strong> You can only view basic session information. Session management actions are restricted to the session creator and administrators.
+                    </div>
                   )}
                 </div>
               </CardContent>
