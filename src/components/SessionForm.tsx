@@ -22,6 +22,7 @@ import { useDepartmentsData } from "@/hooks/useDepartmentsData";
 import { useInstitutionsData } from "@/hooks/useInstitutionsData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SessionFormProps {
   onSubmit?: (data: any) => void;
@@ -43,6 +44,7 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const { students, loading: studentsLoading, error: studentsError } = useStudentsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
   const { institutions, loading: institutionsLoading } = useInstitutionsData();
+  const { user, hasPermission } = useAuth();
   
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
@@ -90,7 +92,14 @@ export const SessionForm: React.FC<SessionFormProps> = ({
   const departmentInstitutionGroups = React.useMemo(() => {
     const groups: Record<string, { id: string; name: string; departments: typeof departments }> = {};
     
-    departments.forEach(dept => {
+    // Filter departments based on user role
+    let filteredDepartments = departments;
+    if (!hasPermission('full_system_access') && user?.department) {
+      // Non-super admins only see their own department
+      filteredDepartments = departments.filter(dept => dept.department_name === user.department);
+    }
+    
+    filteredDepartments.forEach(dept => {
       if (!groups[dept.institution_id]) {
         // Create a virtual institution name based on department patterns
         let institutionName = '';
@@ -126,12 +135,19 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     
     console.log('Created department institution groups:', groups);
     return Object.values(groups);
-  }, [departments]);
+  }, [departments, user?.department, hasPermission]);
 
   // Get departments for selected institution (using the workaround)
   const filteredDepartments = React.useMemo(() => {
+    let baseDepartments = departments;
+    
+    // Role-based filtering: non-super admins only see their own department
+    if (!hasPermission('full_system_access') && user?.department) {
+      baseDepartments = departments.filter(dept => dept.department_name === user.department);
+    }
+    
     if (!selectedInstitution || selectedInstitution === "all") {
-      return departments; // Show all departments
+      return baseDepartments;
     }
     
     // Check if it's one of our virtual institution groups
@@ -141,8 +157,8 @@ export const SessionForm: React.FC<SessionFormProps> = ({
     }
     
     // Fallback to original filtering (which may return empty due to ID mismatch)
-    return departments.filter(dept => dept.institution_id === selectedInstitution);
-  }, [selectedInstitution, departments, departmentInstitutionGroups]);
+    return baseDepartments.filter(dept => dept.institution_id === selectedInstitution);
+  }, [selectedInstitution, departments, departmentInstitutionGroups, user?.department, hasPermission]);
 
   // Get programs filtered by selected department
   const availablePrograms = React.useMemo(() => {
@@ -550,16 +566,18 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select an institution" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-md z-50">
-                    <SelectItem value="all">All Institutions</SelectItem>
-                    {/* Show only institutions that have departments */}
-                    {departmentInstitutionGroups
-                      .filter(group => group.departments.length > 0)
-                      .map(group => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
+                   <SelectContent className="bg-background border shadow-md z-50">
+                     {hasPermission('full_system_access') && (
+                       <SelectItem value="all">All Institutions</SelectItem>
+                     )}
+                     {/* Show only institutions that have departments */}
+                     {departmentInstitutionGroups
+                       .filter(group => group.departments.length > 0)
+                       .map(group => (
+                         <SelectItem key={group.id} value={group.id}>
+                           {group.name}
+                         </SelectItem>
+                       ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -581,9 +599,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   </SelectTrigger>
                    <SelectContent className="bg-background border shadow-md z-50">
                      {filteredDepartments.length > 4 ? (
-                       <ScrollArea className="h-48">
-                         <SelectItem value="all">All Departments</SelectItem>
-                         {filteredDepartments.length > 0 ? (
+                        <ScrollArea className="h-48">
+                           {hasPermission('full_system_access') && (
+                             <SelectItem value="all">All Departments</SelectItem>
+                           )}
+                          {filteredDepartments.length > 0 ? (
                            filteredDepartments.map(department => {
                              const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
                              return (
@@ -604,9 +624,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                          )}
                        </ScrollArea>
                      ) : (
-                       <>
-                         <SelectItem value="all">All Departments</SelectItem>
-                         {filteredDepartments.length > 0 ? (
+                        <>
+                           {hasPermission('full_system_access') && (
+                             <SelectItem value="all">All Departments</SelectItem>
+                           )}
+                          {filteredDepartments.length > 0 ? (
                            filteredDepartments.map(department => {
                              const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
                              return (
@@ -648,7 +670,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                    <SelectContent className="bg-background border shadow-md z-50">
                      {availablePrograms.length > 4 ? (
                        <ScrollArea className="h-48">
-                         <SelectItem value="all">All Programs</SelectItem>
+                          {hasPermission('full_system_access') && (
+                            <SelectItem value="all">All Programs</SelectItem>
+                          )}
                          {availablePrograms.map(program => {
                            // Count students in this program based on current department filter
                            let studentCount = 0;
@@ -675,7 +699,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                        </ScrollArea>
                      ) : (
                        <>
-                         <SelectItem value="all">All Programs</SelectItem>
+                          {hasPermission('full_system_access') && (
+                            <SelectItem value="all">All Programs</SelectItem>
+                          )}
                          {availablePrograms.map(program => {
                            // Count students in this program based on current department filter
                            let studentCount = 0;
@@ -721,7 +747,9 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                    <SelectContent className="bg-background border shadow-md z-50">
                      {availableSemesters.length > 4 ? (
                        <ScrollArea className="h-48">
-                         <SelectItem value="all">All Semesters</SelectItem>
+                          {hasPermission('full_system_access') && (
+                            <SelectItem value="all">All Semesters</SelectItem>
+                          )}
                          {availableSemesters.map(semester => {
                            // Count students in this semester based on current filters
                            const semesterYear = semester.replace('Year ', '');
@@ -757,9 +785,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                          })}
                        </ScrollArea>
                      ) : (
-                       <>
-                         <SelectItem value="all">All Semesters</SelectItem>
-                         {availableSemesters.map(semester => {
+                        <>
+                           {hasPermission('full_system_access') && (
+                             <SelectItem value="all">All Semesters</SelectItem>
+                           )}
+                          {availableSemesters.map(semester => {
                            // Count students in this semester based on current filters
                            const semesterYear = semester.replace('Year ', '');
                            let studentCount = 0;
@@ -825,9 +855,11 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                          ))}
                        </ScrollArea>
                      ) : (
-                       <>
-                         <SelectItem value="all">All Sections</SelectItem>
-                         {availableSections.map(section => (
+                        <>
+                           {hasPermission('full_system_access') && (
+                             <SelectItem value="all">All Sections</SelectItem>
+                           )}
+                          {availableSections.map(section => (
                            <SelectItem key={section.name} value={section.name}>
                              <div className="flex justify-between items-center w-full">
                                <span>{section.name}</span>

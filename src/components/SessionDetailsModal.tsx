@@ -22,9 +22,11 @@ import {
 } from "lucide-react";
 import { CounselingSession } from "@/hooks/useCounselingSessions";
 import { SessionEditModal } from "@/components/SessionEditModal";
+import { MentorFeedbackForm } from "@/components/MentorFeedbackForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentsData } from "@/hooks/useStudentsData";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SessionDetailsModalProps {
   session: CounselingSession | null;
@@ -72,8 +74,10 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const { toast } = useToast();
   const { students } = useStudentsData();
+  const { user, hasPermission } = useAuth();
 
   // Helper function to get student name from external ID
   const getStudentDisplayInfo = (studentExternalId: string) => {
@@ -176,6 +180,22 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
     if (session && onStatusUpdate) {
       onStatusUpdate(session.id, status);
     }
+  };
+
+  const handleMarkAsComplete = () => {
+    // For mentors, show feedback form first
+    if (user?.role === 'mentor') {
+      setFeedbackModalOpen(true);
+    } else {
+      // For admins, directly complete
+      handleStatusUpdate('completed');
+    }
+  };
+
+  const handleFeedbackSuccess = () => {
+    // Complete the session after feedback is submitted
+    handleStatusUpdate('completed');
+    setFeedbackModalOpen(false);
   };
 
   const handleEditSuccess = () => {
@@ -434,20 +454,23 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                   {session.status === 'pending' && (
                     <>
                       <Button 
-                        onClick={() => handleStatusUpdate('completed')}
+                        onClick={handleMarkAsComplete}
                         className="flex items-center gap-2"
                       >
                         <CheckCircle className="w-4 h-4" />
                         Mark as Completed
                       </Button>
-                      <Button 
-                        variant="destructive"
-                        onClick={() => handleStatusUpdate('cancelled')}
-                        className="flex items-center gap-2"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Cancel Session
-                      </Button>
+                      {/* Only super admins can cancel sessions */}
+                      {hasPermission('full_system_access') && (
+                        <Button 
+                          variant="destructive"
+                          onClick={() => handleStatusUpdate('cancelled')}
+                          className="flex items-center gap-2"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Cancel Session
+                        </Button>
+                      )}
                     </>
                   )}
                   
@@ -486,12 +509,23 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
         </ScrollArea>
 
         {/* Session Edit Modal */}
-        {session && (
+        {editModalOpen && session && (
           <SessionEditModal
+            session={session}
             open={editModalOpen}
             onOpenChange={setEditModalOpen}
-            session={session}
             onSuccess={handleEditSuccess}
+          />
+        )}
+
+        {/* Mentor Feedback Form */}
+        {feedbackModalOpen && user?.externalId && (
+          <MentorFeedbackForm
+            open={feedbackModalOpen}
+            onOpenChange={setFeedbackModalOpen}
+            sessionId={session.id}
+            mentorExternalId={user.externalId}
+            onSuccess={handleFeedbackSuccess}
           />
         )}
       </DialogContent>

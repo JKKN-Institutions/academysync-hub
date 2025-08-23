@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MentorFeedbackFormProps {
   open: boolean;
@@ -74,6 +75,7 @@ export const MentorFeedbackForm = ({
   onSuccess
 }: MentorFeedbackFormProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<MentorFeedbackData>({
     session_quality_rating: 0,
@@ -189,6 +191,11 @@ export const MentorFeedbackForm = ({
           <DialogTitle>Mentor Session Feedback</DialogTitle>
           <DialogDescription>
             Please provide detailed feedback about this counseling session. This feedback is required before the session can be marked as completed.
+            {user?.displayName && (
+              <div className="mt-2 text-sm font-medium text-primary">
+                Feedback provided by: {user.displayName}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 
