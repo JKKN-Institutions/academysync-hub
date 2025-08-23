@@ -16,6 +16,8 @@ import { useCounselingSessions } from "@/hooks/useCounselingSessions";
 import { useGoals } from "@/hooks/useGoals";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import NotificationDashboard from "@/components/ui/notification-dashboard";
+import UserDebugInfo from "@/components/ui/user-debug-info";
 
 interface Notification {
   id: string;
@@ -378,6 +380,11 @@ const Index = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {formatUserName(user?.displayName || 'User')}</h2>
+          
+          {/* Debug Info - Show only in development or for testing */}
+          {process.env.NODE_ENV === 'development' && (
+            <UserDebugInfo />
+          )}
         </div>
 
         {/* Quick Actions Grid */}
@@ -399,7 +406,87 @@ const Index = () => {
           })}
         </div>
 
-        {/* Dashboard Overview */}
+         {/* Dashboard Overview & Notifications */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Notifications Dashboard - Show for students and mentors */}
+          {user && user.externalId && user.role && user.role !== 'admin' && (
+            <NotificationDashboard 
+              userExternalId={user.externalId}
+              userType={user.role === 'mentee' ? 'student' : user.role === 'mentor' ? 'mentor' : 'admin'}
+              className="lg:col-span-1"
+            />
+          )}
+          
+          {/* Session Schedule */}
+          <Card className={user && user.externalId && user.role && user.role !== 'admin' ? '' : 'lg:col-span-2'}>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Calendar className="w-5 h-5 mr-2 text-green-600" />
+                Session Schedule
+              </CardTitle>
+              <CardDescription>Upcoming sessions this week</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {sessionsLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              ) : upcomingThisWeek.length > 0 ? (
+                <div className="space-y-3 max-h-80 overflow-y-auto">
+                  {upcomingThisWeek.map((session) => (
+                    <div key={session.id} className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
+                      <div className="flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-green-600 mt-1" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {session.name}
+                        </p>
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div className="flex items-center space-x-4">
+                            <span className="font-medium">📅 {formatDate(session.session_date)}</span>
+                            {session.start_time && (
+                              <span className="font-medium">⏰ {formatTime(session.start_time)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <span>👥 {session.session_type === 'one_on_one' ? '1:1 Session' : 'Group Session'}</span>
+                            {session.location && <span>📍 {session.location}</span>}
+                          </div>
+                          <div className="text-gray-500">
+                            Students: {session.participants?.length || 0}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <Badge variant="secondary" className="text-xs">
+                            {session.priority || 'normal'} priority
+                          </Badge>
+                          <Link to={`/counseling`} className="text-xs text-blue-600 hover:underline">
+                            View Details
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No upcoming sessions</p>
+                  <p className="text-xs">Schedule a session to see it here</p>
+                  <Link to="/counseling">
+                    <Button variant="outline" size="sm" className="mt-3">
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create Session
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* System Overview Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -488,9 +575,8 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Recent Activity & Session Schedule */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Recent Activity */}
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -574,76 +660,6 @@ const Index = () => {
                   <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">No recent activity</p>
                   <p className="text-xs">Create a counseling session or goal to get started</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Session Schedule */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-green-600" />
-                Session Schedule
-              </CardTitle>
-              <CardDescription>Upcoming sessions this week</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {sessionsLoading ? (
-                <div className="space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : upcomingThisWeek.length > 0 ? (
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {upcomingThisWeek.map((session) => (
-                    <div key={session.id} className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border-l-4 border-l-green-500">
-                      <div className="flex-shrink-0">
-                        <Calendar className="w-5 h-5 text-green-600 mt-1" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 text-sm truncate">
-                          {session.name}
-                        </p>
-                        <div className="text-xs text-gray-600 space-y-1">
-                          <div className="flex items-center space-x-4">
-                            <span className="font-medium">📅 {formatDate(session.session_date)}</span>
-                            {session.start_time && (
-                              <span className="font-medium">⏰ {formatTime(session.start_time)}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span>👥 {session.session_type === 'one_on_one' ? '1:1 Session' : 'Group Session'}</span>
-                            {session.location && <span>📍 {session.location}</span>}
-                          </div>
-                          <div className="text-gray-500">
-                            Students: {session.participants?.length || 0}
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <Badge variant="secondary" className="text-xs">
-                            {session.priority || 'normal'} priority
-                          </Badge>
-                          <Link to={`/counseling`} className="text-xs text-blue-600 hover:underline">
-                            View Details
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <Calendar className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No upcoming sessions</p>
-                  <p className="text-xs">Schedule a session to see it here</p>
-                  <Link to="/counseling">
-                    <Button variant="outline" size="sm" className="mt-3">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Create Session
-                    </Button>
-                  </Link>
                 </div>
               )}
             </CardContent>

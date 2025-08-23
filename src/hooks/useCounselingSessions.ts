@@ -107,17 +107,6 @@ export const useCounselingSessions = () => {
 
   const createSession = async (sessionData: CreateSessionData, sendEmails: boolean = false, mentorName?: string): Promise<CounselingSession | null> => {
     try {
-      // Get current user info for debugging
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('role, institution, department')
-        .eq('user_id', userData.user?.id)
-        .single();
-
-      console.log('Creating session with user profile:', profileData);
-      console.log('Session data:', sessionData);
-
       // Create the main session record
       const { data: session, error: sessionError } = await supabase
         .from('counseling_sessions')
@@ -131,19 +120,12 @@ export const useCounselingSessions = () => {
           session_type: sessionData.session_type,
           priority: sessionData.priority || 'normal',
           status: 'pending',
-          created_by: userData.user?.id // Explicitly set creator
+          created_by: (await supabase.auth.getUser()).data.user?.id // Explicitly set creator
         })
         .select()
         .single();
 
       if (sessionError) {
-        console.error('Session creation error:', sessionError);
-        console.error('Session error details:', {
-          code: sessionError.code,
-          message: sessionError.message,
-          details: sessionError.details,
-          hint: sessionError.hint
-        });
         throw sessionError;
       }
 
@@ -165,6 +147,38 @@ export const useCounselingSessions = () => {
         }
       }
 
+      // Send in-app notifications to all students
+      if (sessionData.students.length > 0) {
+        const notificationData = sessionData.students.map(studentId => ({
+          user_external_id: studentId, // Student ID is already the external ID
+          user_type: 'student' as const,
+          title: '📚 New Counseling Session Invitation',
+          message: `You have been invited to "${sessionData.name}" scheduled for ${new Date(sessionData.session_date).toLocaleDateString()}${sessionData.start_time ? ` at ${sessionData.start_time}` : ''} by ${mentorName || 'your mentor'}.`,
+          type: 'session_invitation' as const,
+          data: {
+            sessionId: session.id,
+            sessionName: sessionData.name,
+            sessionDate: sessionData.session_date,
+            sessionTime: sessionData.start_time,
+            location: sessionData.location,
+            mentorName: mentorName
+          },
+          action_required: true,
+          action_url: `/session/${session.id}`
+        }));
+
+        const { error: notificationsError } = await supabase
+          .from('notifications')
+          .insert(notificationData);
+
+        if (notificationsError) {
+          console.error('Error creating notifications:', notificationsError);
+          // Continue execution, notifications are not critical for session creation
+        } else {
+          console.log('Successfully created in-app notifications for students:', sessionData.students);
+        }
+      }
+
       // Send emails if requested
       if (sendEmails && sessionData.students.length > 0) {
         await sendCounselingEmails(sessionData, mentorName || 'Your Mentor');
@@ -175,7 +189,7 @@ export const useCounselingSessions = () => {
 
       toast({
         title: 'Session Created',
-        description: `Successfully created "${sessionData.name}" session.${sendEmails ? ' Email notifications sent to students.' : ''}`
+        description: `Successfully created "${sessionData.name}" session.${sendEmails ? ' Email notifications sent to students.' : ''} In-app notifications sent to all participants.`
       });
 
       // Return properly typed session
