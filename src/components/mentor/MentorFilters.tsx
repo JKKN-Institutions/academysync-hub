@@ -30,6 +30,7 @@ interface MentorFiltersProps {
   onRefetch?: () => void;
   isDemo?: boolean;
   loading?: boolean;
+  staffData?: any[];
 }
 
 export const MentorFilters = ({
@@ -38,50 +39,54 @@ export const MentorFilters = ({
   onClearFilters,
   onRefetch,
   isDemo = false,
-  loading = false
+  loading = false,
+  staffData = []
 }: MentorFiltersProps) => {
   const [searchTerm, setSearchTerm] = useState(filters.search);
   
   const { institutions, loading: institutionsLoading } = useInstitutionsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
 
+  // Get unique values from actual staff data
+  const getUniqueValues = (field: string) => {
+    return [...new Set(staffData.map(staff => staff[field]).filter(Boolean))].sort();
+  };
+
   // Demo data when not using real API
   const demoInstitutions = [
-    { id: '1', name: 'Main Campus', code: 'MAIN' },
-    { id: '2', name: 'North Campus', code: 'NORTH' },
-    { id: '3', name: 'South Campus', code: 'SOUTH' }
+    { id: '1', institution_name: 'Main Campus', code: 'MAIN' },
+    { id: '2', institution_name: 'North Campus', code: 'NORTH' },
+    { id: '3', institution_name: 'South Campus', code: 'SOUTH' }
   ];
 
   const demoDepartments = [
-    { id: '1', name: 'Computer Science', code: 'CS' },
-    { id: '2', name: 'Mathematics', code: 'MATH' },
-    { id: '3', name: 'Physics', code: 'PHY' },
-    { id: '4', name: 'Chemistry', code: 'CHEM' },
-    { id: '5', name: 'Biology', code: 'BIO' }
+    { id: '1', department_name: 'Computer Science', code: 'CS' },
+    { id: '2', department_name: 'Mathematics', code: 'MATH' },
+    { id: '3', department_name: 'Physics', code: 'PHY' },
+    { id: '4', department_name: 'Chemistry', code: 'CHEM' },
+    { id: '5', department_name: 'Biology', code: 'BIO' }
   ];
 
-  const designations = [
-    'Professor', 'Associate Professor', 'Assistant Professor', 
-    'Senior Lecturer', 'Lecturer', 'Research Fellow',
-    'Head of Department', 'Dean', 'Director'
-  ];
-
-  const statusOptions = ['active', 'inactive'];
-
+  // Use actual data from database or demo data
   const activeInstitutions = isDemo ? demoInstitutions : institutions;
-  
-  // Filter departments based on selected institution
-  const filteredDepartments = isDemo 
-    ? demoDepartments 
-    : filters.institution && filters.institution !== 'all'
-      ? departments.filter(dept => {
-          // Find the selected institution
-          const selectedInstitution = institutions.find(inst => inst.institution_name === filters.institution);
-          return selectedInstitution && dept.institution_id === selectedInstitution.id;
-        })
-      : departments;
-  
-  const activeDepartments = filteredDepartments;
+  const availableDepartments = isDemo ? demoDepartments : departments;
+
+  // Get unique designations and status from staff data
+  const designations = isDemo 
+    ? ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer'] 
+    : getUniqueValues('designation');
+
+  const statusOptions = isDemo 
+    ? ['active', 'inactive'] 
+    : getUniqueValues('status');
+
+  // For departments, if we have staff data, get unique departments from staff
+  // Otherwise use the departments table
+  const departmentOptions = isDemo 
+    ? demoDepartments.map(d => d.department_name)
+    : staffData.length > 0 
+      ? getUniqueValues('department')
+      : availableDepartments.map(d => d.department_name);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -139,18 +144,18 @@ export const MentorFilters = ({
                 <SelectTrigger>
                   <SelectValue placeholder={institutionsLoading ? "Loading institutions..." : "All Institutions"} />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border">
-                  <SelectItem value="all">All Institutions</SelectItem>
-                  {institutionsLoading ? (
-                    <SelectLoadingItem message="Loading institutions..." />
-                  ) : (
-                    activeInstitutions.map((institution) => (
-                      <SelectItem key={institution.id} value={institution.institution_name}>
-                        {institution.institution_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+                 <SelectContent className="bg-background border border-border">
+                   <SelectItem value="all">All Institutions</SelectItem>
+                   {institutionsLoading ? (
+                     <SelectLoadingItem message="Loading institutions..." />
+                   ) : (
+                     activeInstitutions.map((institution) => (
+                       <SelectItem key={institution.id} value={institution.institution_name}>
+                         {institution.institution_name}
+                       </SelectItem>
+                     ))
+                   )}
+                 </SelectContent>
               </Select>
             </div>
 
@@ -167,18 +172,18 @@ export const MentorFilters = ({
                 <SelectTrigger>
                   <SelectValue placeholder={departmentsLoading ? "Loading departments..." : "All Departments"} />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border">
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departmentsLoading ? (
-                    <SelectLoadingItem message="Loading departments..." />
-                  ) : (
-                    activeDepartments.map((department) => (
-                      <SelectItem key={department.id} value={department.department_name}>
-                        {department.department_name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+                 <SelectContent className="bg-background border border-border">
+                   <SelectItem value="all">All Departments</SelectItem>
+                   {departmentsLoading && !isDemo && staffData.length === 0 ? (
+                     <SelectLoadingItem message="Loading departments..." />
+                   ) : (
+                     departmentOptions.map((department, index) => (
+                       <SelectItem key={index} value={department}>
+                         {department}
+                       </SelectItem>
+                     ))
+                   )}
+                 </SelectContent>
               </Select>
             </div>
 

@@ -37,21 +37,21 @@ const MentorsDirectory = () => {
       mentor.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
       mentor.staffId?.toLowerCase().includes(filters.search.toLowerCase());
 
-    // Institution filter - for now we'll assume all mentors are from same institution
-    // This can be enhanced when institution data is available in staff records
-    const institutionMatch = !filters.institution || filters.institution === "all" || filters.institution === "Main Campus";
+    // Institution filter - currently not implemented as staff table doesn't have institution field
+    // All staff are considered part of "all" institutions for now
+    const institutionMatch = !filters.institution || filters.institution === "all";
 
-    // Department filter
+    // Department filter - exact match with staff department
     const departmentMatch = !filters.department || filters.department === "all" || 
-      mentor.department?.toLowerCase() === filters.department?.toLowerCase();
+      mentor.department === filters.department;
 
-    // Designation filter
+    // Designation filter - exact match with staff designation
     const designationMatch = !filters.designation || filters.designation === "all" || 
-      mentor.designation?.toLowerCase() === filters.designation?.toLowerCase();
+      mentor.designation === filters.designation;
 
-    // Status filter
+    // Status filter - exact match with staff status
     const statusMatch = !filters.status || filters.status === "all" || 
-      mentor.status?.toLowerCase() === filters.status?.toLowerCase();
+      mentor.status === filters.status;
 
     return searchMatch && institutionMatch && departmentMatch && designationMatch && statusMatch;
   });
@@ -124,6 +124,7 @@ const MentorsDirectory = () => {
           onRefetch={handleRetrySync}
           isDemo={isDemoMode}
           loading={loading}
+          staffData={mentors}
         />
 
         {/* Mentors Grid */}
