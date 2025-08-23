@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
@@ -578,28 +579,55 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a department" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-md z-50">
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {filteredDepartments.length > 0 ? (
-                      filteredDepartments.map(department => {
-                        const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
-                        return (
-                          <SelectItem key={department.id} value={department.id}>
-                            <div className="flex justify-between items-center w-full">
-                              <span>{department.department_name || 'Unknown Department'}</span>
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                {studentCount} students
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        );
-                      })
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        No departments available for selected institution
-                      </div>
-                    )}
-                  </SelectContent>
+                   <SelectContent className="bg-background border shadow-md z-50">
+                     {filteredDepartments.length > 4 ? (
+                       <ScrollArea className="h-48">
+                         <SelectItem value="all">All Departments</SelectItem>
+                         {filteredDepartments.length > 0 ? (
+                           filteredDepartments.map(department => {
+                             const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
+                             return (
+                               <SelectItem key={department.id} value={department.id}>
+                                 <div className="flex justify-between items-center w-full">
+                                   <span>{department.department_name || 'Unknown Department'}</span>
+                                   <Badge variant="secondary" className="ml-2 text-xs">
+                                     {studentCount} students
+                                   </Badge>
+                                 </div>
+                               </SelectItem>
+                             );
+                           })
+                         ) : (
+                           <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                             No departments available for selected institution
+                           </div>
+                         )}
+                       </ScrollArea>
+                     ) : (
+                       <>
+                         <SelectItem value="all">All Departments</SelectItem>
+                         {filteredDepartments.length > 0 ? (
+                           filteredDepartments.map(department => {
+                             const studentCount = availableStudents.filter(s => s.department === department.department_name).length;
+                             return (
+                               <SelectItem key={department.id} value={department.id}>
+                                 <div className="flex justify-between items-center w-full">
+                                   <span>{department.department_name || 'Unknown Department'}</span>
+                                   <Badge variant="secondary" className="ml-2 text-xs">
+                                     {studentCount} students
+                                   </Badge>
+                                 </div>
+                               </SelectItem>
+                             );
+                           })
+                         ) : (
+                           <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                             No departments available for selected institution
+                           </div>
+                         )}
+                       </>
+                     )}
+                   </SelectContent>
                 </Select>
               </div>
 
@@ -617,32 +645,63 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a program" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-md z-50">
-                    <SelectItem value="all">All Programs</SelectItem>
-                    {availablePrograms.map(program => {
-                      // Count students in this program based on current department filter
-                      let studentCount = 0;
-                      if (selectedDepartment && selectedDepartment !== 'all') {
-                        const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
-                        studentCount = availableStudents.filter(s => 
-                          s.program === program && s.department === selectedDeptName
-                        ).length;
-                      } else {
-                        studentCount = availableStudents.filter(s => s.program === program).length;
-                      }
-                      
-                      return (
-                        <SelectItem key={program} value={program}>
-                          <div className="flex justify-between items-center w-full">
-                            <span>{program}</span>
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              {studentCount} students
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
+                   <SelectContent className="bg-background border shadow-md z-50">
+                     {availablePrograms.length > 4 ? (
+                       <ScrollArea className="h-48">
+                         <SelectItem value="all">All Programs</SelectItem>
+                         {availablePrograms.map(program => {
+                           // Count students in this program based on current department filter
+                           let studentCount = 0;
+                           if (selectedDepartment && selectedDepartment !== 'all') {
+                             const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                             studentCount = availableStudents.filter(s => 
+                               s.program === program && s.department === selectedDeptName
+                             ).length;
+                           } else {
+                             studentCount = availableStudents.filter(s => s.program === program).length;
+                           }
+                           
+                           return (
+                             <SelectItem key={program} value={program}>
+                               <div className="flex justify-between items-center w-full">
+                                 <span>{program}</span>
+                                 <Badge variant="secondary" className="ml-2 text-xs">
+                                   {studentCount} students
+                                 </Badge>
+                               </div>
+                             </SelectItem>
+                           );
+                         })}
+                       </ScrollArea>
+                     ) : (
+                       <>
+                         <SelectItem value="all">All Programs</SelectItem>
+                         {availablePrograms.map(program => {
+                           // Count students in this program based on current department filter
+                           let studentCount = 0;
+                           if (selectedDepartment && selectedDepartment !== 'all') {
+                             const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                             studentCount = availableStudents.filter(s => 
+                               s.program === program && s.department === selectedDeptName
+                             ).length;
+                           } else {
+                             studentCount = availableStudents.filter(s => s.program === program).length;
+                           }
+                           
+                           return (
+                             <SelectItem key={program} value={program}>
+                               <div className="flex justify-between items-center w-full">
+                                 <span>{program}</span>
+                                 <Badge variant="secondary" className="ml-2 text-xs">
+                                   {studentCount} students
+                                 </Badge>
+                               </div>
+                             </SelectItem>
+                           );
+                         })}
+                       </>
+                     )}
+                   </SelectContent>
                 </Select>
               </div>
 
@@ -659,42 +718,83 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select semester/year" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-md z-50">
-                    <SelectItem value="all">All Semesters</SelectItem>
-                    {availableSemesters.map(semester => {
-                      // Count students in this semester based on current filters
-                      const semesterYear = semester.replace('Year ', '');
-                      let studentCount = 0;
-                      
-                      if (selectedDepartment && selectedDepartment !== 'all') {
-                        const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
-                        const filteredStudents = students?.filter(s => 
-                          s.department === selectedDeptName && 
-                          s.semesterYear === parseInt(semesterYear)
-                        ) || [];
-                        
-                        if (selectedProgram && selectedProgram !== 'all') {
-                          studentCount = filteredStudents.filter(s => s.program === selectedProgram).length;
-                        } else {
-                          studentCount = filteredStudents.length;
-                        }
-                      } else {
-                        const filteredStudents = students?.filter(s => s.semesterYear === parseInt(semesterYear)) || [];
-                        studentCount = filteredStudents.length;
-                      }
-                      
-                      return (
-                        <SelectItem key={semester} value={semester}>
-                          <div className="flex justify-between items-center w-full">
-                            <span>{semester}</span>
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              {studentCount} students
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
+                   <SelectContent className="bg-background border shadow-md z-50">
+                     {availableSemesters.length > 4 ? (
+                       <ScrollArea className="h-48">
+                         <SelectItem value="all">All Semesters</SelectItem>
+                         {availableSemesters.map(semester => {
+                           // Count students in this semester based on current filters
+                           const semesterYear = semester.replace('Year ', '');
+                           let studentCount = 0;
+                           
+                           if (selectedDepartment && selectedDepartment !== 'all') {
+                             const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                             const filteredStudents = students?.filter(s => 
+                               s.department === selectedDeptName && 
+                               s.semesterYear === parseInt(semesterYear)
+                             ) || [];
+                             
+                             if (selectedProgram && selectedProgram !== 'all') {
+                               studentCount = filteredStudents.filter(s => s.program === selectedProgram).length;
+                             } else {
+                               studentCount = filteredStudents.length;
+                             }
+                           } else {
+                             const filteredStudents = students?.filter(s => s.semesterYear === parseInt(semesterYear)) || [];
+                             studentCount = filteredStudents.length;
+                           }
+                           
+                           return (
+                             <SelectItem key={semester} value={semester}>
+                               <div className="flex justify-between items-center w-full">
+                                 <span>{semester}</span>
+                                 <Badge variant="secondary" className="ml-2 text-xs">
+                                   {studentCount} students
+                                 </Badge>
+                               </div>
+                             </SelectItem>
+                           );
+                         })}
+                       </ScrollArea>
+                     ) : (
+                       <>
+                         <SelectItem value="all">All Semesters</SelectItem>
+                         {availableSemesters.map(semester => {
+                           // Count students in this semester based on current filters
+                           const semesterYear = semester.replace('Year ', '');
+                           let studentCount = 0;
+                           
+                           if (selectedDepartment && selectedDepartment !== 'all') {
+                             const selectedDeptName = filteredDepartments.find(d => d.id === selectedDepartment)?.department_name;
+                             const filteredStudents = students?.filter(s => 
+                               s.department === selectedDeptName && 
+                               s.semesterYear === parseInt(semesterYear)
+                             ) || [];
+                             
+                             if (selectedProgram && selectedProgram !== 'all') {
+                               studentCount = filteredStudents.filter(s => s.program === selectedProgram).length;
+                             } else {
+                               studentCount = filteredStudents.length;
+                             }
+                           } else {
+                             const filteredStudents = students?.filter(s => s.semesterYear === parseInt(semesterYear)) || [];
+                             studentCount = filteredStudents.length;
+                           }
+                           
+                           return (
+                             <SelectItem key={semester} value={semester}>
+                               <div className="flex justify-between items-center w-full">
+                                 <span>{semester}</span>
+                                 <Badge variant="secondary" className="ml-2 text-xs">
+                                   {studentCount} students
+                                 </Badge>
+                               </div>
+                             </SelectItem>
+                           );
+                         })}
+                       </>
+                     )}
+                   </SelectContent>
                 </Select>
               </div>
 
@@ -709,19 +809,37 @@ export const SessionForm: React.FC<SessionFormProps> = ({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a section" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-md z-50">
-                    <SelectItem value="all">All Sections</SelectItem>
-                    {availableSections.map(section => (
-                      <SelectItem key={section.name} value={section.name}>
-                        <div className="flex justify-between items-center w-full">
-                          <span>{section.name}</span>
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {section.students.length} students
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                   <SelectContent className="bg-background border shadow-md z-50">
+                     {availableSections.length > 4 ? (
+                       <ScrollArea className="h-48">
+                         <SelectItem value="all">All Sections</SelectItem>
+                         {availableSections.map(section => (
+                           <SelectItem key={section.name} value={section.name}>
+                             <div className="flex justify-between items-center w-full">
+                               <span>{section.name}</span>
+                               <Badge variant="secondary" className="ml-2 text-xs">
+                                 {section.students.length} students
+                               </Badge>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </ScrollArea>
+                     ) : (
+                       <>
+                         <SelectItem value="all">All Sections</SelectItem>
+                         {availableSections.map(section => (
+                           <SelectItem key={section.name} value={section.name}>
+                             <div className="flex justify-between items-center w-full">
+                               <span>{section.name}</span>
+                               <Badge variant="secondary" className="ml-2 text-xs">
+                                 {section.students.length} students
+                               </Badge>
+                             </div>
+                           </SelectItem>
+                         ))}
+                       </>
+                     )}
+                   </SelectContent>
                 </Select>
                 {(!selectedSemester || selectedSemester === 'all') && (
                   <p className="text-xs text-muted-foreground">
