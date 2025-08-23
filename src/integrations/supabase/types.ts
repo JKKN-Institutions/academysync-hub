@@ -313,6 +313,13 @@ export type Database = {
             referencedRelation: "counseling_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_goals_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_limited_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       institutions: {
@@ -397,6 +404,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_meeting_logs_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_limited_view"
             referencedColumns: ["id"]
           },
         ]
@@ -749,6 +763,13 @@ export type Database = {
             referencedRelation: "counseling_sessions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "session_feedback_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_limited_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       session_participants: {
@@ -779,6 +800,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "counseling_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_limited_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1135,6 +1163,57 @@ export type Database = {
         }
         Relationships: []
       }
+      session_limited_view: {
+        Row: {
+          can_view_details: boolean | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_time: string | null
+          id: string | null
+          location: string | null
+          name: string | null
+          priority: string | null
+          session_date: string | null
+          session_type: string | null
+          start_time: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          can_view_details?: never
+          created_at?: string | null
+          created_by?: never
+          description?: never
+          end_time?: string | null
+          id?: string | null
+          location?: never
+          name?: string | null
+          priority?: string | null
+          session_date?: string | null
+          session_type?: string | null
+          start_time?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          can_view_details?: never
+          created_at?: string | null
+          created_by?: never
+          description?: never
+          end_time?: string | null
+          id?: string | null
+          location?: never
+          name?: string | null
+          priority?: string | null
+          session_date?: string | null
+          session_type?: string | null
+          start_time?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       staff_directory: {
         Row: {
           avatar_url: string | null
@@ -1215,6 +1294,14 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_session: {
+        Args: { session_creator_id: string }
+        Returns: boolean
+      }
+      can_access_session_participants: {
+        Args: { session_uuid: string }
+        Returns: boolean
+      }
       change_user_role: {
         Args: { new_role: string; target_user_id: string }
         Returns: boolean
@@ -1226,6 +1313,13 @@ export type Database = {
       get_current_user_role_safe: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_department_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          department: string
+          institution: string
+        }[]
       }
       get_user_permissions: {
         Args: { user_uuid?: string }
