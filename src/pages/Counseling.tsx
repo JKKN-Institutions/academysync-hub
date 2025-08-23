@@ -72,7 +72,7 @@ const Counseling = () => {
   const createSessionDirectly = async (sessionData: CreateSessionData) => {
     setIsCreating(true);
     try {
-      const newSession = await createSession(sessionData);
+      const newSession = await createSession(sessionData, false, user?.email || 'Your Mentor');
       if (newSession) {
         setIsFormOpen(false);
         
@@ -101,21 +101,10 @@ const Counseling = () => {
 
     setIsCreating(true);
     try {
-      // Create the session first
-      const newSession = await createSession(pendingSessionData);
+      // Create the session with email notifications enabled
+      const newSession = await createSession(pendingSessionData, true, user?.email || 'Your Mentor');
       
       if (newSession) {
-        // Send notifications to students
-        await sendSessionInvitations({
-          sessionId: newSession.id,
-          sessionName: pendingSessionData.name,
-          sessionDate: pendingSessionData.session_date,
-          sessionTime: pendingSessionData.start_time,
-          location: pendingSessionData.location,
-          mentorName: user?.email || 'Your Mentor',
-          studentIds: pendingSessionData.students
-        });
-
         // Send confirmation to mentor
         await sendMentorConfirmation({
           sessionId: newSession.id,
@@ -128,6 +117,11 @@ const Counseling = () => {
         setIsFormOpen(false);
         setAddedStudents([]);
         setPendingSessionData(null);
+        
+        toast({
+          title: "Session Created & Emails Sent",
+          description: `Successfully created "${pendingSessionData.name}" and sent email notifications to ${pendingSessionData.students.length} student${pendingSessionData.students.length !== 1 ? 's' : ''}.`,
+        });
       }
     } catch (error) {
       console.error('Failed to create session with notifications:', error);

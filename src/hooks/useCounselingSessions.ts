@@ -88,7 +88,7 @@ export const useCounselingSessions = () => {
     }
   };
 
-  const createSession = async (sessionData: CreateSessionData): Promise<CounselingSession | null> => {
+  const createSession = async (sessionData: CreateSessionData, sendEmails: boolean = false, mentorName?: string): Promise<CounselingSession | null> => {
     try {
       // Create the main session record
       const { data: session, error: sessionError } = await supabase
@@ -129,12 +129,17 @@ export const useCounselingSessions = () => {
         }
       }
 
+      // Send emails if requested
+      if (sendEmails && sessionData.students.length > 0) {
+        await sendCounselingEmails(sessionData, mentorName || 'Your Mentor');
+      }
+
       // Refetch sessions to update the list
       await fetchSessions();
 
       toast({
         title: 'Session Created',
-        description: `Successfully created "${sessionData.name}" session.`
+        description: `Successfully created "${sessionData.name}" session.${sendEmails ? ' Email notifications sent to students.' : ''}`
       });
 
       // Return properly typed session
@@ -154,6 +159,61 @@ export const useCounselingSessions = () => {
         variant: 'destructive'
       });
       return null;
+    }
+  };
+
+  const sendCounselingEmails = async (sessionData: CreateSessionData, mentorName: string) => {
+    try {
+      // Get student details from the database
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('id, name, email')
+        .in('id', sessionData.students);
+
+      if (studentsError) {
+        console.error('Error fetching student details:', studentsError);
+        return;
+      }
+
+      if (!students || students.length === 0) {
+        console.error('No student details found for IDs:', sessionData.students);
+        return;
+      }
+
+      const studentEmails = students.map(s => s.email).filter(email => email);
+      const studentNames = students.map(s => s.name);
+
+      if (studentEmails.length === 0) {
+        console.error('No valid email addresses found for students');
+        return;
+      }
+
+      // Call the email function
+      const { error: emailError } = await supabase.functions.invoke('send-counseling-email', {
+        body: {
+          sessionName: sessionData.name,
+          sessionDate: sessionData.session_date,
+          sessionTime: sessionData.start_time || '00:00',
+          location: sessionData.location,
+          description: sessionData.description,
+          mentorName: mentorName,
+          studentEmails: studentEmails,
+          studentNames: studentNames
+        }
+      });
+
+      if (emailError) {
+        console.error('Error sending counseling emails:', emailError);
+        toast({
+          title: 'Email Error',
+          description: 'Session created successfully, but emails could not be sent.',
+          variant: 'destructive'
+        });
+      } else {
+        console.log('Counseling emails sent successfully');
+      }
+    } catch (error) {
+      console.error('Error in sendCounselingEmails:', error);
     }
   };
 

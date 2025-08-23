@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.superface-integration]
 verify_jwt = false
+
+[functions.send-counseling-email]
+verify_jwt = false
