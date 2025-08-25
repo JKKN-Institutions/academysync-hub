@@ -107,6 +107,37 @@ export const useCounselingSessions = () => {
 
   const createSession = async (sessionData: CreateSessionData, sendEmails: boolean = false, mentorName?: string): Promise<CounselingSession | null> => {
     try {
+      console.log('=== SESSION CREATION DEBUG ===');
+      
+      // Check authentication first
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      console.log('Auth user:', authUser);
+      console.log('Auth error:', authError);
+      
+      if (!authUser) {
+        throw new Error('User not authenticated. Please log in again.');
+      }
+      
+      // Check user profile and permissions
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role, display_name, department')
+        .eq('user_id', authUser.id)
+        .single();
+      
+      console.log('User profile:', userProfile);
+      console.log('Profile error:', profileError);
+      
+      if (!userProfile) {
+        throw new Error('User profile not found. Please contact administrator.');
+      }
+      
+      if (!['admin', 'super_admin', 'mentor'].includes(userProfile.role)) {
+        throw new Error(`Insufficient permissions. Your role (${userProfile.role}) cannot create sessions.`);
+      }
+      
+      console.log('Creating session with data:', sessionData);
+      
       // Create the main session record
       const { data: session, error: sessionError } = await supabase
         .from('counseling_sessions')
@@ -120,13 +151,21 @@ export const useCounselingSessions = () => {
           session_type: sessionData.session_type,
           priority: sessionData.priority || 'normal',
           status: 'pending',
-          created_by: (await supabase.auth.getUser()).data.user?.id // Explicitly set creator
+          created_by: authUser.id
         })
         .select()
         .single();
 
+      console.log('Session creation result:', { session, sessionError });
+      
       if (sessionError) {
-        throw sessionError;
+        console.error('Session creation error details:', {
+          message: sessionError.message,
+          details: sessionError.details,
+          hint: sessionError.hint,
+          code: sessionError.code
+        });
+        throw new Error(`Failed to create session: ${sessionError.message}`);
       }
 
       // Create participant records for each student
