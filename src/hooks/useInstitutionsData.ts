@@ -46,18 +46,62 @@ export const useInstitutionsData = () => {
         ];
         setInstitutions(demoInstitutions);
       } else {
-        // Fetch from Supabase database
-        const { data, error: dbError } = await supabase
-          .from('institutions')
-          .select('*')
-          .eq('status', 'active')
-          .order('institution_name');
+        // Try Supabase first, fallback to direct API if needed
+        try {
+          const { data, error: dbError } = await supabase
+            .from('institutions')
+            .select('*')
+            .eq('status', 'active')
+            .order('institution_name');
 
-        if (dbError) {
-          throw dbError;
+          if (dbError) {
+            console.warn('Supabase institutions fetch failed:', dbError);
+            throw dbError;
+          }
+
+          if (data && data.length > 0) {
+            setInstitutions((data || []) as Institution[]);
+          } else {
+            // No data in Supabase, try direct API fetch
+            console.log('No institutions in Supabase, trying direct API fetch...');
+            
+            // Import fetchInstitutions dynamically to avoid circular dependency
+            const { fetchInstitutions } = await import('@/services/myjkknApi');
+            const apiInstitutions = await fetchInstitutions();
+            
+            // Transform API data to match our interface
+            const transformedInstitutions: Institution[] = apiInstitutions.map(inst => ({
+              id: inst.id,
+              institution_id: inst.id,
+              institution_name: inst.institution_name,
+              description: inst.description || 'Institution',
+              status: inst.status,
+              created_at: inst.created_at,
+              updated_at: inst.updated_at
+            }));
+            
+            setInstitutions(transformedInstitutions);
+          }
+        } catch (dbError) {
+          console.warn('Supabase fetch failed, trying direct API:', dbError);
+          
+          // Import fetchInstitutions dynamically to avoid circular dependency
+          const { fetchInstitutions } = await import('@/services/myjkknApi');
+          const apiInstitutions = await fetchInstitutions();
+          
+          // Transform API data to match our interface
+          const transformedInstitutions: Institution[] = apiInstitutions.map(inst => ({
+            id: inst.id,
+            institution_id: inst.id,
+            institution_name: inst.institution_name,
+            description: inst.description || 'Institution',
+            status: inst.status,
+            created_at: inst.created_at,
+            updated_at: inst.updated_at
+          }));
+          
+          setInstitutions(transformedInstitutions);
         }
-
-        setInstitutions((data || []) as Institution[]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load institutions';
