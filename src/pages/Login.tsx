@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { supabase } from '@/integrations/supabase/client';
 import { SimpleApiTester } from '@/components/SimpleApiTester';
 import { myjkknOAuth } from '@/services/myjkknOAuth';
+import { logDebugInfo } from '@/utils/debugInfo';
 
 const Login = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -219,8 +220,21 @@ const Login = () => {
             © 2025 JKKN Educational Institutions
           </div>
 
-          {/* Debug API Button */}
-          <div className="fixed bottom-4 right-4">
+          {/* Debug & API Tools */}
+          <div className="fixed bottom-4 right-4 flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              onClick={() => {
+                logDebugInfo();
+                alert('Debug info logged to console. Press F12 and check console tab.');
+              }}
+            >
+              <Bug className="h-4 w-4 mr-2" />
+              Debug Info
+            </Button>
+            
             <Dialog>
               <DialogTrigger asChild>
                 <Button 
