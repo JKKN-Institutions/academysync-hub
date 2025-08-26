@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
 import UserManagement from "./pages/UserManagement";
 import RolesPermissions from "./pages/RolesPermissions";
 import MentorsDirectory from "./pages/MentorsDirectory";
@@ -48,6 +49,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/student-login" element={<Login />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/handbook" element={<Landing />} />
