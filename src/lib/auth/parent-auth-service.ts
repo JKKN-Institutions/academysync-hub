@@ -1,5 +1,9 @@
 import Cookies from 'js-cookie';
 
+// Constants for Supabase Edge Functions (no env usage per Lovable guidelines)
+const SUPABASE_FUNCTIONS_URL = 'https://pbzndbvxjdvfmgoonxee.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiem5kYnZ4amR2Zm1nb29ueGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTg5NzQsImV4cCI6MjA2OTg3NDk3NH0.12mw6uOwJAL5nDRMqCf78xLGMJQg8D6HM3KCalwOXaA';
+
 interface AuthConfig {
   parentAppUrl: string;
   appId: string;
@@ -28,12 +32,19 @@ export class ParentAuthService {
   private refreshTimer?: NodeJS.Timeout;
 
   private constructor() {
+    // Start with minimal defaults; fetch real config from Edge Function when needed
     this.config = {
-      parentAppUrl: import.meta.env.VITE_PARENT_APP_URL || 'https://my.jkkn.ac.in',
-      appId: import.meta.env.VITE_APP_ID || '',
-      redirectUri: import.meta.env.VITE_REDIRECT_URI || (typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : '/auth/callback'),
+      parentAppUrl: 'https://my.jkkn.ac.in',
+      appId: '',
+      redirectUri: (typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : '/auth/callback'),
       scopes: ['read', 'write', 'profile']
     };
+
+    // Try to hydrate from cache
+    const cached = typeof window !== 'undefined' ? localStorage.getItem('myjkkn_config') : null;
+    if (cached) {
+      try { this.config = { ...this.config, ...JSON.parse(cached) }; } catch {}
+    }
   }
 
   static getInstance(): ParentAuthService {
@@ -43,43 +54,53 @@ export class ParentAuthService {
     return ParentAuthService.instance;
   }
 
+  // Fetch config from Edge Function and cache it
+  private async ensureConfig() {
+    if (this.config.appId && this.config.parentAppUrl) return;
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-config`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      this.config.appId = data.appId || this.config.appId;
+      this.config.parentAppUrl = data.parentAppUrl || this.config.parentAppUrl;
+      try { localStorage.setItem('myjkkn_config', JSON.stringify({ appId: this.config.appId, parentAppUrl: this.config.parentAppUrl })); } catch {}
+    }
+  }
+
   // Initialize OAuth2 authentication flow - Redirects to consent page
   async initiateLogin(state?: string): Promise<void> {
-    // Validate configuration before initiating login
-    if (!this.config.appId || this.config.appId === 'your-app-id-here') {
-      throw new Error('MyJKKN App ID not configured. Please contact administrator.');
+    await this.ensureConfig();
+
+    if (!this.config.appId) {
+      console.error('[ParentAuth] Missing application ID');
+      throw new Error('Missing MyJKKN application ID. Please configure the app.');
     }
 
     const computedRedirect = typeof window !== 'undefined'
       ? `${window.location.origin}/auth/callback`
       : this.config.redirectUri;
-    
-    // Use the consent page endpoint for child app authentication
+
     const authUrl = new URL(`${this.config.parentAppUrl}/auth/child-app/consent`);
-    
-    // OAuth2 standard parameters (MyJKKN expects child_app_id)
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('child_app_id', this.config.appId);
     authUrl.searchParams.append('redirect_uri', computedRedirect);
     authUrl.searchParams.append('scope', this.config.scopes.join(' '));
     authUrl.searchParams.append('state', state || this.generateState());
-    
-    // Store state for CSRF protection
+
     if (!state) {
       sessionStorage.setItem('oauth_state', authUrl.searchParams.get('state')!);
     }
-    
-    console.log('[ParentAuth] Initiating login', {
-      authUrl: authUrl.toString(),
-      appId: this.config.appId,
-      redirect: computedRedirect
-    });
+
+    console.log('[ParentAuth] Initiating login', { url: authUrl.toString(), appId: this.config.appId, redirect: computedRedirect });
     window.location.href = authUrl.toString();
   }
 
-  // Handle OAuth callback with authorization code
+  // Handle OAuth callback with authorization code (via Edge Function)
   async handleCallback(code: string, state: string): Promise<UserSession> {
-    // Verify state for CSRF protection
     const savedState = sessionStorage.getItem('oauth_state');
     if (state !== savedState) {
       throw new Error('Invalid state parameter - possible CSRF attack');
@@ -88,68 +109,55 @@ export class ParentAuthService {
     const computedRedirect = typeof window !== 'undefined'
       ? `${window.location.origin}/auth/callback`
       : this.config.redirectUri;
-    
-    // Exchange authorization code for tokens
-    const response = await fetch(`${this.config.parentAppUrl}/api/auth/child-app/token`, {
+
+    await this.ensureConfig();
+
+    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-auth`, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': import.meta.env.VITE_API_KEY || ''
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
         grant_type: 'authorization_code',
-        code: code,
-        child_app_id: this.config.appId,  // Note: Use child_app_id
-        redirect_uri: computedRedirect
-      })
+        code,
+        redirect_uri: computedRedirect,
+      }),
     });
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      let error: any = {};
-      try { error = JSON.parse(text); } catch { error = { error_description: text || 'Authentication failed' }; }
-      console.error('[ParentAuth] Token exchange failed', { status: response.status, error });
-      throw new Error(error.error_description || `Authentication failed (${response.status})`);
+      console.error('[ParentAuth] Token exchange failed', response.status, text);
+      throw new Error('Authentication failed');
     }
 
     const session = await response.json();
-    
-    // Save session data
     this.saveSession(session);
-    
-    // Schedule automatic token refresh
     this.scheduleTokenRefresh(session.expires_in);
-    
-    // Clear state
     sessionStorage.removeItem('oauth_state');
-    
     return session;
   }
 
   // Save session tokens securely
   private saveSession(session: UserSession): void {
-    // Store access token with expiry
     const expiresAt = new Date(Date.now() + session.expires_in * 1000);
-    
-    // Use appropriate cookie settings based on environment
-    const isProduction = window.location.protocol === 'https:';
-    
-    Cookies.set('access_token', session.access_token, { 
+    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+    Cookies.set('access_token', session.access_token, {
       expires: expiresAt,
-      secure: isProduction, // Only use secure in production
-      sameSite: isProduction ? 'strict' : 'lax', // Use lax for development
-      path: '/' // Ensure cookie is available site-wide
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
     });
-    
-    // Store refresh token for 30 days
-    Cookies.set('refresh_token', session.refresh_token, { 
+
+    Cookies.set('refresh_token', session.refresh_token, {
       expires: 30,
       secure: isProduction,
       sameSite: isProduction ? 'strict' : 'lax',
-      path: '/'
+      path: '/',
     });
-    
-    // Store user data in localStorage with error handling
+
     try {
       localStorage.setItem('user_data', JSON.stringify(session.user));
       localStorage.setItem('auth_timestamp', Date.now().toString());
@@ -158,27 +166,17 @@ export class ParentAuthService {
     }
   }
 
-  // Get current session
   getSession(): UserSession | null {
     try {
       const accessToken = Cookies.get('access_token');
       const refreshToken = Cookies.get('refresh_token');
       const userData = localStorage.getItem('user_data');
-
-      // Debug logging for troubleshooting
-      if (!accessToken) console.debug('No access token found');
-      if (!refreshToken) console.debug('No refresh token found');
-      if (!userData) console.debug('No user data found');
-
-      if (!accessToken || !refreshToken || !userData) {
-        return null;
-      }
-
+      if (!accessToken || !refreshToken || !userData) return null;
       return {
         access_token: accessToken,
         refresh_token: refreshToken,
         user: JSON.parse(userData),
-        expires_in: 3600
+        expires_in: 3600,
       };
     } catch (error) {
       console.error('Error getting session:', error);
@@ -186,103 +184,48 @@ export class ParentAuthService {
     }
   }
 
-  // Refresh access token
   async refreshToken(): Promise<UserSession | null> {
     const refreshToken = Cookies.get('refresh_token');
     if (!refreshToken) return null;
 
-    try {
-      const response = await fetch(`${this.config.parentAppUrl}/api/auth/child-app/token`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-API-Key': import.meta.env.VITE_API_KEY || ''
-        },
-        body: JSON.stringify({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          child_app_id: this.config.appId  // Note: Use child_app_id
-        })
-      });
+    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-auth`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: refreshToken }),
+    });
 
-      if (!response.ok) {
-        throw new Error('Token refresh failed');
-      }
-
-      const session = await response.json();
-      this.saveSession(session);
-      this.scheduleTokenRefresh(session.expires_in);
-      
-      return session;
-    } catch (error) {
-      // If refresh fails, clear session and redirect to login
+    if (!response.ok) {
       this.clearSession();
       return null;
     }
+
+    const session = await response.json();
+    this.saveSession(session);
+    this.scheduleTokenRefresh(session.expires_in);
+    return session;
   }
 
-  // Schedule automatic token refresh
   private scheduleTokenRefresh(expiresIn: number): void {
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-    }
-
-    // Refresh 5 minutes before expiry
-    const refreshIn = Math.max((expiresIn - 300) * 1000, 60000); // At least 1 minute
-    
-    this.refreshTimer = setTimeout(() => {
-      this.refreshToken();
-    }, refreshIn);
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    const refreshIn = Math.max((expiresIn - 300) * 1000, 60000);
+    this.refreshTimer = setTimeout(() => this.refreshToken(), refreshIn);
   }
 
-  // Logout user - IMPORTANT: Only clears child app session, NOT parent session
   async logout(redirectToParent: boolean = false): Promise<void> {
-    try {
-      // Call child app logout endpoint (preserves parent session)
-      const session = this.getSession();
-      const computedRedirect = typeof window !== 'undefined'
-        ? window.location.origin
-        : this.config.parentAppUrl;
-      const response = await fetch(`${this.config.parentAppUrl}/api/auth/child-app/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          app_id: this.config.appId,
-          session_id: session?.session_id,
-          access_token: session?.access_token,
-          redirect_uri: redirectToParent ? this.config.parentAppUrl : computedRedirect
-        })
-      });
-
-      // Clear local session data
-      this.clearSession();
-
-      if (redirectToParent && response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (data.redirect_uri) {
-          window.location.href = data.redirect_uri;
-          return;
-        }
-      }
-      
-      // Redirect to child app login page
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if logout fails, clear local state
-      this.clearSession();
-      window.location.href = '/login';
+    this.clearSession();
+    if (redirectToParent) {
+      window.location.href = this.config.parentAppUrl || '/login';
+      return;
     }
+    window.location.href = '/login';
   }
 
-  // Clear session data
   private clearSession(): void {
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-    }
-    
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
     Cookies.remove('access_token');
     Cookies.remove('refresh_token');
     localStorage.removeItem('user_data');
@@ -290,29 +233,21 @@ export class ParentAuthService {
     sessionStorage.clear();
   }
 
-  // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!this.getSession();
   }
 
-  // Get current user
   getUser(): any {
     const session = this.getSession();
     return session?.user || null;
   }
 
-  // Get auth headers for API calls
   getAuthHeaders(): Record<string, string> {
     const session = this.getSession();
     if (!session) return {};
-
-    return {
-      'Authorization': `Bearer ${session.access_token}`,
-      'X-App-ID': this.config.appId
-    };
+    return { Authorization: `Bearer ${session.access_token}`, 'X-App-ID': this.config.appId };
   }
 
-  // Generate random state for CSRF protection
   private generateState(): string {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
