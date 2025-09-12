@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import parentAuthService from '@/lib/auth/parent-auth-service';
 
 export type UserRole = 'admin' | 'mentor' | 'mentee' | 'dept_lead' | 'super_admin';
 
@@ -17,8 +18,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  login: () => void;
+  login: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   canAccessRoute: (route: string) => boolean;
 }
@@ -124,88 +126,105 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     let mounted = true;
-
-    // Set up auth state listener FIRST to avoid missing events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!mounted) return;
-        
-        if (session?.user) {
-          // Only synchronous state updates in the callback
-          setUser({
-            ...session.user,
-            role: 'mentee', // Default role, will be updated by profile fetch
-            displayName: (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || session.user.email || 'Unknown User',
-            department: undefined,
-            externalId: undefined
-          });
-          
-          // Defer profile fetching and auto-sync to avoid deadlock
-          setTimeout(async () => {
-            if (!mounted) return;
-            
-            try {
-              // First, trigger auto-sync to ensure latest data from MyJKKN API
-              if (event === 'SIGNED_IN') {
-                console.log('Triggering auto-sync for new login...');
-                try {
-                  await supabase.functions.invoke('auto-sync-on-login');
-                  console.log('Auto-sync completed successfully');
-                } catch (syncError) {
-                  console.warn('Auto-sync failed, continuing with existing data:', syncError);
-                }
-              }
-              
-              // Then fetch user profile
-              const profile = await fetchUserProfile(session.user.id);
-              if (mounted) {
-                setUser(prevUser => prevUser ? {
-                  ...prevUser,
-                  role: profile?.role as UserRole || 'mentee',
-                  displayName: profile?.display_name || (session.user.user_metadata as any)?.full_name || (session.user.user_metadata as any)?.name || session.user.email || 'Unknown User',
-                  department: profile?.department,
-                  externalId: profile?.external_id
-                } : null);
-              }
-            } catch (error) {
-              console.error('Error in authentication flow:', error);
-            }
-          }, 0);
-        } else {
-          setUser(null);
-        }
-        
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
+    console.log('AuthContext: Initializing auth...');
+    
+    const initAuth = async () => {
+      // First check for OAuth callback parameters
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+      const error = params.get('error');
       
-      if (session?.user) {
-        // Initial user setup - will be updated by the auth state change listener
-        setUser({
-          ...session.user,
-          role: 'mentee',
-          displayName: session.user.email || 'Unknown User',
-          department: undefined,
-          externalId: undefined
-        });
+      console.log('Checking for callback code:', !!code);
+      
+      if (error) {
+        console.error('OAuth error:', params.get('error_description'));
+        if (mounted) setLoading(false);
+        return;
+      }
+      
+      if (code && state) {
+        // Handle OAuth callback
+        try {
+          console.log('Processing OAuth callback...');
+          const session = await parentAuthService.handleCallback(code, state);
+          console.log('OAuth callback successful, user:', session.user.email);
+          
+          if (mounted) {
+            setUser({
+              ...session.user as any,
+              role: (session.user.role as UserRole) || 'mentee',
+              displayName: session.user.full_name || session.user.email || 'Unknown User',
+              department: undefined,
+              externalId: session.user.id
+            });
+          }
+          
+          // Clean URL after successful authentication
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (error) {
+          console.error('Auth callback failed:', error);
+        }
       } else {
-        setUser(null);
+        // Check for existing parent auth session first
+        const parentSession = parentAuthService.getSession();
+        if (parentSession) {
+          console.log('Found existing parent session for user:', parentSession.user.email);
+          if (mounted) {
+            setUser({
+              ...parentSession.user as any,
+              role: (parentSession.user.role as UserRole) || 'mentee',
+              displayName: parentSession.user.full_name || parentSession.user.email || 'Unknown User',
+              department: undefined,
+              externalId: parentSession.user.id
+            });
+          }
+        } else {
+          // Fallback to Supabase auth if no parent session
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user && mounted) {
+            setUser({
+              ...session.user,
+              role: 'mentee',
+              displayName: session.user.email || 'Unknown User',
+              department: undefined,
+              externalId: undefined
+            });
+            
+            // Try to fetch profile for Supabase users
+            setTimeout(async () => {
+              if (!mounted) return;
+              try {
+                const profile = await fetchUserProfile(session.user.id);
+                if (mounted && profile) {
+                  setUser(prevUser => prevUser ? {
+                    ...prevUser,
+                    role: profile?.role as UserRole || 'mentee',
+                    displayName: profile?.display_name || session.user.email || 'Unknown User',
+                    department: profile?.department,
+                    externalId: profile?.external_id
+                  } : null);
+                }
+              } catch (error) {
+                console.error('Error fetching profile:', error);
+              }
+            }, 0);
+          } else if (mounted) {
+            console.log('No stored auth data found');
+            setUser(null);
+          }
+        }
       }
       
       if (mounted) {
         setLoading(false);
       }
-    });
+    };
+    
+    initAuth();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
   }, []);
 
@@ -242,12 +261,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
-  const login = () => {
-    // Redirect to MyJKKN OAuth
-    window.location.href = '/login';
+  const login = async () => {
+    // Use parent auth service for OAuth flow
+    await parentAuthService.initiateLogin();
   };
 
-  const logout = signOut;
+  const logout = async () => {
+    try {
+      // Try parent auth logout first
+      if (parentAuthService.isAuthenticated()) {
+        await parentAuthService.logout();
+      } else {
+        // Fallback to Supabase logout
+        await signOut();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force clear and redirect
+      setUser(null);
+      window.location.href = '/login';
+    }
+  };
+
+  const refreshSession = async () => {
+    const session = await parentAuthService.refreshToken();
+    if (session) {
+      setUser({
+        ...session.user as any,
+        role: (session.user.role as UserRole) || 'mentee',
+        displayName: session.user.full_name || session.user.email || 'Unknown User',
+        department: undefined,
+        externalId: session.user.id
+      });
+    }
+  };
 
   const hasPermission = (permission: string): boolean => {
     if (!user?.role) return false;
@@ -292,6 +339,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signOut,
     login,
     logout,
+    refreshSession,
     hasPermission,
     canAccessRoute
   };
