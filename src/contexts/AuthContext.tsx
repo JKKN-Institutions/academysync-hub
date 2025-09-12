@@ -14,8 +14,11 @@ export interface AuthUser extends User {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
+  isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  login: () => void;
+  logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   canAccessRoute: (route: string) => boolean;
 }
@@ -239,6 +242,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const login = () => {
+    // Redirect to MyJKKN OAuth
+    window.location.href = '/login';
+  };
+
+  const logout = signOut;
+
   const hasPermission = (permission: string): boolean => {
     if (!user?.role) return false;
     return PERMISSIONS[user.role]?.includes(permission) || false;
@@ -277,8 +287,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const value = {
     user,
     loading,
+    isAuthenticated: !!user,
     signIn,
     signOut,
+    login,
+    logout,
     hasPermission,
     canAccessRoute
   };

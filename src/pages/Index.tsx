@@ -30,7 +30,7 @@ interface Notification {
 }
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated, login, logout } = useAuth();
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
   const { sessions, upcomingSessions, completedSessions, loading: sessionsLoading } = useCounselingSessions();
@@ -351,6 +351,28 @@ const Index = () => {
   const recentActivities = getRecentActivities();
   const upcomingThisWeek = getUpcomingThisWeek();
 
+  // Show login interface if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold text-gray-900">Welcome to Mentor-Mentee Platform</CardTitle>
+            <CardDescription className="text-gray-600">Please login to continue</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={login}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Login with MyJKKN
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
@@ -379,11 +401,28 @@ const Index = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {formatUserName(user?.displayName || 'User')}</h2>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome, {formatUserName(user?.displayName || 'User')}</h2>
+              <div className="space-y-1 text-gray-600">
+                <p>Email: {user?.email}</p>
+                <p>Role: <Badge variant="outline">{user?.role}</Badge></p>
+              </div>
+            </div>
+            <Button 
+              onClick={logout}
+              variant="outline"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              Logout
+            </Button>
+          </div>
           
           {/* Debug Info - Show only in development or for testing */}
           {process.env.NODE_ENV === 'development' && (
-            <UserDebugInfo />
+            <div className="mt-4">
+              <UserDebugInfo />
+            </div>
           )}
         </div>
 
