@@ -45,6 +45,11 @@ export class ParentAuthService {
 
   // Initialize OAuth2 authentication flow - Redirects to consent page
   async initiateLogin(state?: string): Promise<void> {
+    // Validate configuration before initiating login
+    if (!this.config.appId || this.config.appId === 'your-app-id-here') {
+      throw new Error('MyJKKN App ID not configured. Please contact administrator.');
+    }
+    
     // Use the consent page endpoint for child app authentication
     const authUrl = new URL(`${this.config.parentAppUrl}/auth/child-app/consent`);
     
