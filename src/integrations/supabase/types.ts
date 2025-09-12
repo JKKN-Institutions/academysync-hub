@@ -1065,6 +1065,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sync_logs: {
         Row: {
           completed_at: string | null
@@ -1325,6 +1349,19 @@ export type Database = {
         Args: { user_uuid?: string }
         Returns: Json
       }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       log_user_activity: {
         Args: {
           activity_data?: Json
@@ -1348,6 +1385,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "mentor" | "mentee" | "dept_lead" | "super_admin"
       assignment_mode: "app_managed" | "upstream_managed"
       goal_status: "proposed" | "in_progress" | "completed" | "archived"
       mentor_role: "primary" | "co_mentor"
@@ -1478,6 +1516,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "mentor", "mentee", "dept_lead", "super_admin"],
       assignment_mode: ["app_managed", "upstream_managed"],
       goal_status: ["proposed", "in_progress", "completed", "archived"],
       mentor_role: ["primary", "co_mentor"],
