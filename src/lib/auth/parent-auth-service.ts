@@ -49,15 +49,18 @@ export class ParentAuthService {
     if (!this.config.appId || this.config.appId === 'your-app-id-here') {
       throw new Error('MyJKKN App ID not configured. Please contact administrator.');
     }
+
+    const computedRedirect = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : this.config.redirectUri;
     
     // Use the consent page endpoint for child app authentication
     const authUrl = new URL(`${this.config.parentAppUrl}/auth/child-app/consent`);
     
-    // OAuth2 standard parameters
+    // OAuth2 standard parameters (MyJKKN expects child_app_id)
     authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('client_id', this.config.appId);
-    authUrl.searchParams.append('app_id', this.config.appId);
-    authUrl.searchParams.append('redirect_uri', this.config.redirectUri);
+    authUrl.searchParams.append('child_app_id', this.config.appId);
+    authUrl.searchParams.append('redirect_uri', computedRedirect);
     authUrl.searchParams.append('scope', this.config.scopes.join(' '));
     authUrl.searchParams.append('state', state || this.generateState());
     
@@ -66,7 +69,11 @@ export class ParentAuthService {
       sessionStorage.setItem('oauth_state', authUrl.searchParams.get('state')!);
     }
     
-    console.log('[ParentAuth] Initiating login to:', authUrl.toString());
+    console.log('[ParentAuth] Initiating login', {
+      authUrl: authUrl.toString(),
+      appId: this.config.appId,
+      redirect: computedRedirect
+    });
     window.location.href = authUrl.toString();
   }
 
@@ -77,6 +84,10 @@ export class ParentAuthService {
     if (state !== savedState) {
       throw new Error('Invalid state parameter - possible CSRF attack');
     }
+
+    const computedRedirect = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : this.config.redirectUri;
     
     // Exchange authorization code for tokens
     const response = await fetch(`${this.config.parentAppUrl}/api/auth/child-app/token`, {
@@ -89,13 +100,16 @@ export class ParentAuthService {
         grant_type: 'authorization_code',
         code: code,
         child_app_id: this.config.appId,  // Note: Use child_app_id
-        redirect_uri: this.config.redirectUri
+        redirect_uri: computedRedirect
       })
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error_description: 'Authentication failed' }));
-      throw new Error(error.error_description || 'Authentication failed');
+      const text = await response.text().catch(() => '');
+      let error: any = {};
+      try { error = JSON.parse(text); } catch { error = { error_description: text || 'Authentication failed' }; }
+      console.error('[ParentAuth] Token exchange failed', { status: response.status, error });
+      throw new Error(error.error_description || `Authentication failed (${response.status})`);
     }
 
     const session = await response.json();
@@ -226,6 +240,9 @@ export class ParentAuthService {
     try {
       // Call child app logout endpoint (preserves parent session)
       const session = this.getSession();
+      const computedRedirect = typeof window !== 'undefined'
+        ? window.location.origin
+        : this.config.parentAppUrl;
       const response = await fetch(`${this.config.parentAppUrl}/api/auth/child-app/logout`, {
         method: 'POST',
         headers: {
@@ -235,7 +252,7 @@ export class ParentAuthService {
           app_id: this.config.appId,
           session_id: session?.session_id,
           access_token: session?.access_token,
-          redirect_uri: redirectToParent ? this.config.parentAppUrl : window.location.origin
+          redirect_uri: redirectToParent ? this.config.parentAppUrl : computedRedirect
         })
       });
 
