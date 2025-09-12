@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { SimpleApiTester } from '@/components/SimpleApiTester';
-import { myjkknOAuth } from '@/services/myjkknOAuth';
+
 import { logDebugInfo } from '@/utils/debugInfo';
 
 const Login = () => {
@@ -15,7 +15,7 @@ const Login = () => {
   const [myjkknLoading, setMyjkknLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { user, loading: userLoading } = useAuth();
+  const { user, loading: userLoading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -73,8 +73,8 @@ const Login = () => {
     setError('');
 
     try {
-      // Initiate MyJKKN OAuth flow
-      myjkknOAuth.initiateOAuth();
+      // Use the new parent auth service through AuthContext
+      await login();
     } catch (error: any) {
       setError(error.message || 'Failed to initiate MyJKKN authentication');
       setMyjkknLoading(false);
