@@ -21,14 +21,53 @@ interface UserProfile {
   department?: string;
 }
 
+// Constants for Supabase Edge Functions
+const SUPABASE_FUNCTIONS_URL = 'https://pbzndbvxjdvfmgoonxee.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiem5kYnZ4amR2Zm1nb29ueGVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTg5NzQsImV4cCI6MjA2OTg3NDk3NH0.12mw6uOwJAL5nDRMqCf78xLGMJQg8D6HM3KCalwOXaA';
+
 class MyJKKNOAuthService {
   private config: MyJKKNOAuthConfig = {
-    clientId: 'your-myjkkn-client-id', // This should be configured
+    clientId: '',
     redirectUri: `${window.location.origin}/auth/callback`,
     scope: 'read:profile read:institutions',
     authUrl: 'https://my.jkkn.ac.in/oauth/authorize',
     tokenUrl: 'https://my.jkkn.ac.in/oauth/token'
   };
+
+  // Fetch config from Edge Function and cache it
+  private async ensureConfig() {
+    if (this.config.clientId) return;
+    
+    try {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-config`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        this.config.clientId = data.appId || this.config.clientId;
+        
+        // Cache the config
+        try { 
+          localStorage.setItem('myjkkn_oauth_config', JSON.stringify({ clientId: this.config.clientId })); 
+        } catch {}
+      }
+    } catch (error) {
+      console.error('[MyJKKNOAuth] Failed to fetch config:', error);
+      
+      // Try to load from cache as fallback
+      const cached = localStorage.getItem('myjkkn_oauth_config');
+      if (cached) {
+        try { 
+          const cachedConfig = JSON.parse(cached);
+          this.config.clientId = cachedConfig.clientId || this.config.clientId;
+        } catch {}
+      }
+    }
+  }
 
   // Generate a random state parameter for security
   private generateState(): string {
@@ -36,7 +75,13 @@ class MyJKKNOAuthService {
   }
 
   // Step 1: Redirect to MyJKKN authorization endpoint
-  initiateOAuth(): void {
+  async initiateOAuth(): Promise<void> {
+    await this.ensureConfig();
+    
+    if (!this.config.clientId) {
+      throw new Error('Missing MyJKKN application ID. Please configure the app.');
+    }
+    
     const state = this.generateState();
     
     // Store state in localStorage for verification later
@@ -51,6 +96,7 @@ class MyJKKNOAuthService {
     });
 
     const authUrl = `${this.config.authUrl}?${params.toString()}`;
+    console.log('[MyJKKNOAuth] Initiating OAuth', { clientId: this.config.clientId, authUrl });
     window.location.href = authUrl;
   }
 
