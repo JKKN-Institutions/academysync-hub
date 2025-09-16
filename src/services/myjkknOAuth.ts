@@ -111,23 +111,25 @@ class MyJKKNOAuthService {
     // Clean up stored state
     localStorage.removeItem('oauth_state');
 
-    // Exchange authorization code for tokens
-    const response = await fetch(this.config.tokenUrl, {
+    // Exchange authorization code for tokens via our secure edge function
+    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-auth`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: new URLSearchParams({
+      body: JSON.stringify({
         grant_type: 'authorization_code',
-        client_id: this.config.clientId,
         code: code,
         redirect_uri: this.config.redirectUri,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Token exchange failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
     }
 
     const tokens: TokenResponse = await response.json();
@@ -184,21 +186,23 @@ class MyJKKNOAuthService {
       throw new Error('No refresh token available');
     }
 
-    const response = await fetch(this.config.tokenUrl, {
+    const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/myjkkn-auth`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: new URLSearchParams({
+      body: JSON.stringify({
         grant_type: 'refresh_token',
-        client_id: this.config.clientId,
         refresh_token: refreshToken,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Token refresh failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Token refresh failed: ${response.status} - ${errorText}`);
     }
 
     const tokens: TokenResponse = await response.json();
