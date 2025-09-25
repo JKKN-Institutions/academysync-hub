@@ -114,7 +114,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('Error fetching institutions:', error)
-        results.institutions = { error: error.message }
+        results.institutions = { error: error instanceof Error ? error.message : String(error) }
       }
     }
 
@@ -197,7 +197,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('Error fetching departments:', error)
-        results.departments = { error: error.message }
+        results.departments = { error: error instanceof Error ? error.message : String(error) }
       }
     }
 
@@ -226,7 +226,7 @@ serve(async (req) => {
 
         // If action is 'sync', also update the staff table
         if (action === 'sync') {
-          const staffToSync = results.staff.data.map(s => ({
+          const staffToSync = results.staff.data.map((s: any) => ({
             staff_id: s.staff_id,
             name: s.name,
             email: s.email,
@@ -256,7 +256,7 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('Error fetching staff:', error)
-        results.staff = { error: error.message }
+        results.staff = { error: error instanceof Error ? error.message : String(error) }
       }
     }
 
@@ -356,7 +356,7 @@ serve(async (req) => {
         console.log(`🎉 Successfully processed ${transformedStudents.length} students`)
       } catch (error) {
         console.error('Error fetching students:', error)
-        results.students = { error: `Failed to fetch students: ${error.message}` }
+        results.students = { error: `Failed to fetch students: ${error instanceof Error ? error.message : String(error)}` }
       }
     }
     console.log('Sync completed successfully:', results)
@@ -377,7 +377,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       }),
       {
         status: 500,

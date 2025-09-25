@@ -98,7 +98,7 @@ serve(async (req) => {
             success: false,
             connectivity_test: true,
             api_key_valid: false,
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
             timestamp: new Date().toISOString()
           }),
           { 
@@ -212,13 +212,13 @@ serve(async (req) => {
       console.log(`✅ Successfully fetched all ${allStudents.length} students from ${totalPages} pages`)
     } catch (error) {
       console.error('Error fetching students:', error)
-      studentError = `Failed to fetch students: ${error.message}`
+      studentError = `Failed to fetch students: ${error instanceof Error ? error.message : String(error)}`
     }
 
     // Filter and transform students
     const activeStudents = allStudents.filter(student => 
       (student.status === 'active' || student.status === 'Active' || 
-       student.status === 1 || student.status === '1') && student.id
+       student.status === '1') && student.id
     )
 
     const transformedStudents = activeStudents.map(student => ({
@@ -294,7 +294,7 @@ serve(async (req) => {
       // Filter and transform staff
       const activeStaff = allStaff.filter(staff => 
         (staff.status === 'active' || staff.status === 'Active' || 
-         staff.status === 1 || staff.status === '1') && staff.id && staff.email
+         staff.status === '1') && staff.id && staff.email
       )
 
       const transformedStaff = activeStaff.map(staff => ({
@@ -330,7 +330,7 @@ serve(async (req) => {
       }
     } catch (error) {
       console.error('Error fetching staff:', error)
-      staffError = `Failed to fetch staff: ${error.message}`
+      staffError = `Failed to fetch staff: ${error instanceof Error ? error.message : String(error)}`
     }
 
     const syncResult = {
@@ -362,7 +362,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       }),
       { 

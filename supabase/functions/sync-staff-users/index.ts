@@ -199,7 +199,7 @@ serve(async (req) => {
           errors.push({
             staff_id: staff.staff_id,
             email: staff.email,
-            error: staffError.message
+            error: staffError instanceof Error ? staffError.message : String(staffError)
           });
         }
       }
@@ -247,7 +247,7 @@ serve(async (req) => {
           users_processed: usersProcessed,
           users_created: usersCreated,
           users_updated: usersUpdated,
-          errors: JSON.stringify([...errors, { error: syncError.message }]),
+          errors: JSON.stringify([...errors, { error: syncError instanceof Error ? syncError.message : String(syncError) }]),
           sync_status: 'failed',
           completed_at: new Date().toISOString()
         })
@@ -260,7 +260,7 @@ serve(async (req) => {
     console.error('Function error:', error);
     
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       success: false 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

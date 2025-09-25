@@ -151,7 +151,7 @@ serve(async (req) => {
     // Filter for active students only
     const activeStudents = allStudents.filter(student => {
       const isActive = student.status === 'active' || student.status === 'Active' || 
-                       student.status === 1 || student.status === '1'
+                       student.status === '1'
       return isActive && student.id
     })
 
@@ -211,7 +211,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()
       }),
       { 

@@ -29,7 +29,7 @@ serve(async (req) => {
       console.log('Failed to parse request body, using defaults:', parseError);
     }
 
-    const { action = 'sync_all', sync_students = true, sync_staff = true } = requestBody;
+    const { action = 'sync_all', sync_students = true, sync_staff = true } = requestBody as any;
 
     console.log('Starting comprehensive user sync operation:', { action, sync_students, sync_staff });
 
@@ -211,7 +211,7 @@ serve(async (req) => {
             errors.push({
               type: 'staff',
               external_id: staff.staff_id,
-              error: staffError.message
+              error: staffError instanceof Error ? staffError.message : String(staffError)
             });
           }
         }
@@ -381,7 +381,7 @@ serve(async (req) => {
             errors.push({
               type: 'student',
               external_id: student.id,
-              error: studentError.message
+              error: studentError instanceof Error ? studentError.message : String(studentError)
             });
           }
         }
@@ -435,7 +435,7 @@ serve(async (req) => {
           users_processed: usersProcessed,
           users_created: usersCreated,
           users_updated: usersUpdated,
-          errors: JSON.stringify([...errors, { error: syncError.message }]),
+          errors: JSON.stringify([...errors, { error: syncError instanceof Error ? syncError.message : String(syncError) }]),
           sync_status: 'failed',
           completed_at: new Date().toISOString()
         })
@@ -448,7 +448,7 @@ serve(async (req) => {
     console.error('Function error:', error);
     
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       success: false 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
