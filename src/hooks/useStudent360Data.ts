@@ -494,30 +494,51 @@ export const useStudent360Data = () => {
 
   // Fetch detailed data for a specific student
   const fetchStudentDetails = useCallback(async (studentId: string): Promise<Student360Data | null> => {
-    // Always try to fetch real data first
+    console.log('🔍 fetchStudentDetails called with ID:', studentId);
+    console.log('📊 Demo mode enabled:', isDemoMode);
+    
+    // If in demo mode, return demo data immediately
+    if (isDemoMode) {
+      console.log('✅ Using demo data (demo mode enabled)');
+      const demoStudents = getDemoStudents();
+      const demoStudent = demoStudents.find(s => s.id === studentId || s.studentId === studentId);
+      console.log('🎭 Found demo student:', demoStudent ? demoStudent.name : 'Not found');
+      return demoStudent || null;
+    }
+
+    // Try to fetch real data first
     try {
-      console.log('Fetching real-time student data for ID:', studentId);
+      console.log('🌐 Attempting to fetch real-time student data for ID:', studentId);
       const result = await fetchStudent360Data(studentId);
       
       if (result && result.name !== "Demo Student") {
-        console.log('Successfully fetched real student data:', result);
+        console.log('✅ Successfully fetched real student data:', result.name);
         return result;
+      } else {
+        console.warn('⚠️ API returned demo/placeholder data, treating as failure');
       }
     } catch (error) {
-      console.warn('Real API failed for student details:', error);
+      console.error('❌ Real API failed for student details:', error);
+      
+      // Show user-friendly error message
+      toast({
+        title: "API Connection Issue",
+        description: "Unable to fetch live student data. Please check API configuration in Admin settings.",
+        variant: "destructive",
+      });
     }
 
-    // Fallback to demo data only if demo mode is enabled and real API failed
-    if (isDemoMode) {
-      console.log('Using demo data as fallback for student details');
-      const demoStudents = getDemoStudents();
-      return demoStudents.find(s => s.id === studentId) || null;
-    }
-
-    // If not in demo mode and real API failed, return null
-    console.error('Unable to fetch student details - API failed and demo mode is disabled');
+    // If not in demo mode and real API failed, return null with clear message
+    console.error('💥 Unable to fetch student details - API failed and demo mode is disabled');
+    
+    toast({
+      title: "No Student Data Available",
+      description: "Student details could not be loaded. Enable Demo Mode in Admin settings to use sample data.",
+      variant: "destructive",
+    });
+    
     return null;
-  }, [isDemoMode]);
+  }, [isDemoMode, toast]);
 
   return {
     students,
