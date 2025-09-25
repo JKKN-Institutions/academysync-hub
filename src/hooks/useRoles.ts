@@ -185,7 +185,30 @@ export const useRoles = () => {
 
   const assignRoleToUser = async (userId: string, roleId: string, expiresAt?: string) => {
     try {
-      const { error } = await supabase
+      // First, get the role name from the role ID
+      const selectedRole = roles.find(r => r.id === roleId);
+      if (!selectedRole) {
+        throw new Error('Role not found');
+      }
+
+      // Update both systems for backward compatibility
+      
+      // 1. Update the user_profiles.role field (legacy system)
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ role: selectedRole.name })
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      // 2. Remove existing role assignments for this user to avoid duplicates
+      await supabase
+        .from('user_role_assignments')
+        .delete()
+        .eq('user_id', userId);
+
+      // 3. Insert the new role assignment (new system)
+      const { error: assignmentError } = await supabase
         .from('user_role_assignments')
         .insert([
           {
@@ -196,7 +219,7 @@ export const useRoles = () => {
           }
         ]);
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
 
       toast({
         title: "Success",
@@ -215,13 +238,24 @@ export const useRoles = () => {
 
   const removeRoleFromUser = async (userId: string, roleId: string) => {
     try {
-      const { error } = await supabase
+      // Remove from both systems for consistency
+      
+      // 1. Remove from new system
+      const { error: assignmentError } = await supabase
         .from('user_role_assignments')
         .delete()
         .eq('user_id', userId)
         .eq('role_id', roleId);
 
-      if (error) throw error;
+      if (assignmentError) throw assignmentError;
+
+      // 2. Update legacy system - set to default role 'mentee'
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({ role: 'mentee' })
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
 
       toast({
         title: "Success",
