@@ -121,7 +121,7 @@ export const useCounselingSessions = () => {
       // Check user profile and permissions
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
-        .select('role, display_name, department')
+        .select('role, display_name, department, external_id')
         .eq('user_id', authUser.id)
         .single();
       
@@ -188,8 +188,8 @@ export const useCounselingSessions = () => {
 
       // Send in-app notifications to all students
       if (sessionData.students.length > 0) {
-        const notificationData = sessionData.students.map(studentId => ({
-          user_external_id: studentId, // Student ID is already the external ID
+        const studentNotifications = sessionData.students.map(studentId => ({
+          user_external_id: studentId,
           user_type: 'student' as const,
           title: '📚 New Counseling Session Invitation',
           message: `You have been invited to "${sessionData.name}" scheduled for ${new Date(sessionData.session_date).toLocaleDateString()}${sessionData.start_time ? ` at ${sessionData.start_time}` : ''} by ${mentorName || 'your mentor'}.`,
@@ -206,29 +206,61 @@ export const useCounselingSessions = () => {
           action_url: `/session/${session.id}`
         }));
 
-        const { error: notificationsError } = await supabase
+        const { error: studentNotificationsError } = await supabase
           .from('notifications')
-          .insert(notificationData);
+          .insert(studentNotifications);
 
-        if (notificationsError) {
-          console.error('Error creating notifications:', notificationsError);
-          // Continue execution, notifications are not critical for session creation
+        if (studentNotificationsError) {
+          console.error('Error creating student notifications:', studentNotificationsError);
         } else {
           console.log('Successfully created in-app notifications for students:', sessionData.students);
         }
       }
 
+      // Send mentor confirmation notification
+      if (userProfile.external_id) {
+        const mentorNotification = {
+          user_external_id: userProfile.external_id,
+          user_type: 'mentor' as const,
+          title: '✅ Session Created Successfully',
+          message: `Your counseling session "${sessionData.name}" has been created with ${sessionData.students.length} student${sessionData.students.length !== 1 ? 's' : ''} for ${new Date(sessionData.session_date).toLocaleDateString()}${sessionData.start_time ? ` at ${sessionData.start_time}` : ''}. All students have been notified.`,
+          type: 'session_confirmation' as const,
+          data: {
+            sessionId: session.id,
+            sessionName: sessionData.name,
+            studentCount: sessionData.students.length,
+            sessionDate: sessionData.session_date,
+            sessionTime: sessionData.start_time,
+            location: sessionData.location,
+            emailsSent: sendEmails
+          },
+          action_required: false,
+          action_url: `/session/${session.id}`
+        };
+
+        const { error: mentorNotificationError } = await supabase
+          .from('notifications')
+          .insert(mentorNotification);
+
+        if (mentorNotificationError) {
+          console.error('Error creating mentor notification:', mentorNotificationError);
+        } else {
+          console.log('Successfully created mentor confirmation notification');
+        }
+      }
+
       // Send emails if requested
       if (sendEmails && sessionData.students.length > 0) {
-        await sendCounselingEmails(sessionData, mentorName || 'Your Mentor');
+        const emailResult = await sendCounselingEmails(sessionData, mentorName || userProfile.display_name || 'Your Mentor');
+        console.log('Email sending result:', emailResult);
       }
 
       // Refetch sessions to update the list
       await fetchSessions();
 
       toast({
-        title: 'Session Created',
-        description: `Successfully created "${sessionData.name}" session.${sendEmails ? ' Email notifications sent to students.' : ''} In-app notifications sent to all participants.`
+        title: 'Session Created Successfully',
+        description: `"${sessionData.name}" session created with ${sessionData.students.length} student${sessionData.students.length !== 1 ? 's' : ''}.${sendEmails ? ' Email notifications sent.' : ''} All participants notified.`
       });
 
       // Return properly typed session
@@ -253,56 +285,99 @@ export const useCounselingSessions = () => {
 
   const sendCounselingEmails = async (sessionData: CreateSessionData, mentorName: string) => {
     try {
-      // Get student details from the database
+      console.log('=== EMAIL SENDING DEBUG ===');
+      console.log('Session data:', sessionData);
+      console.log('Mentor name:', mentorName);
+      
+      // Get student details from the database using correct field mapping
       const { data: students, error: studentsError } = await supabase
         .from('students')
-        .select('id, name, email')
-        .in('id', sessionData.students);
+        .select('student_id, name, email, id')
+        .in('student_id', sessionData.students); // Use student_id field to match external IDs
+
+      console.log('Student query result:', { students, studentsError });
 
       if (studentsError) {
         console.error('Error fetching student details:', studentsError);
-        return;
+        throw new Error(`Failed to fetch student details: ${studentsError.message}`);
       }
 
       if (!students || students.length === 0) {
         console.error('No student details found for IDs:', sessionData.students);
-        return;
+        throw new Error(`No students found with IDs: ${sessionData.students.join(', ')}`);
       }
 
-      const studentEmails = students.map(s => s.email).filter(email => email);
-      const studentNames = students.map(s => s.name);
+      // Filter students with valid emails
+      const studentsWithEmails = students.filter(s => s.email && s.email.trim() !== '');
+      console.log('Students with valid emails:', studentsWithEmails);
 
-      if (studentEmails.length === 0) {
-        console.error('No valid email addresses found for students');
-        return;
+      if (studentsWithEmails.length === 0) {
+        throw new Error('No valid email addresses found for the selected students');
       }
+
+      const studentEmails = studentsWithEmails.map(s => s.email);
+      const studentNames = studentsWithEmails.map(s => s.name);
+
+      console.log('Sending emails to:', studentEmails);
 
       // Call the email function
-      const { error: emailError } = await supabase.functions.invoke('send-counseling-email', {
+      const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-counseling-email', {
         body: {
           sessionName: sessionData.name,
           sessionDate: sessionData.session_date,
           sessionTime: sessionData.start_time || '00:00',
-          location: sessionData.location,
-          description: sessionData.description,
+          location: sessionData.location || 'To be confirmed',
+          description: sessionData.description || 'Counseling session details will be discussed during the meeting.',
           mentorName: mentorName,
           studentEmails: studentEmails,
           studentNames: studentNames
         }
       });
 
+      console.log('Email function response:', { emailResult, emailError });
+
       if (emailError) {
         console.error('Error sending counseling emails:', emailError);
+        throw new Error(`Failed to send emails: ${emailError.message}`);
+      }
+
+      // Check if any emails failed
+      if (emailResult?.emailsSent < studentEmails.length) {
+        console.warn(`Only ${emailResult.emailsSent} out of ${studentEmails.length} emails were sent successfully`);
         toast({
-          title: 'Email Error',
-          description: 'Session created successfully, but emails could not be sent.',
-          variant: 'destructive'
+          title: 'Partial Email Success',
+          description: `${emailResult.emailsSent} out of ${studentEmails.length} emails were sent successfully.`,
+          variant: 'default'
         });
       } else {
-        console.log('Counseling emails sent successfully');
+        console.log('All counseling emails sent successfully');
+        toast({
+          title: 'Emails Sent Successfully',
+          description: `Counseling session emails sent to all ${studentEmails.length} students.`
+        });
       }
+
+      return {
+        success: true,
+        emailsSent: emailResult?.emailsSent || 0,
+        totalStudents: studentEmails.length
+      };
     } catch (error) {
       console.error('Error in sendCounselingEmails:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred while sending emails';
+      
+      toast({
+        title: 'Email Error',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+
+      return {
+        success: false,
+        error: errorMessage,
+        emailsSent: 0,
+        totalStudents: 0
+      };
     }
   };
 
