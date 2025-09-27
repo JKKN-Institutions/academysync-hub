@@ -60,6 +60,16 @@ export const StudentFilters: React.FC<StudentFiltersProps> = ({
   // Use real data when not in demo mode
   const activeInstitutions = isDemo ? demoInstitutions : institutions;
   
+  console.log('📊 StudentFilters Data State:', {
+    isDemo,
+    institutionsCount: institutions.length,
+    departmentsCount: departments.length,
+    institutionsLoading,
+    departmentsLoading,
+    activeInstitutionsCount: activeInstitutions.length,
+    sampleInstitutions: activeInstitutions.slice(0, 3).map(i => i.institution_name)
+  });
+  
   // Filter departments based on selected institution
   const filteredDepartments = isDemo 
     ? demoDepartments 

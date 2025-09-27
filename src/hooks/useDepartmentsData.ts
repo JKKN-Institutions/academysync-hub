@@ -67,18 +67,54 @@ export const useDepartmentsData = () => {
         // Use demo data
         setDepartments(getDemoDepartments());
       } else {
-        // Fetch from Supabase database (synced from MyJKKN API)
-        const { data, error: dbError } = await supabase
-          .from('departments')
-          .select('*')
-          .eq('status', 'active')
-          .order('department_name');
+        // Always try direct API fetch to get fresh data
+        console.log('🏢 Fetching departments from API...');
+        
+        try {
+          // Import fetchDepartments dynamically to avoid circular dependency
+          const { fetchDepartments } = await import('@/services/myjkknApi');
+          const apiDepartments = await fetchDepartments();
+          
+          console.log('📊 Raw departments from API:', apiDepartments.length, 'items');
+          
+          // Transform API data to match our interface
+          const transformedDepartments: Department[] = apiDepartments.map(dept => ({
+            id: dept.id,
+            department_id: dept.id,
+            department_name: dept.department_name,
+            description: dept.description || dept.department_name,
+            institution_id: dept.institution_id,
+            status: 'active' as 'active' | 'inactive',
+            created_at: dept.created_at,
+            updated_at: dept.updated_at
+          }));
+          
+          console.log('✅ Transformed departments:', transformedDepartments.map(d => d.department_name));
+          setDepartments(transformedDepartments);
+          
+        } catch (apiError) {
+          console.error('❌ Direct API fetch failed, trying Supabase fallback:', apiError);
+          
+          // Fallback to Supabase data if API fails
+          const { data, error: dbError } = await supabase
+            .from('departments')
+            .select('*')
+            .eq('status', 'active')
+            .order('department_name');
 
-        if (dbError) {
-          throw dbError;
+          if (dbError) {
+            console.warn('Supabase departments fetch also failed:', dbError);
+            throw dbError;
+          }
+
+          if (data && data.length > 0) {
+            console.log('📦 Using Supabase fallback data:', data.length, 'departments');
+            setDepartments((data || []) as Department[]);
+          } else {
+            console.warn('⚠️ No departments found in either API or Supabase');
+            setDepartments([]);
+          }
         }
-
-        setDepartments((data || []) as Department[]);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load departments';
