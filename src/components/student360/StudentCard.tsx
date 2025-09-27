@@ -186,12 +186,31 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         {/* Action Button */}
         <div className="pt-3 border-t">
           <Button 
-            onClick={() => {
-              console.log('Viewing student 360 for student:', student);
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🔥 Button clicked! Student data:', {
+                id: student.id,
+                studentId: student.studentId,
+                name: student.name,
+                rollNo: student.rollNo
+              });
+              
               // Use studentId if available, fallback to id
               const id = student.studentId || student.id;
-              console.log('Using student ID for fetch:', id);
-              onViewDetails(id);
+              console.log('🆔 Using student ID for fetch:', id);
+              
+              if (!id) {
+                console.error('❌ No valid student ID found!');
+                return;
+              }
+              
+              try {
+                onViewDetails(id);
+                console.log('✅ onViewDetails called successfully');
+              } catch (error) {
+                console.error('❌ Error calling onViewDetails:', error);
+              }
             }}
             className="w-full group-hover:shadow-md transition-all duration-200"
             variant="default"
