@@ -247,6 +247,9 @@ const Counseling = () => {
     );
   }
 
+  // Check if user can create sessions (only admin, mentor, super_admin)
+  const canCreateSession = user?.role && ['admin', 'mentor', 'super_admin'].includes(user.role);
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -257,25 +260,27 @@ const Counseling = () => {
             Manage and track your counseling sessions
           </p>
         </div>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Session
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Counseling Session</DialogTitle>
-            </DialogHeader>
-            <SessionForm
-              onSubmit={handleSessionSubmit}
-              onCancel={() => setIsFormOpen(false)}
-              loading={isCreating}
-              onStudentAdded={handleStudentAdded}
-            />
-          </DialogContent>
-        </Dialog>
+        {canCreateSession && (
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Session
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Counseling Session</DialogTitle>
+              </DialogHeader>
+              <SessionForm
+                onSubmit={handleSessionSubmit}
+                onCancel={() => setIsFormOpen(false)}
+                loading={isCreating}
+                onStudentAdded={handleStudentAdded}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {/* Filters */}
