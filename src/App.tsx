@@ -49,7 +49,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/student-login" element={<Login />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/callback" element={<AuthCallback />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/handbook" element={<Landing />} />

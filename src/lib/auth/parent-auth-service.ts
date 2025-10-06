@@ -36,7 +36,7 @@ export class ParentAuthService {
     this.config = {
       parentAppUrl: 'https://auth.jkkn.ai',
       appId: '',
-      redirectUri: (typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : '/auth/callback'),
+      redirectUri: (typeof window !== 'undefined' ? window.location.origin + '/callback' : '/callback'),
       scopes: ['read', 'write', 'profile']
     };
 
@@ -81,7 +81,7 @@ export class ParentAuthService {
     }
 
     const computedRedirect = typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
+      ? `${window.location.origin}/callback`
       : this.config.redirectUri;
 
     // Generate state if not provided
@@ -111,7 +111,7 @@ export class ParentAuthService {
     }
 
     const computedRedirect = typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
+      ? `${window.location.origin}/callback`
       : this.config.redirectUri;
 
     await this.ensureConfig();
