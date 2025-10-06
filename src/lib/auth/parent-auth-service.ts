@@ -71,7 +71,7 @@ export class ParentAuthService {
     }
   }
 
-  // Initialize OAuth2 authentication flow - Redirects to consent page
+  // Initialize OAuth2 authentication flow - Redirects to authorization page
   async initiateLogin(state?: string): Promise<void> {
     await this.ensureConfig();
 
@@ -84,24 +84,28 @@ export class ParentAuthService {
       ? `${window.location.origin}/auth/callback`
       : this.config.redirectUri;
 
-    const authUrl = new URL(`${this.config.parentAppUrl}/auth/child-app/consent`);
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('child_app_id', this.config.appId);
-    authUrl.searchParams.append('redirect_uri', computedRedirect);
-    authUrl.searchParams.append('scope', this.config.scopes.join(' '));
-    authUrl.searchParams.append('state', state || this.generateState());
+    // Generate state if not provided
+    const oauthState = state || this.generateState();
+    localStorage.setItem('oauth_state', oauthState);
 
-    if (!state) {
-      sessionStorage.setItem('oauth_state', authUrl.searchParams.get('state')!);
-    }
+    // Build authorization URL
+    const params = new URLSearchParams({
+      client_id: this.config.appId,
+      redirect_uri: computedRedirect,
+      response_type: 'code',
+      scope: 'read write profile',
+      state: oauthState,
+    });
 
-    console.log('[ParentAuth] Initiating login', { url: authUrl.toString(), appId: this.config.appId, redirect: computedRedirect });
-    window.location.href = authUrl.toString();
+    const authUrl = `${this.config.parentAppUrl}/api/auth/authorize?${params.toString()}`;
+    console.log('[ParentAuth] Redirecting to:', authUrl);
+    
+    window.location.href = authUrl;
   }
 
   // Handle OAuth callback with authorization code (via Edge Function)
   async handleCallback(code: string, state: string): Promise<UserSession> {
-    const savedState = sessionStorage.getItem('oauth_state');
+    const savedState = localStorage.getItem('oauth_state');
     if (state !== savedState) {
       throw new Error('Invalid state parameter - possible CSRF attack');
     }
@@ -135,7 +139,7 @@ export class ParentAuthService {
     const session = await response.json();
     this.saveSession(session);
     this.scheduleTokenRefresh(session.expires_in);
-    sessionStorage.removeItem('oauth_state');
+    localStorage.removeItem('oauth_state');
     return session;
   }
 
