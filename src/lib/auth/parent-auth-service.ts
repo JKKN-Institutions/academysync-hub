@@ -34,7 +34,7 @@ export class ParentAuthService {
   private constructor() {
     // Start with minimal defaults; fetch real config from Edge Function when needed
     this.config = {
-      parentAppUrl: 'https://my.jkkn.ac.in',
+      parentAppUrl: 'https://auth.jkkn.ai',
       appId: '',
       redirectUri: (typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : '/auth/callback'),
       scopes: ['read', 'write', 'profile']
