@@ -38,8 +38,10 @@ const StaffDirectory = () => {
   const { institutions } = useInstitutionsData();
   const { departments } = useDepartmentsData();
 
-  // Filter departments based on selected institution if needed
-  const filteredDepartments = departments;
+  // Filter departments based on selected institution
+  const filteredDepartments = selectedInstitution && selectedInstitution !== "all"
+    ? departments.filter(dept => dept.institution_id === selectedInstitution)
+    : departments;
 
   // Filter staff based on search, status, institution, and department
   const filteredStaff = staff.filter(member => {
@@ -197,7 +199,14 @@ const StaffDirectory = () => {
             <div className="flex flex-col md:flex-row gap-4">
               {/* Institution Filter */}
               <div className="flex-1">
-                <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                <Select 
+                  value={selectedInstitution} 
+                  onValueChange={(value) => {
+                    setSelectedInstitution(value);
+                    // Reset department when institution changes
+                    setSelectedDepartment("all");
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="All Institutions" />
                   </SelectTrigger>
@@ -214,9 +223,17 @@ const StaffDirectory = () => {
 
               {/* Department Filter */}
               <div className="flex-1">
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <Select 
+                  value={selectedDepartment} 
+                  onValueChange={setSelectedDepartment}
+                  disabled={selectedInstitution && selectedInstitution !== "all" && filteredDepartments.length === 0}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Department" />
+                    <SelectValue placeholder={
+                      selectedInstitution && selectedInstitution !== "all" && filteredDepartments.length === 0
+                        ? "No departments available"
+                        : "All Departments"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Departments</SelectItem>
