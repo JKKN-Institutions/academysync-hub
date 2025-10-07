@@ -41,20 +41,33 @@ const Student360 = () => {
     setLoadingDetails(true);
     try {
       console.log('Loading student details for ID:', id);
-      const studentDetails = await fetchStudentDetails(id);
-      if (studentDetails) {
-        console.log('Student details loaded successfully:', studentDetails);
-        setSelectedStudent(studentDetails);
-        // Use navigate to properly update the URL
+      
+      // First, find the student from the list to show basic info immediately
+      const studentFromList = students.find(s => s.id === id || s.studentId === id);
+      
+      if (studentFromList) {
+        // Set the student from list first to show basic info
+        setSelectedStudent(studentFromList);
         navigate(`/student360/${id}`, { replace: true });
+        
+        // Then try to fetch detailed data in the background
+        try {
+          const detailedStudent = await fetchStudentDetails(id);
+          if (detailedStudent) {
+            console.log('✅ Detailed student data loaded:', detailedStudent);
+            setSelectedStudent(detailedStudent);
+          } else {
+            console.log('ℹ️ Using basic student info from list view');
+          }
+        } catch (detailError) {
+          console.warn('⚠️ Could not load detailed data, showing basic info:', detailError);
+        }
       } else {
-        console.warn('No student details returned for ID:', id);
-        // Navigate back to the list if student not found
+        console.warn('❌ Student not found in list:', id);
         handleBackToList();
       }
     } catch (error) {
       console.error('Error loading student details:', error);
-      // Navigate back to the list on error
       handleBackToList();
     } finally {
       setLoadingDetails(false);

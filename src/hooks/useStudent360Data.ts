@@ -515,28 +515,14 @@ export const useStudent360Data = () => {
         console.log('✅ Successfully fetched real student data:', result.name);
         return result;
       } else {
-        console.warn('⚠️ API returned demo/placeholder data, treating as failure');
+        console.warn('⚠️ API returned demo/placeholder data, will use basic info');
       }
     } catch (error) {
       console.error('❌ Real API failed for student details:', error);
-      
-      // Show user-friendly error message
-      toast({
-        title: "API Connection Issue",
-        description: "Unable to fetch live student data. Please check API configuration in Admin settings.",
-        variant: "destructive",
-      });
     }
 
-    // If not in demo mode and real API failed, return null with clear message
-    console.error('💥 Unable to fetch student details - API failed and demo mode is disabled');
-    
-    toast({
-      title: "No Student Data Available",
-      description: "Student details could not be loaded. Enable Demo Mode in Admin settings to use sample data.",
-      variant: "destructive",
-    });
-    
+    // Return null to allow caller to use basic student info from list
+    console.log('ℹ️ Detailed data unavailable, caller will use basic info');
     return null;
   }, [isDemoMode, toast]);
 
