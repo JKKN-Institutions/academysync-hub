@@ -160,7 +160,6 @@ const Login = () => {
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-white mb-3">🎓 Welcome Back!</h2>
               <p className="text-blue-200 mb-2">Sign in with your JKKN Google account</p>
-              <p className="text-sm text-blue-200/70">(@jkkn.ac.in, @jkkniu.edu.in, @jkknce.ac.in)</p>
             </div>
 
             {error && (
