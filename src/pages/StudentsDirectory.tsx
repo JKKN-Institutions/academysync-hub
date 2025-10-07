@@ -153,7 +153,7 @@ const StudentsDirectory = () => {
                         onValueChange={(value) => {
                           setSelectedInstitution(value);
                           // Reset department when institution changes
-                          setSelectedDepartment("");
+                          setSelectedDepartment("all");
                         }}
                       >
                         <SelectTrigger>
