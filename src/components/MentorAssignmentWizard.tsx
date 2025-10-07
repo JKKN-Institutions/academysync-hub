@@ -16,6 +16,7 @@ import { useDepartmentsData } from '@/hooks/useDepartmentsData';
 import { useInstitutionsData } from '@/hooks/useInstitutionsData';
 import { useAssignments } from '@/hooks/useAssignments';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MentorAssignmentWizardProps {
   open: boolean;
@@ -135,7 +136,35 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
           }
         };
 
-        return await createAssignment(assignmentData);
+        const result = await createAssignment(assignmentData);
+
+        // Send notification to student
+        if (result?.success) {
+          try {
+            await supabase.from('notifications').insert({
+              user_external_id: student.studentId,
+              user_type: 'student',
+              type: 'mentor_assignment',
+              title: 'New Mentor Assigned',
+              message: `You have been assigned to ${selectedMentor.name} (${selectedMentor.designation}) from ${selectedMentor.department} department as your ${assignmentType === 'primary' ? 'primary' : 'co-'} mentor.`,
+              action_url: '/profile',
+              action_required: false,
+              data: {
+                mentor_id: selectedMentor.staffId,
+                mentor_name: selectedMentor.name,
+                mentor_department: selectedMentor.department,
+                assignment_type: assignmentType,
+                student_department: student.department,
+                student_program: student.program
+              }
+            });
+          } catch (notifError) {
+            console.error('Failed to send notification:', notifError);
+            // Don't fail the assignment if notification fails
+          }
+        }
+
+        return result;
       });
 
       const results = await Promise.all(assignmentPromises);
@@ -144,7 +173,7 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
       if (successCount === selectedMentees.length) {
         toast({
           title: 'Assignments Created',
-          description: `Successfully created ${successCount} fresh assignment(s).`,
+          description: `Successfully created ${successCount} assignment(s) and sent notifications.`,
         });
       } else {
         toast({
