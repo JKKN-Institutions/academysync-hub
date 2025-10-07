@@ -332,9 +332,44 @@ export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({
                               )}
                             </div>
                           </div>
-                          <Badge variant="outline" className="capitalize">
-                            {participant.participation_status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={participant.participation_status}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value as 'invited' | 'confirmed' | 'attended' | 'missed';
+                                try {
+                                  const { error } = await supabase
+                                    .from('session_participants')
+                                    .update({ participation_status: newStatus })
+                                    .eq('id', participant.id);
+
+                                  if (error) throw error;
+
+                                  toast({
+                                    title: 'Status Updated',
+                                    description: `Participant status updated to ${newStatus}`
+                                  });
+
+                                  // Refetch session details
+                                  fetchSessionDetails(session.id);
+                                  onSessionUpdated?.();
+                                } catch (error) {
+                                  console.error('Error updating participant status:', error);
+                                  toast({
+                                    title: 'Error',
+                                    description: 'Failed to update participant status',
+                                    variant: 'destructive'
+                                  });
+                                }
+                              }}
+                              className="px-3 py-1 text-sm border rounded-md bg-background capitalize"
+                            >
+                              <option value="invited">Invited</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="attended">Attended</option>
+                              <option value="missed">Missed</option>
+                            </select>
+                          </div>
                         </div>
                       );
                     })}

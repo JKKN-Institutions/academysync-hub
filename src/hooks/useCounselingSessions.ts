@@ -169,6 +169,7 @@ export const useCounselingSessions = () => {
       }
 
       // Create participant records for each student
+      let participants: SessionParticipant[] = [];
       if (sessionData.students.length > 0) {
         const participantRecords = sessionData.students.map(studentId => ({
           session_id: session.id,
@@ -176,13 +177,17 @@ export const useCounselingSessions = () => {
           participation_status: 'invited'
         }));
 
-        const { error: participantsError } = await supabase
+        const { data: insertedParticipants, error: participantsError } = await supabase
           .from('session_participants')
-          .insert(participantRecords);
+          .insert(participantRecords)
+          .select('id, student_external_id, participation_status');
 
         if (participantsError) {
           console.error('Error creating participants:', participantsError);
           // Don't throw here as the session was created successfully
+        } else if (insertedParticipants) {
+          participants = insertedParticipants as SessionParticipant[];
+          console.log('✅ Successfully created participants:', participants);
         }
       }
 
@@ -263,13 +268,14 @@ export const useCounselingSessions = () => {
         description: `"${sessionData.name}" session created with ${sessionData.students.length} student${sessionData.students.length !== 1 ? 's' : ''}.${sendEmails ? ' Email notifications sent.' : ''} All participants notified.`
       });
 
-      // Return properly typed session
+      // Return properly typed session with participants
       return {
         ...session,
         session_type: session.session_type as 'one_on_one' | 'group',
         status: session.status as 'pending' | 'completed' | 'cancelled',
         priority: session.priority as 'low' | 'normal' | 'high',
-        participants: []
+        participants: participants,
+        can_view_details: true // User who created can view details
       };
     } catch (err) {
       console.error('Error creating session:', err);
