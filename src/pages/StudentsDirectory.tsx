@@ -26,8 +26,10 @@ const StudentsDirectory = () => {
   const { institutions, loading: institutionsLoading } = useInstitutionsData();
   const { departments, loading: departmentsLoading } = useDepartmentsData();
 
-  // Filter departments based on selected institution if needed
-  const filteredDepartments = departments;
+  // Filter departments based on selected institution
+  const filteredDepartments = selectedInstitution && selectedInstitution !== "all"
+    ? departments.filter(dept => dept.institution_id === selectedInstitution)
+    : departments;
 
   // Filter students based on search term, institution, and department
   const filteredStudents = students.filter(student => {
@@ -38,9 +40,20 @@ const StudentsDirectory = () => {
         interest.toLowerCase().includes(searchTerm.toLowerCase())
       ));
 
-    // Match by institution name
-    const matchesInstitution = !selectedInstitution || selectedInstitution === "all" || 
-      institutions.find(inst => inst.id === selectedInstitution)?.institution_name === student.program;
+    // Match by institution - check both department's institution and student's department
+    let matchesInstitution = true;
+    if (selectedInstitution && selectedInstitution !== "all") {
+      const selectedInst = institutions.find(inst => inst.id === selectedInstitution);
+      if (selectedInst) {
+        // Get all departments that belong to this institution
+        const instDepartments = departments
+          .filter(dept => dept.institution_id === selectedInstitution)
+          .map(dept => dept.department_name);
+        
+        // Check if student's department is in this institution
+        matchesInstitution = instDepartments.includes(student.department);
+      }
+    }
     
     // Match by department name
     const matchesDepartment = !selectedDepartment || selectedDepartment === "all" || 
@@ -135,7 +148,14 @@ const StudentsDirectory = () => {
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Institution Filter */}
                     <div className="flex-1">
-                      <Select value={selectedInstitution} onValueChange={setSelectedInstitution}>
+                      <Select 
+                        value={selectedInstitution} 
+                        onValueChange={(value) => {
+                          setSelectedInstitution(value);
+                          // Reset department when institution changes
+                          setSelectedDepartment("");
+                        }}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="All Institutions" />
                         </SelectTrigger>
@@ -152,9 +172,17 @@ const StudentsDirectory = () => {
 
                     {/* Department Filter */}
                     <div className="flex-1">
-                      <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                      <Select 
+                        value={selectedDepartment} 
+                        onValueChange={setSelectedDepartment}
+                        disabled={selectedInstitution && selectedInstitution !== "all" && filteredDepartments.length === 0}
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Department" />
+                          <SelectValue placeholder={
+                            selectedInstitution && selectedInstitution !== "all" && filteredDepartments.length === 0
+                              ? "No departments available"
+                              : "All Departments"
+                          } />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Departments</SelectItem>
