@@ -27,8 +27,17 @@ export const useStudentsData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [authReady, setAuthReady] = useState(false);
+
+  // Wait for auth to be ready before fetching
+  useEffect(() => {
+    const timer = setTimeout(() => setAuthReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const loadStudents = async () => {
+    if (!authReady) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -155,13 +164,8 @@ export const useStudentsData = () => {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load students';
       setError(errorMessage);
       
-      if (!isDemoMode) {
-        toast({
-          title: 'Error Loading Students',
-          description: errorMessage,
-          variant: 'destructive'
-        });
-      }
+      // Log silently, don't show disruptive toast on refresh
+      console.warn('Students data fetch failed:', errorMessage);
       
       // Fallback to empty array on error
       setStudents([]);
@@ -171,8 +175,10 @@ export const useStudentsData = () => {
   };
 
   useEffect(() => {
-    loadStudents();
-  }, [isDemoMode]);
+    if (authReady) {
+      loadStudents();
+    }
+  }, [isDemoMode, authReady]);
 
   const refetch = () => {
     loadStudents();

@@ -43,8 +43,17 @@ export const useCounselingSessions = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [authReady, setAuthReady] = useState(false);
+
+  // Wait for auth to be ready before fetching
+  useEffect(() => {
+    const timer = setTimeout(() => setAuthReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const fetchSessions = async () => {
+    if (!authReady) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -95,11 +104,9 @@ export const useCounselingSessions = () => {
       console.error('Error fetching sessions:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sessions';
       setError(errorMessage);
-      toast({
-        title: 'Error Loading Sessions',
-        description: errorMessage,
-        variant: 'destructive'
-      });
+      
+      // Log silently, don't show disruptive toast on initial load/refresh
+      console.warn('Session fetch failed:', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -440,8 +447,10 @@ export const useCounselingSessions = () => {
   };
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
+    if (authReady) {
+      fetchSessions();
+    }
+  }, [authReady]);
 
   return {
     sessions,

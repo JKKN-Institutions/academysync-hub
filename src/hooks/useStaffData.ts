@@ -9,8 +9,17 @@ export const useStaffData = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [authReady, setAuthReady] = useState(false);
+
+  // Wait for auth to be ready
+  useEffect(() => {
+    const timer = setTimeout(() => setAuthReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const loadStaff = async () => {
+    if (!authReady) return;
+    
     try {
       setLoading(true);
       setError(null);
@@ -70,8 +79,10 @@ export const useStaffData = () => {
   };
 
   useEffect(() => {
-    loadStaff();
-  }, [isDemoMode]);
+    if (authReady) {
+      loadStaff();
+    }
+  }, [isDemoMode, authReady]);
 
   const refetch = () => {
     loadStaff();
