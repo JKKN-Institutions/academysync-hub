@@ -33,6 +33,17 @@ const MentorsDirectory = () => {
   });
 
   const filteredMentors = mentors.filter(mentor => {
+    // Debug: Log mentor data for first mentor when filters change
+    if (mentors.length > 0 && mentor === mentors[0]) {
+      console.log('🔍 Filter Debug - First mentor:', {
+        name: mentor.name,
+        department: mentor.department,
+        designation: mentor.designation,
+        status: mentor.status
+      });
+      console.log('🔍 Current filters:', filters);
+    }
+
     // Search filter
     const searchMatch = !filters.search || 
       `${mentor.name}`.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -50,29 +61,49 @@ const MentorsDirectory = () => {
       
       // Get departments for the selected institution
       const selectedInstitution = institutions.find(inst => inst.institution_name === filters.institution);
-      if (!selectedInstitution) return false;
+      if (!selectedInstitution) return true; // Don't filter out if institution not found
       
       const institutionDepartments = departments
         .filter(dept => dept.institution_id === selectedInstitution.id)
-        .map(dept => dept.department_name);
+        .map(dept => dept.department_name?.toLowerCase().trim());
       
-      return institutionDepartments.includes(mentor.department);
+      // Case-insensitive match with trimmed values
+      return institutionDepartments.some(dept => 
+        dept === mentor.department?.toLowerCase().trim()
+      );
     })();
 
-    // Department filter - exact match with staff department
+    // Department filter - case-insensitive match with trimmed values
     const departmentMatch = !filters.department || filters.department === "all" || 
-      mentor.department === filters.department;
+      mentor.department?.toLowerCase().trim() === filters.department?.toLowerCase().trim();
 
-    // Designation filter - exact match with staff designation
+    // Designation filter - case-insensitive match with trimmed values
     const designationMatch = !filters.designation || filters.designation === "all" || 
-      mentor.designation === filters.designation;
+      mentor.designation?.toLowerCase().trim() === filters.designation?.toLowerCase().trim();
 
-    // Status filter - exact match with staff status
+    // Status filter - case-insensitive match with trimmed values
     const statusMatch = !filters.status || filters.status === "all" || 
-      mentor.status === filters.status;
+      mentor.status?.toLowerCase().trim() === filters.status?.toLowerCase().trim();
 
-    return searchMatch && institutionMatch && departmentMatch && designationMatch && statusMatch;
+    const matchResult = searchMatch && institutionMatch && departmentMatch && designationMatch && statusMatch;
+    
+    // Debug: Log filter results for first mentor
+    if (mentors.length > 0 && mentor === mentors[0]) {
+      console.log('🔍 Filter Results:', {
+        searchMatch,
+        institutionMatch,
+        departmentMatch,
+        designationMatch,
+        statusMatch,
+        finalResult: matchResult
+      });
+    }
+
+    return matchResult;
   });
+
+  // Debug: Log filtered results summary
+  console.log(`📊 Mentor Filtering: ${filteredMentors.length} of ${mentors.length} mentors match filters`);
 
   const handleRetrySync = () => {
     refetch();
@@ -115,8 +146,14 @@ const MentorsDirectory = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentors Directory</h1>
           <p className="text-gray-600">
-            Browse all faculty and staff members who serve as mentors ({mentors.length} total)
+            Browse all faculty and staff members who serve as mentors ({filteredMentors.length} of {mentors.length} total)
           </p>
+          {mentors.length > 0 && (
+            <div className="mt-2 text-sm text-gray-500">
+              Active Staff: {mentors.filter(m => m.status === 'active').length} • 
+              Departments: {[...new Set(mentors.map(m => m.department).filter(Boolean))].length}
+            </div>
+          )}
         </div>
 
         {/* Etiquette Tip */}
@@ -162,14 +199,25 @@ const MentorsDirectory = () => {
             icon={Users}
             title="No mentors found"
             description={
-              filters.search || Object.values(filters).some(v => v !== "all" && v !== "")
-                ? "No mentors match your current filters. Try adjusting your search criteria."
-                : "No mentors are available in the directory."
+              mentors.length === 0 
+                ? "No mentors are available in the directory. Please sync staff data from the Admin panel."
+                : filters.search || Object.values(filters).some(v => v !== "all" && v !== "")
+                  ? `No mentors match your current filters. Try adjusting your search criteria. (${mentors.length} total mentors available)`
+                  : "No mentors are available in the directory."
             }
-            action={filters.search || Object.values(filters).some(v => v !== "all" && v !== "") ? {
-              label: "Clear filters",
-              onClick: handleClearFilters
-            } : undefined}
+            action={
+              mentors.length > 0 && (filters.search || Object.values(filters).some(v => v !== "all" && v !== ""))
+                ? {
+                    label: "Clear filters",
+                    onClick: handleClearFilters
+                  }
+                : mentors.length === 0
+                  ? {
+                      label: "Sync Staff Data",
+                      onClick: () => navigate('/admin')
+                    }
+                  : undefined
+            }
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
