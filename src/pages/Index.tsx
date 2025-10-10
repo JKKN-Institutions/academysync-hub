@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen, Plus, X } from "lucide-react";
+import { Users, Calendar, Target, FileText, Bell, BarChart3, Settings, Shield, GraduationCap, BookOpen, Plus, X, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentsData } from "@/hooks/useStudentsData";
@@ -533,7 +533,7 @@ const Index = () => {
           <Card>
             <CardHeader>
               <CardTitle>Students Overview</CardTitle>
-              <CardDescription>Current student statistics</CardDescription>
+              <CardDescription>Current student statistics {isDemo && <Badge variant="secondary" className="ml-2">Demo Data</Badge>}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -557,6 +557,17 @@ const Index = () => {
                     )}
                   </span>
                 </div>
+                {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={refetchStudents}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -589,6 +600,17 @@ const Index = () => {
                     )}
                   </span>
                 </div>
+                {user?.role === 'admin' || user?.role === 'super_admin' ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={refetchStaff}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                ) : null}
               </div>
             </CardContent>
           </Card>

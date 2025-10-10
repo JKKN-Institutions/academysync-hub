@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { AlertCircle, CheckCircle, Clock, Database, Settings, Shield, RotateCcw } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, Database, Settings, Shield, RotateCcw, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { AssignmentModeSettings } from "@/components/AssignmentModeSettings";
@@ -14,6 +14,7 @@ import { MyjkknDataFetcher } from "@/components/MyjkknDataFetcher";
 import { StudentForm } from "@/components/admin/StudentForm";
 import StudentsList from "@/components/admin/StudentsList";
 import { AutoStudentSync } from "@/components/admin/AutoStudentSync";
+import DataSyncTrigger from "@/components/DataSyncTrigger";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -102,8 +103,12 @@ const Admin = () => {
           <p className="text-muted-foreground">Manage system configuration and integrations</p>
         </div>
 
-        <Tabs defaultValue="integrations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="data-sync" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="data-sync">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Data Sync
+            </TabsTrigger>
             <TabsTrigger value="integrations">
               <Database className="w-4 h-4 mr-2" />
               Integrations
@@ -125,6 +130,20 @@ const Admin = () => {
               Audit Logs
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="data-sync">
+            <Card>
+              <CardHeader>
+                <CardTitle>MyJKKN Data Synchronization</CardTitle>
+                <CardDescription>
+                  Sync live data from MyJKKN API - students, staff, and all organizational data
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DataSyncTrigger />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="integrations">
             <Card>

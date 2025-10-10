@@ -50,23 +50,103 @@ serve(async (req) => {
         throw new Error('MYJKKN_API_KEY not configured');
       }
 
-      console.log('Fetching staff data from external API...');
+      console.log('Fetching staff data from external API with pagination...');
+      console.log('=== STAFF API PAGINATION FETCH ===');
       
-      // Fetch staff from external API
-      const staffResponse = await fetch('https://my.jkkn.ac.in/api/api-management/staff', {
-        headers: {
-          'Authorization': `Bearer ${myjkknApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      let allStaff: any[] = [];
+      let currentPage = 1;
+      let totalPages = 1;
 
-      if (!staffResponse.ok) {
-        throw new Error(`Failed to fetch staff: ${staffResponse.statusText}`);
+      // Try multiple possible endpoints for staff
+      const possibleEndpoints = [
+        `/api-management/staff?limit=1000`,
+        `/api-management/organizations/staff?limit=1000`,
+        `/staff?limit=1000`,
+        `/api-management/staff`
+      ];
+
+      let staffResponse: any = null;
+      let workingEndpoint: string = '';
+
+      // Try each endpoint until we find one that works
+      for (const endpoint of possibleEndpoints) {
+        try {
+          console.log(`Trying staff endpoint: ${endpoint}`);
+          const response = await fetch(`https://my.jkkn.ac.in/api${endpoint}`, {
+            headers: {
+              'Authorization': `Bearer ${myjkknApiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            console.log(`❌ Endpoint ${endpoint} failed with status ${response.status}`);
+            continue;
+          }
+
+          staffResponse = await response.json();
+          workingEndpoint = endpoint;
+          console.log(`✅ Endpoint ${endpoint} worked!`);
+          break;
+        } catch (error) {
+          console.log(`❌ Endpoint ${endpoint} failed:`, error);
+          continue;
+        }
       }
 
-      const staffData = await staffResponse.json();
-      const staffList = staffData.data || [];
+      if (!staffResponse) {
+        throw new Error('All staff API endpoints failed. Please check API configuration.');
+      }
 
+      // Now fetch all pages using the working endpoint
+      do {
+        console.log(`Fetching staff page ${currentPage} from ${workingEndpoint}...`);
+        
+        if (currentPage > 1) {
+          // Add pagination parameters for subsequent pages
+          const separator = workingEndpoint.includes('?') ? '&' : '?';
+          const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
+          
+          const response = await fetch(`https://my.jkkn.ac.in/api${paginatedEndpoint}`, {
+            headers: {
+              'Authorization': `Bearer ${myjkknApiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            console.error(`Failed to fetch page ${currentPage}: ${response.statusText}`);
+            break;
+          }
+
+          staffResponse = await response.json();
+        }
+
+        console.log(`Page ${currentPage} response:`, {
+          staffCount: staffResponse.data?.length || 0,
+          metadata: staffResponse.metadata
+        });
+
+        // Add this page's staff to our collection
+        if (staffResponse.data && Array.isArray(staffResponse.data)) {
+          allStaff = [...allStaff, ...staffResponse.data];
+        }
+
+        // Update pagination info
+        if (staffResponse.metadata) {
+          totalPages = staffResponse.metadata.totalPages || staffResponse.metadata.total_pages || 1;
+          console.log(`Pagination info: page ${currentPage} of ${totalPages}, total staff so far: ${allStaff.length}`);
+        } else {
+          console.log('No metadata found, assuming single page');
+          break;
+        }
+
+        currentPage++;
+      } while (currentPage <= totalPages);
+
+      console.log(`✅ Successfully fetched all ${allStaff.length} staff from ${totalPages} pages`);
+
+      const staffList = allStaff;
       console.log(`Found ${staffList.length} staff members to process`);
 
       // Process each staff member
@@ -74,15 +154,32 @@ serve(async (req) => {
         try {
           usersProcessed++;
           
-          if (!staff.email) {
+          // Extract email from various possible field names
+          const email = staff.email || staff.staff_email || staff.employee_email;
+          
+          if (!email) {
             errors.push({
-              staff_id: staff.staff_id,
+              staff_id: staff.staff_id || staff.id,
               error: 'No email address provided'
             });
             continue;
           }
 
-          console.log(`Processing staff: ${staff.name} (${staff.email})`);
+          // Extract name from various possible field combinations
+          let staffName = 'Unknown Staff';
+          if (staff.name) {
+            staffName = staff.name;
+          } else if (staff.staff_name) {
+            staffName = staff.staff_name;
+          } else if (staff.full_name) {
+            staffName = staff.full_name;
+          } else if (staff.first_name || staff.last_name) {
+            const firstName = staff.first_name || '';
+            const lastName = staff.last_name || '';
+            staffName = `${firstName} ${lastName}`.trim();
+          }
+
+          console.log(`Processing staff: ${staffName} (${email})`);
 
           // Check if user already exists in auth.users
           const { data: existingAuthUsers, error: authCheckError } = await supabaseClient.auth.admin.listUsers();
@@ -96,28 +193,28 @@ serve(async (req) => {
             continue;
           }
 
-          const existingAuthUser = existingAuthUsers.users.find(u => u.email === staff.email);
+          const existingAuthUser = existingAuthUsers.users.find(u => u.email === email);
           let authUserId = existingAuthUser?.id;
 
           // Create auth user if doesn't exist
           if (!existingAuthUser) {
-            console.log(`Creating new auth user for: ${staff.email}`);
+            console.log(`Creating new auth user for: ${email}`);
             
             const { data: newAuthUser, error: createAuthError } = await supabaseClient.auth.admin.createUser({
-              email: staff.email,
+              email: email,
               password: 'TempPassword123!',
               email_confirm: true,
               user_metadata: {
-                display_name: staff.name,
-                staff_id: staff.staff_id
+                display_name: staffName,
+                staff_id: staff.staff_id || staff.id
               }
             });
 
             if (createAuthError) {
               console.error('Error creating auth user:', createAuthError);
               errors.push({
-                staff_id: staff.staff_id,
-                email: staff.email,
+                staff_id: staff.staff_id || staff.id,
+                email: email,
                 error: `Auth user creation failed: ${createAuthError.message}`
               });
               continue;
@@ -130,30 +227,34 @@ serve(async (req) => {
 
           // Determine role based on designation
           let role = 'mentee'; // default
-          const designation = (staff.designation || '').toLowerCase();
+          const designation = (staff.designation || staff.employee_designation || '').toLowerCase();
           
-          if (designation.includes('professor') || designation.includes('faculty') || designation.includes('lecturer')) {
+          if (designation.includes('professor') || designation.includes('faculty') || designation.includes('lecturer') || designation.includes('assistant')) {
             role = 'mentor';
           } else if (designation.includes('admin') || designation.includes('director') || designation.includes('principal')) {
             role = 'admin';
-          } else if (designation.includes('head') || designation.includes('lead')) {
+          } else if (designation.includes('head') || designation.includes('lead') || designation.includes('hod')) {
             role = 'dept_lead';
           }
+
+          // Extract department name
+          const departmentName = staff.department?.department_name || staff.department || 'Unknown Department';
 
           // Insert or update user profile
           const { error: profileError } = await supabaseClient
             .from('user_profiles')
             .upsert({
               user_id: authUserId,
-              display_name: staff.name,
-              department: staff.department,
-              external_id: staff.staff_id,
+              display_name: staffName,
+              department: departmentName,
+              external_id: staff.staff_id || staff.id,
               role: role,
-              institution: 'JKKN College of Arts and Science',
-              mobile: staff.mobile,
+              institution: staff.institution?.institution_name || staff.institution || 'JKKN Institution',
+              mobile: staff.mobile || staff.phone,
               is_synced_from_staff: true,
-              staff_id: staff.staff_id,
-              designation: staff.designation
+              staff_id: staff.staff_id || staff.id,
+              designation: staff.designation || staff.employee_designation,
+              email: email
             }, {
               onConflict: 'user_id'
             });
@@ -161,8 +262,8 @@ serve(async (req) => {
           if (profileError) {
             console.error('Error upserting user profile:', profileError);
             errors.push({
-              staff_id: staff.staff_id,
-              email: staff.email,
+              staff_id: staff.staff_id || staff.id,
+              email: email,
               error: `Profile upsert failed: ${profileError.message}`
             });
             continue;
@@ -172,13 +273,13 @@ serve(async (req) => {
           const { error: staffInsertError } = await supabaseClient
             .from('staff')
             .upsert({
-              staff_id: staff.staff_id,
-              name: staff.name,
-              email: staff.email,
-              department: staff.department,
-              designation: staff.designation,
-              mobile: staff.mobile,
-              status: staff.is_active ? 'active' : 'inactive'
+              staff_id: staff.staff_id || staff.id,
+              name: staffName,
+              email: email,
+              department: departmentName,
+              designation: staff.designation || staff.employee_designation,
+              mobile: staff.mobile || staff.phone,
+              status: (staff.is_active === true || staff.is_active === 1 || staff.is_active === '1') ? 'active' : 'inactive'
             }, {
               onConflict: 'staff_id'
             });
@@ -192,13 +293,13 @@ serve(async (req) => {
             usersUpdated++;
           }
 
-          console.log(`Successfully processed: ${staff.name}`);
+          console.log(`Successfully processed: ${staffName}`);
 
         } catch (staffError) {
-          console.error(`Error processing staff ${staff.staff_id}:`, staffError);
+          console.error(`Error processing staff ${staff.staff_id || staff.id}:`, staffError);
           errors.push({
-            staff_id: staff.staff_id,
-            email: staff.email,
+            staff_id: staff.staff_id || staff.id,
+            email: staff.email || staff.staff_email,
             error: staffError instanceof Error ? staffError.message : String(staffError)
           });
         }
