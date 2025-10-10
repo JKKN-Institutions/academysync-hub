@@ -14,10 +14,9 @@ import {
 import { User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 export const ProfileDropdown = () => {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -27,28 +26,43 @@ export const ProfileDropdown = () => {
   const handleSignOut = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signOut();
+      console.log('🚪 Starting sign out process...');
       
-      if (error) {
-        console.error('Sign out error:', error);
-        throw error;
-      }
-
+      // Use the logout method from AuthContext which handles both parent auth and Supabase
+      await logout();
+      
+      console.log('✅ Sign out successful');
+      
       toast({
         title: "Signed out successfully",
         description: "You have been logged out of your account.",
       });
       
-      // Clear any cached data and navigate
+      // Clear any cached data
       localStorage.clear();
-      navigate("/login", { replace: true });
+      sessionStorage.clear();
+      
+      // Small delay to ensure cleanup completes
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+        window.location.reload(); // Force reload to clear all state
+      }, 100);
+      
     } catch (error: any) {
-      console.error('Sign out failed:', error);
+      console.error('❌ Sign out failed:', error);
       toast({
         title: "Error signing out",
         description: error.message || "There was a problem signing you out. Please try again.",
         variant: "destructive",
       });
+      
+      // Force logout even if error occurs
+      localStorage.clear();
+      sessionStorage.clear();
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+        window.location.reload();
+      }, 100);
     } finally {
       setIsLoading(false);
     }

@@ -268,18 +268,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
+      console.log('🔓 Logout initiated...');
+      
+      // Log logout activity before clearing session
+      try {
+        await supabase.rpc('log_user_activity', {
+          activity_type: 'logout'
+        });
+      } catch (activityError) {
+        console.warn('Failed to log logout activity:', activityError);
+      }
+      
       // Try parent auth logout first
       if (parentAuthService.isAuthenticated()) {
+        console.log('🔑 Logging out from parent auth service...');
         await parentAuthService.logout();
-      } else {
-        // Fallback to Supabase logout
-        await signOut();
       }
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Force clear and redirect
+      
+      // Also sign out from Supabase to ensure full cleanup
+      console.log('🔐 Signing out from Supabase...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Supabase sign out error:', error);
+      }
+      
+      // Clear user state
       setUser(null);
-      window.location.href = '/login';
+      
+      console.log('✅ Logout complete');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Force clear user state even on error
+      setUser(null);
+      throw error; // Re-throw so ProfileDropdown can handle it
     }
   };
 
