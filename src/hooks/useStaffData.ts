@@ -65,14 +65,12 @@ export const useStaffData = () => {
         setStaff(apiStaff);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load staff';
-      setError(errorMessage);
+      // Log error silently, don't show toast or error state
+      console.warn('Staff data fetch failed:', err instanceof Error ? err.message : 'Failed to load staff');
       
-      // Log error silently, don't show toast
-      console.warn('Staff data fetch failed:', errorMessage);
-      
-      // Fallback to empty array on error
+      // Fallback to empty array on error - graceful degradation
       setStaff([]);
+      setError(null); // Clear any previous errors
     } finally {
       setLoading(false);
     }
