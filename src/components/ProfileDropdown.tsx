@@ -42,11 +42,8 @@ export const ProfileDropdown = () => {
       localStorage.clear();
       sessionStorage.clear();
       
-      // Small delay to ensure cleanup completes
-      setTimeout(() => {
-        navigate("/login", { replace: true });
-        window.location.reload(); // Force reload to clear all state
-      }, 100);
+      // Navigate to login - use window.location for full page refresh
+      window.location.href = "/login";
       
     } catch (error: any) {
       console.error('❌ Sign out failed:', error);
@@ -59,10 +56,7 @@ export const ProfileDropdown = () => {
       // Force logout even if error occurs
       localStorage.clear();
       sessionStorage.clear();
-      setTimeout(() => {
-        navigate("/login", { replace: true });
-        window.location.reload();
-      }, 100);
+      window.location.href = "/login";
     } finally {
       setIsLoading(false);
     }
