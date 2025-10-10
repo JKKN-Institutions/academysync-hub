@@ -49,36 +49,50 @@ export const MentorFilters = ({
 
   // Get unique values from actual staff data
   const getUniqueValues = (field: string) => {
+    if (!staffData || staffData.length === 0) return [];
     return [...new Set(staffData.map(staff => staff[field]).filter(Boolean))].sort();
   };
 
   // Demo data when not using real API
   const demoInstitutions = [
-    { id: '1', institution_name: 'Main Campus', code: 'MAIN' },
-    { id: '2', institution_name: 'North Campus', code: 'NORTH' },
-    { id: '3', institution_name: 'South Campus', code: 'SOUTH' }
+    { id: '1', institution_name: 'JKKN College of Engineering & Technology', code: 'JKKN-ENG' },
+    { id: '2', institution_name: 'JKKN College of Pharmacy', code: 'JKKN-PHARM' },
+    { id: '3', institution_name: 'JKKN Dental College', code: 'JKKN-DENTAL' }
   ];
 
   const demoDepartments = [
     { id: '1', department_name: 'Computer Science', code: 'CS' },
-    { id: '2', department_name: 'Mathematics', code: 'MATH' },
-    { id: '3', department_name: 'Physics', code: 'PHY' },
-    { id: '4', department_name: 'Chemistry', code: 'CHEM' },
-    { id: '5', department_name: 'Biology', code: 'BIO' }
+    { id: '2', department_name: 'Mechanical Engineering', code: 'MECH' },
+    { id: '3', department_name: 'Electrical Engineering', code: 'EEE' },
+    { id: '4', department_name: 'Pharmacy', code: 'PHARM' },
+    { id: '5', department_name: 'Dentistry', code: 'DENT' }
   ];
 
   // Use actual data from database or demo data
-  const activeInstitutions = isDemo ? demoInstitutions : institutions;
-  const availableDepartments = isDemo ? demoDepartments : departments;
+  const activeInstitutions = isDemo ? demoInstitutions : (institutions.filter(i => i.status === 'active'));
+  const availableDepartments = isDemo ? demoDepartments : (departments.filter(d => d.status === 'active'));
+
+  // Get unique departments from staff data (primary source)
+  const staffDepartments = staffData && staffData.length > 0 
+    ? getUniqueValues('department')
+    : [];
+  
+  // Combine staff departments with database departments
+  const allDepartments = [...new Set([
+    ...staffDepartments,
+    ...availableDepartments.map(d => d.department_name)
+  ])].filter(Boolean).sort();
 
   // Get unique designations and status from staff data
+  const staffDesignations = getUniqueValues('designation');
   const designations = isDemo 
     ? ['Professor', 'Associate Professor', 'Assistant Professor', 'Senior Lecturer', 'Lecturer'] 
-    : getUniqueValues('designation');
+    : (staffDesignations.length > 0 ? staffDesignations : ['Professor', 'Associate Professor', 'Assistant Professor']);
 
+  const staffStatuses = getUniqueValues('status');
   const statusOptions = isDemo 
     ? ['active', 'inactive'] 
-    : getUniqueValues('status');
+    : (staffStatuses.length > 0 ? staffStatuses : ['active', 'inactive']);
 
   // Filter departments based on selected institution
   const getDepartmentsByInstitution = () => {
@@ -87,26 +101,36 @@ export const MentorFilters = ({
     }
     
     if (filters.institution === 'all' || !filters.institution) {
-      // Show all departments
-      return staffData.length > 0 
-        ? getUniqueValues('department')
-        : availableDepartments.map(d => d.department_name);
+      // Show all available departments
+      return allDepartments;
     }
     
-    // Filter departments by institution
+    // Find the selected institution
+    const selectedInstitution = activeInstitutions.find(
+      inst => inst.institution_name === filters.institution
+    );
+    
+    if (!selectedInstitution || !('institution_id' in selectedInstitution)) {
+      return allDepartments;
+    }
+    
+    // Get departments linked to this institution from database
     const institutionDepartments = availableDepartments
       .filter(dept => {
-        const institution = activeInstitutions.find(inst => inst.institution_name === filters.institution);
-        return institution && ('institution_id' in dept ? dept.institution_id === institution.id : true);
+        // Type guard: ensure dept has institution_id
+        if ('institution_id' in dept && dept.institution_id) {
+          return dept.institution_id === selectedInstitution.institution_id;
+        }
+        return false;
       })
       .map(d => d.department_name);
     
-    // Also include departments from staff data that exist in the institution
-    const staffDepartments = staffData
-      .map(staff => staff.department)
-      .filter(dept => dept && institutionDepartments.includes(dept));
+    // If no departments found in database for this institution, show all staff departments
+    if (institutionDepartments.length === 0) {
+      return allDepartments;
+    }
     
-    return [...new Set([...institutionDepartments, ...staffDepartments])].sort();
+    return institutionDepartments.sort();
   };
 
   const departmentOptions = getDepartmentsByInstitution();
@@ -345,7 +369,15 @@ export const MentorFilters = ({
 
           {/* Helper Text */}
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            Please select Institution, Department, Designation, and Status to refine your search
+            {staffData.length === 0 && !loading ? (
+              <span className="text-warning">⚠️ No staff data available. Please sync staff data from Admin panel.</span>
+            ) : (
+              <span>
+                Showing {staffData.length} mentor{staffData.length !== 1 ? 's' : ''} • 
+                {departmentOptions.length} department{departmentOptions.length !== 1 ? 's' : ''} • 
+                {designations.length} designation{designations.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         </div>
       </CardContent>
