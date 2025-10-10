@@ -122,7 +122,10 @@ export const useAssignments = () => {
     }
   };
 
-  const createAssignment = async (assignmentData: CreateAssignmentData) => {
+  const validateAndCreateAssignment = async (
+    assignmentData: CreateAssignmentData, 
+    cycleId: string
+  ) => {
     try {
       if (isDemoMode) {
         toast({
@@ -132,12 +135,38 @@ export const useAssignments = () => {
         return { success: true };
       }
 
+      // Validate assignment constraints
+      const { data: validation, error: validationError } = await supabase
+        .rpc('validate_assignment_constraints', {
+          p_mentor_external_id: assignmentData.mentor_external_id,
+          p_student_external_id: assignmentData.student_external_id,
+          p_cycle_id: cycleId
+        });
+
+      if (validationError) throw validationError;
+
+      const validationResult = validation?.[0];
+      
+      if (!validationResult?.is_valid) {
+        toast({
+          title: 'Validation Failed',
+          description: validationResult?.error_message || 'Assignment validation failed.',
+          variant: 'destructive'
+        });
+        return { success: false, error: validationResult?.error_message };
+      }
+
+      // Create assignment with cycle and department/program info
       const { data, error } = await supabase
         .from('assignments')
         .insert({
           ...assignmentData,
+          cycle_id: cycleId,
           status: 'active',
-          effective_from: new Date().toISOString()
+          effective_from: new Date().toISOString(),
+          department: validationResult.student_department,
+          program: validationResult.student_program,
+          institution: validationResult.student_department // Using department as institution
         })
         .select()
         .single();
@@ -146,10 +175,10 @@ export const useAssignments = () => {
 
       toast({
         title: 'Assignment Created',
-        description: 'Fresh assignment created successfully.',
+        description: 'Assignment created and validated successfully.',
       });
 
-      await fetchAssignments(); // Refresh the list
+      await fetchAssignments();
       return { success: true, data };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create assignment';
@@ -160,6 +189,27 @@ export const useAssignments = () => {
       });
       return { success: false, error: errorMessage };
     }
+  };
+
+  const createAssignment = async (assignmentData: CreateAssignmentData) => {
+    // Fallback for backward compatibility - use active cycle if available
+    const { data: activeCycle } = await supabase
+      .from('assignment_cycles')
+      .select('id')
+      .eq('status', 'active')
+      .eq('is_locked', false)
+      .single();
+
+    if (!activeCycle) {
+      toast({
+        title: 'No Active Cycle',
+        description: 'No active assignment cycle available. Please create and activate a cycle first.',
+        variant: 'destructive'
+      });
+      return { success: false, error: 'No active cycle' };
+    }
+
+    return validateAndCreateAssignment(assignmentData, activeCycle.id);
   };
 
   const updateAssignment = async (id: string, updates: Partial<Assignment>) => {
@@ -279,6 +329,7 @@ export const useAssignments = () => {
     loading,
     error,
     createAssignment,
+    validateAndCreateAssignment,
     updateAssignment,
     endAssignment,
     getAssignmentsByMentor,

@@ -14,15 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_cycles: {
+        Row: {
+          academic_year: string
+          created_at: string
+          created_by: string | null
+          cycle_name: string
+          end_date: string
+          id: string
+          is_locked: boolean
+          locked_at: string | null
+          locked_by: string | null
+          metadata: Json | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          created_at?: string
+          created_by?: string | null
+          cycle_name: string
+          end_date: string
+          id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          metadata?: Json | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          created_at?: string
+          created_by?: string | null
+          cycle_name?: string
+          end_date?: string
+          id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
+          metadata?: Json | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      assignment_history: {
+        Row: {
+          action_type: string
+          assignment_id: string
+          change_reason: string | null
+          changed_at: string
+          changed_by: string | null
+          cycle_id: string | null
+          id: string
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+        }
+        Insert: {
+          action_type: string
+          assignment_id: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          cycle_id?: string | null
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+        }
+        Update: {
+          action_type?: string
+          assignment_id?: string
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          cycle_id?: string | null
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_history_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignments: {
         Row: {
           created_at: string
           created_by: string | null
+          cycle_id: string | null
+          department: string | null
           effective_from: string
           effective_to: string | null
           id: string
+          institution: string | null
+          is_locked: boolean
+          locked_at: string | null
           mentor_external_id: string
           notes: string | null
+          program: string | null
           role: Database["public"]["Enums"]["mentor_role"]
           status: string
           student_external_id: string
@@ -31,11 +132,17 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          cycle_id?: string | null
+          department?: string | null
           effective_from?: string
           effective_to?: string | null
           id?: string
+          institution?: string | null
+          is_locked?: boolean
+          locked_at?: string | null
           mentor_external_id: string
           notes?: string | null
+          program?: string | null
           role?: Database["public"]["Enums"]["mentor_role"]
           status?: string
           student_external_id: string
@@ -44,17 +151,31 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          cycle_id?: string | null
+          department?: string | null
           effective_from?: string
           effective_to?: string | null
           id?: string
+          institution?: string | null
+          is_locked?: boolean
+          locked_at?: string | null
           mentor_external_id?: string
           notes?: string | null
+          program?: string | null
           role?: Database["public"]["Enums"]["mentor_role"]
           status?: string
           student_external_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assignments_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
@@ -1166,6 +1287,46 @@ export type Database = {
           },
         ]
       }
+      assignments_with_validation: {
+        Row: {
+          academic_year: string | null
+          created_at: string | null
+          created_by: string | null
+          cycle_id: string | null
+          cycle_locked: boolean | null
+          cycle_name: string | null
+          department: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string | null
+          institution: string | null
+          is_locked: boolean | null
+          locked_at: string | null
+          mentor_department: string | null
+          mentor_designation: string | null
+          mentor_external_id: string | null
+          mentor_name: string | null
+          notes: string | null
+          program: string | null
+          role: Database["public"]["Enums"]["mentor_role"] | null
+          status: string | null
+          student_department: string | null
+          student_external_id: string | null
+          student_name: string | null
+          student_program: string | null
+          updated_at: string | null
+          validation_status: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comprehensive_user_analytics: {
         Row: {
           activity_status: string | null
@@ -1362,6 +1523,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
       log_user_activity: {
         Args: {
           activity_data?: Json
@@ -1382,6 +1547,22 @@ export type Database = {
       user_has_permission: {
         Args: { permission_name: string; user_uuid?: string }
         Returns: boolean
+      }
+      validate_assignment_constraints: {
+        Args: {
+          p_cycle_id: string
+          p_mentor_external_id: string
+          p_student_external_id: string
+        }
+        Returns: {
+          error_message: string
+          is_valid: boolean
+          mentor_department: string
+          mentor_institution: string
+          student_department: string
+          student_institution: string
+          student_program: string
+        }[]
       }
     }
     Enums: {

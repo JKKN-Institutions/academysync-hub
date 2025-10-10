@@ -9,14 +9,20 @@ import { AssignmentModeBanner } from "@/components/ui/assignment-mode-banner";
 import { useAssignmentMode } from "@/hooks/useAssignmentMode";
 import { useAssignments } from "@/hooks/useAssignments";
 import MentorAssignmentWizard from "@/components/MentorAssignmentWizard";
+import AssignmentCycleManager from "@/components/AssignmentCycleManager";
 import { useState } from "react";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorState } from "@/components/ui/error-state";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Assignments = () => {
   const { isAppManaged, isUpstreamManaged } = useAssignmentMode();
   const { assignments, loading, error, getAssignmentStats, refetch } = useAssignments();
   const [showAssignmentWizard, setShowAssignmentWizard] = useState(false);
+  const { user } = useAuth();
+  
+  const isSuperAdmin = user?.role === 'super_admin';
   
   if (loading) {
     return (
@@ -58,11 +64,11 @@ const Assignments = () => {
                 }
               </p>
             </div>
-            {isAppManaged && (
+            {isAppManaged && isSuperAdmin && (
               <div className="flex space-x-2">
                 <Button onClick={() => setShowAssignmentWizard(true)}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Create Fresh Assignment
+                  Create Assignment
                 </Button>
                 <Button variant="outline">
                   <Settings className="w-4 h-4 mr-2" />
@@ -71,6 +77,15 @@ const Assignments = () => {
               </div>
             )}
           </div>
+          {!isSuperAdmin && isAppManaged && (
+            <Alert className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Access Restricted</AlertTitle>
+              <AlertDescription>
+                Only Super Administrators can create and manage mentor-mentee assignments for the academic year.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         {/* Summary Cards */}
@@ -127,24 +142,41 @@ const Assignments = () => {
         </div>
 
         {/* Assignments Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
+        <Tabs defaultValue="assignments" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="all">All Assignments ({stats.total})</TabsTrigger>
-            <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
-            <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
+            <TabsTrigger value="assignments">Assignments ({stats.total})</TabsTrigger>
+            {isSuperAdmin && (
+              <TabsTrigger value="cycles">Assignment Cycles</TabsTrigger>
+            )}
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            <AssignmentsList assignments={assignments} />
+          <TabsContent value="assignments" className="space-y-6">
+            <Tabs defaultValue="all" className="space-y-6">
+              <TabsList>
+                <TabsTrigger value="all">All Assignments ({stats.total})</TabsTrigger>
+                <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
+                <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all" className="space-y-4">
+                <AssignmentsList assignments={assignments} />
+              </TabsContent>
+
+              <TabsContent value="active" className="space-y-4">
+                <AssignmentsList assignments={activeAssignments} />
+              </TabsContent>
+
+              <TabsContent value="pending" className="space-y-4">
+                <AssignmentsList assignments={pendingAssignments} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="active" className="space-y-4">
-            <AssignmentsList assignments={activeAssignments} />
-          </TabsContent>
-
-          <TabsContent value="pending" className="space-y-4">
-            <AssignmentsList assignments={pendingAssignments} />
-          </TabsContent>
+          {isSuperAdmin && (
+            <TabsContent value="cycles" className="space-y-4">
+              <AssignmentCycleManager />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Assignment Wizard */}
