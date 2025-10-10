@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,25 +69,49 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
 
   // Filter students based on current filters
   const filteredStudents = students.filter(student => {
-    if (filters.institution && student.department !== filters.institution) return false; // Using department as institution proxy
+    // Filter by mentor's department - students must be from same department as selected mentor
+    if (selectedMentor && student.department !== selectedMentor.department) {
+      return false;
+    }
+    
+    // Apply additional filters
     if (filters.department && student.department !== filters.department) return false;
-    if (filters.section) return false; // Skip section filter for now
     if (filters.program && student.program !== filters.program) return false;
     if (filters.semesterYear && student.semesterYear?.toString() !== filters.semesterYear) return false;
+    
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       return (
         student.name.toLowerCase().includes(searchLower) ||
-        student.email.toLowerCase().includes(searchLower) ||
-        student.rollNo.toLowerCase().includes(searchLower)
+        student.email?.toLowerCase().includes(searchLower) ||
+        student.rollNo?.toLowerCase().includes(searchLower)
       );
     }
     return true;
   });
 
-  // Filter available students (not already assigned)
+  // Filter available students (not already assigned) - check against assignments table
+  const [existingAssignments, setExistingAssignments] = useState<Set<string>>(new Set());
+  
+  useEffect(() => {
+    const fetchExistingAssignments = async () => {
+      const { data } = await supabase
+        .from('assignments')
+        .select('student_external_id')
+        .eq('status', 'active');
+      
+      if (data) {
+        setExistingAssignments(new Set(data.map(a => a.student_external_id)));
+      }
+    };
+    
+    if (open) {
+      fetchExistingAssignments();
+    }
+  }, [open]);
+  
   const availableStudents = filteredStudents.filter(student => 
-    !student.mentor // Only students without current mentors
+    !existingAssignments.has(student.studentId)
   );
 
   const handleMentorSelect = (mentor: any) => {
@@ -125,13 +149,17 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
           role: assignmentType,
           notes,
           supervisor_id: supervisorId || null,
+          department: student.department,
+          program: student.program,
+          institution: student.department, // Using department as institution proxy for now
           assignment_metadata: {
-            institution: student.department, // Using department as institution proxy
-            department: student.department,
-            section: 'A', // Default section
-            program: student.program,
+            mentor_name: selectedMentor.name,
+            mentor_department: selectedMentor.department,
+            mentor_designation: selectedMentor.designation,
+            student_name: student.name,
+            student_program: student.program,
             semesterYear: student.semesterYear,
-            created_via: 'mentor_choice',
+            created_via: 'mentor_assignment_wizard',
             is_fresh_assignment: true
           }
         };
@@ -295,32 +323,33 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
         <Badge variant="secondary">{availableStudents.length} available</Badge>
       </div>
 
+      {/* Department Constraint Info */}
+      {selectedMentor && (
+        <div className="p-4 bg-primary/10 border-l-4 border-primary rounded-lg mb-4">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-5 h-5 text-primary mt-0.5" />
+            <div>
+              <p className="font-semibold text-sm">Department Matching Enforced</p>
+              <p className="text-sm text-muted-foreground">
+                Only showing students from <span className="font-semibold">{selectedMentor.department}</span> department, 
+                as mentor and mentee must be from the same department.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
         <div>
-          <Label htmlFor="institution">Institution</Label>
-          <Select value={filters.institution} onValueChange={(value) => 
-            setFilters(prev => ({ ...prev, institution: value }))
-          }>
+          <Label htmlFor="department">Filter by Department</Label>
+          <Select 
+            value={filters.department} 
+            onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
+            disabled={!!selectedMentor} // Disable if mentor selected (auto-filtered)
+          >
             <SelectTrigger>
-              <SelectValue placeholder="All institutions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All institutions</SelectItem>
-              {institutions.map(inst => (
-                <SelectItem key={inst.id} value={inst.institution_name}>{inst.institution_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="department">Department</Label>
-          <Select value={filters.department} onValueChange={(value) => 
-            setFilters(prev => ({ ...prev, department: value }))
-          }>
-            <SelectTrigger>
-              <SelectValue placeholder="All departments" />
+              <SelectValue placeholder={selectedMentor ? selectedMentor.department : "All departments"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">All departments</SelectItem>
@@ -349,23 +378,6 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
         </div>
 
         <div>
-          <Label htmlFor="section">Section</Label>
-          <Select value={filters.section} onValueChange={(value) => 
-            setFilters(prev => ({ ...prev, section: value }))
-          }>
-            <SelectTrigger>
-              <SelectValue placeholder="All sections" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All sections</SelectItem>
-              {uniqueSections.map(section => (
-                <SelectItem key={section} value={section}>{section}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
           <Label htmlFor="semesterYear">Semester/Year</Label>
           <Select value={filters.semesterYear} onValueChange={(value) => 
             setFilters(prev => ({ ...prev, semesterYear: value }))
@@ -376,7 +388,7 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
             <SelectContent>
               <SelectItem value="">All years</SelectItem>
               {uniqueSemesterYears.map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                <SelectItem key={year} value={year.toString()}>Year {year}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -397,7 +409,13 @@ const MentorAssignmentWizard: React.FC<MentorAssignmentWizardProps> = ({
         {availableStudents.length === 0 ? (
           <Card className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No available students found with current filters.</p>
+            <p className="font-semibold mb-2">No Available Students</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedMentor 
+                ? `No unassigned students found in ${selectedMentor.department} department matching your filters.`
+                : "Please select a mentor first to see available students from their department."
+              }
+            </p>
           </Card>
         ) : (
           availableStudents.map(student => (
