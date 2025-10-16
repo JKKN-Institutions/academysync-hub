@@ -34,7 +34,7 @@ export class ParentAuthService {
   private constructor() {
     // Start with minimal defaults; fetch real config from Edge Function when needed
     this.config = {
-      parentAppUrl: 'https://auth.jkkn.ai',
+      parentAppUrl: 'https://www.jkkn.ai',
       appId: '',
       redirectUri: (typeof window !== 'undefined' ? window.location.origin + '/callback' : '/callback'),
       scopes: ['read', 'write', 'profile']
@@ -97,7 +97,7 @@ export class ParentAuthService {
       state: oauthState,
     });
 
-    const authUrl = `${this.config.parentAppUrl}/api/auth/authorize?${params.toString()}`;
+    const authUrl = `${this.config.parentAppUrl}/oauth/authorize?${params.toString()}`;
     console.log('[ParentAuth] Redirecting to:', authUrl);
     
     window.location.href = authUrl;

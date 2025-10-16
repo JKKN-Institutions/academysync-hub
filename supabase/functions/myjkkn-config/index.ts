@@ -19,7 +19,7 @@ serve(async (req: Request) => {
   }
 
   const appId = Deno.env.get("MYJKKN_APP_ID") ?? "";
-  const parentAppUrl = Deno.env.get("MYJKKN_BASE_URL") ?? "https://auth.jkkn.ai";
+  const parentAppUrl = Deno.env.get("MYJKKN_BASE_URL") ?? "https://www.jkkn.ai";
 
   return new Response(JSON.stringify({ appId, parentAppUrl }), {
     status: 200,
