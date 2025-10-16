@@ -30,7 +30,7 @@ interface Notification {
 }
 
 const Index = () => {
-  const { user, isAuthenticated, login, logout } = useAuth();
+  const { user, isAuthenticated, signOut } = useAuth();
   const { students, loading: studentsLoading, error: studentsError, refetch: refetchStudents, isDemo } = useStudentsData();
   const { staff, loading: staffLoading, error: staffError, refetch: refetchStaff } = useStaffData();
   const { sessions, upcomingSessions, completedSessions, loading: sessionsLoading } = useCounselingSessions();
@@ -362,10 +362,10 @@ const Index = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 
-              onClick={login}
+              onClick={() => window.location.href = '/login'}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Login with MyJKKN
+              Go to Login
             </Button>
           </CardContent>
         </Card>
@@ -410,7 +410,7 @@ const Index = () => {
               </div>
             </div>
             <Button 
-              onClick={logout}
+              onClick={() => signOut()}
               variant="outline"
               className="text-red-600 border-red-200 hover:bg-red-50"
             >

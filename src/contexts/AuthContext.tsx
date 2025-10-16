@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import parentAuthService from '@/lib/auth/parent-auth-service';
 
 export type UserRole = 'admin' | 'mentor' | 'mentee' | 'dept_lead' | 'super_admin';
 
@@ -18,9 +17,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  refreshSession: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   canAccessRoute: (route: string) => boolean;
 }
@@ -129,91 +125,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('AuthContext: Initializing auth...');
     
     const initAuth = async () => {
-      // First check for OAuth callback parameters
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      const state = params.get('state');
-      const error = params.get('error');
+      // Get Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
       
-      console.log('Checking for callback code:', !!code);
-      
-      if (error) {
-        console.error('OAuth error:', params.get('error_description'));
-        if (mounted) setLoading(false);
-        return;
-      }
-      
-      if (code && state) {
-        // Handle OAuth callback
-        try {
-          console.log('Processing OAuth callback...');
-          const session = await parentAuthService.handleCallback(code, state);
-          console.log('OAuth callback successful, user:', session.user.email);
-          
-          if (mounted) {
-            setUser({
-              ...session.user as any,
-              role: (session.user.role as UserRole) || 'mentee',
-              displayName: session.user.full_name || session.user.email || 'Unknown User',
-              department: undefined,
-              externalId: session.user.id
-            });
+      if (session?.user && mounted) {
+        setUser({
+          ...session.user,
+          role: 'mentee',
+          displayName: session.user.email || 'Unknown User',
+          department: undefined,
+          externalId: undefined
+        });
+        
+        // Fetch user profile
+        setTimeout(async () => {
+          if (!mounted) return;
+          try {
+            const profile = await fetchUserProfile(session.user.id);
+            if (mounted && profile) {
+              setUser(prevUser => prevUser ? {
+                ...prevUser,
+                role: profile?.role as UserRole || 'mentee',
+                displayName: profile?.display_name || session.user.email || 'Unknown User',
+                department: profile?.department,
+                externalId: profile?.external_id
+              } : null);
+            }
+          } catch (error) {
+            console.error('Error fetching profile:', error);
           }
-          
-          // Clean URL after successful authentication
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (error) {
-          console.error('Auth callback failed:', error);
-        }
-      } else {
-        // Check for existing parent auth session first
-        const parentSession = parentAuthService.getSession();
-        if (parentSession) {
-          console.log('Found existing parent session for user:', parentSession.user.email);
-          if (mounted) {
-            setUser({
-              ...parentSession.user as any,
-              role: (parentSession.user.role as UserRole) || 'mentee',
-              displayName: parentSession.user.full_name || parentSession.user.email || 'Unknown User',
-              department: undefined,
-              externalId: parentSession.user.id
-            });
-          }
-        } else {
-          // Fallback to Supabase auth if no parent session
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user && mounted) {
-            setUser({
-              ...session.user,
-              role: 'mentee',
-              displayName: session.user.email || 'Unknown User',
-              department: undefined,
-              externalId: undefined
-            });
-            
-            // Try to fetch profile for Supabase users
-            setTimeout(async () => {
-              if (!mounted) return;
-              try {
-                const profile = await fetchUserProfile(session.user.id);
-                if (mounted && profile) {
-                  setUser(prevUser => prevUser ? {
-                    ...prevUser,
-                    role: profile?.role as UserRole || 'mentee',
-                    displayName: profile?.display_name || session.user.email || 'Unknown User',
-                    department: profile?.department,
-                    externalId: profile?.external_id
-                  } : null);
-                }
-              } catch (error) {
-                console.error('Error fetching profile:', error);
-              }
-            }, 0);
-          } else if (mounted) {
-            console.log('No stored auth data found');
-            setUser(null);
-          }
-        }
+        }, 0);
+      } else if (mounted) {
+        console.log('No stored auth data found');
+        setUser(null);
       }
       
       if (mounted) {
@@ -223,8 +167,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     initAuth();
 
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUser({
+          ...session.user,
+          role: profile?.role as UserRole || 'mentee',
+          displayName: profile?.display_name || session.user.email || 'Unknown User',
+          department: profile?.department,
+          externalId: profile?.external_id
+        });
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+
     return () => {
       mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -259,62 +220,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setUser(null);
-  };
-
-  const login = async () => {
-    // Use parent auth service for OAuth flow
-    await parentAuthService.initiateLogin();
-  };
-
-  const logout = async () => {
-    try {
-      console.log('🔓 Logout initiated...');
-      
-      // Log logout activity before clearing session
-      try {
-        await supabase.rpc('log_user_activity', {
-          activity_type: 'logout'
-        });
-      } catch (activityError) {
-        console.warn('Failed to log logout activity:', activityError);
-      }
-      
-      // Try parent auth logout first
-      if (parentAuthService.isAuthenticated()) {
-        console.log('🔑 Logging out from parent auth service...');
-        await parentAuthService.logout();
-      }
-      
-      // Also sign out from Supabase to ensure full cleanup
-      console.log('🔐 Signing out from Supabase...');
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Supabase sign out error:', error);
-      }
-      
-      // Clear user state
-      setUser(null);
-      
-      console.log('✅ Logout complete');
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-      // Force clear user state even on error
-      setUser(null);
-      throw error; // Re-throw so ProfileDropdown can handle it
-    }
-  };
-
-  const refreshSession = async () => {
-    const session = await parentAuthService.refreshToken();
-    if (session) {
-      setUser({
-        ...session.user as any,
-        role: (session.user.role as UserRole) || 'mentee',
-        displayName: session.user.full_name || session.user.email || 'Unknown User',
-        department: undefined,
-        externalId: session.user.id
-      });
-    }
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -358,9 +263,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isAuthenticated: !!user,
     signIn,
     signOut,
-    login,
-    logout,
-    refreshSession,
     hasPermission,
     canAccessRoute
   };

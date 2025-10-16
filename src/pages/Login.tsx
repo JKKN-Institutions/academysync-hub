@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Loader2, GraduationCap, Bug, Building } from 'lucide-react';
+import { AlertCircle, Loader2, GraduationCap, Bug } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,10 +12,9 @@ import { logDebugInfo } from '@/utils/debugInfo';
 
 const Login = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [myjkknLoading, setMyjkknLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { user, loading: userLoading, login } = useAuth();
+  const { user, loading: userLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -68,19 +67,6 @@ const Login = () => {
     }
   };
 
-  const handleMyjkknSignIn = async () => {
-    setMyjkknLoading(true);
-    setError('');
-
-    try {
-      // Use the new parent auth service through AuthContext
-      await login();
-    } catch (error: any) {
-      setError(error.message || 'Failed to initiate MyJKKN authentication');
-      setMyjkknLoading(false);
-    }
-  };
-
   // Check user's email domain after successful OAuth
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -112,7 +98,7 @@ const Login = () => {
     }
   }, []);
 
-  if (userLoading || googleLoading || myjkknLoading) {
+  if (userLoading || googleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-blue-50">
         <div className="text-center">
@@ -174,7 +160,7 @@ const Login = () => {
                 type="button" 
                 className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 text-white py-4 text-lg font-bold rounded-2xl shadow-xl border-0 transition-all duration-300 hover:scale-105 hover:shadow-2xl" 
                 onClick={handleGoogleSignIn}
-                disabled={googleLoading || myjkknLoading}
+                disabled={googleLoading}
               >
                 {googleLoading && <Loader2 className="mr-3 h-5 w-5 animate-spin" />}
                 <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
@@ -184,26 +170,6 @@ const Login = () => {
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 Continue with Google
-              </Button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/20" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-purple-900 px-2 text-white/60">or</span>
-                </div>
-              </div>
-
-              <Button 
-                type="button" 
-                className="w-full bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white py-4 text-lg font-bold rounded-2xl shadow-xl border-0 transition-all duration-300 hover:scale-105 hover:shadow-2xl" 
-                onClick={handleMyjkknSignIn}
-                disabled={googleLoading || myjkknLoading}
-              >
-                {myjkknLoading && <Loader2 className="mr-3 h-5 w-5 animate-spin" />}
-                <Building className="mr-3 h-5 w-5" />
-                Login with MyJKKN
               </Button>
             </div>
 

@@ -16,7 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 export const ProfileDropdown = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -28,8 +28,8 @@ export const ProfileDropdown = () => {
     try {
       console.log('🚪 Starting sign out process...');
       
-      // Use the logout method from AuthContext which handles both parent auth and Supabase
-      await logout();
+      // Use the signOut method from AuthContext
+      await signOut();
       
       console.log('✅ Sign out successful');
       
