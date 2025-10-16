@@ -163,7 +163,7 @@ const getApiKey = async (): Promise<string> => {
 };
 
 // Base API configuration
-const API_BASE_URL = 'https://my.jkkn.ac.in/api';
+const API_BASE_URL = 'https://www.jkkn.ai/api';
 
 // Generic API request function
 const makeApiRequest = async <T>(

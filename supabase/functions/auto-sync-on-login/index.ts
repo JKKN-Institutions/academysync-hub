@@ -70,7 +70,7 @@ serve(async (req) => {
       console.log('Running connectivity test...')
       try {
         // Test a simple API endpoint
-        const testResponse = await fetch(`https://my.jkkn.ac.in/api/api-management/staff?limit=1`, {
+        const testResponse = await fetch(`https://www.jkkn.ai/api/api-management/staff?limit=1`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -113,9 +113,9 @@ serve(async (req) => {
 
     // Generic API request function
     const makeApiRequest = async <T>(endpoint: string): Promise<T> => {
-      console.log(`Making request to: https://my.jkkn.ac.in/api${endpoint}`)
+      console.log(`Making request to: https://www.jkkn.ai/api${endpoint}`)
       
-      const response = await fetch(`https://my.jkkn.ac.in/api${endpoint}`, {
+      const response = await fetch(`https://www.jkkn.ai/api${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,

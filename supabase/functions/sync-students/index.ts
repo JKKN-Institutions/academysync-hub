@@ -50,9 +50,9 @@ serve(async (req) => {
 
     // Generic API request function
     const makeApiRequest = async <T>(endpoint: string): Promise<T> => {
-      console.log(`Making request to: https://my.jkkn.ac.in/api${endpoint}`)
+      console.log(`Making request to: https://www.jkkn.ai/api${endpoint}`)
       
-      const response = await fetch(`https://my.jkkn.ac.in/api${endpoint}`, {
+      const response = await fetch(`https://www.jkkn.ai/api${endpoint}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,

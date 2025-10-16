@@ -30,8 +30,8 @@ class MyJKKNOAuthService {
     clientId: '',
     redirectUri: `${window.location.origin}/auth/callback`,
     scope: 'read:profile read:institutions',
-    authUrl: 'https://my.jkkn.ac.in/oauth/authorize',
-    tokenUrl: 'https://my.jkkn.ac.in/oauth/token'
+    authUrl: 'https://www.jkkn.ai/oauth/authorize',
+    tokenUrl: 'https://www.jkkn.ai/oauth/token'
   };
 
   // Fetch config from Edge Function and cache it
@@ -144,7 +144,7 @@ class MyJKKNOAuthService {
 
   // Step 3: Fetch user profile with access token
   async getUserProfile(accessToken: string): Promise<UserProfile> {
-    const response = await fetch('https://my.jkkn.ac.in/api/user/profile', {
+    const response = await fetch('https://www.jkkn.ai/api/user/profile', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',

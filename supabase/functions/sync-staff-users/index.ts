@@ -72,7 +72,7 @@ serve(async (req) => {
       for (const endpoint of possibleEndpoints) {
         try {
           console.log(`Trying staff endpoint: ${endpoint}`);
-          const response = await fetch(`https://my.jkkn.ac.in/api${endpoint}`, {
+          const response = await fetch(`https://www.jkkn.ai/api${endpoint}`, {
             headers: {
               'Authorization': `Bearer ${myjkknApiKey}`,
               'Content-Type': 'application/json'
@@ -107,7 +107,7 @@ serve(async (req) => {
           const separator = workingEndpoint.includes('?') ? '&' : '?';
           const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
           
-          const response = await fetch(`https://my.jkkn.ac.in/api${paginatedEndpoint}`, {
+          const response = await fetch(`https://www.jkkn.ai/api${paginatedEndpoint}`, {
             headers: {
               'Authorization': `Bearer ${myjkknApiKey}`,
               'Content-Type': 'application/json'

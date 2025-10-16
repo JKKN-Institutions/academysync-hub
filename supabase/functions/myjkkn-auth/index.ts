@@ -15,7 +15,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const baseUrl = Deno.env.get("MYJKKN_BASE_URL") ?? "https://my.jkkn.ac.in";
+    const baseUrl = Deno.env.get("MYJKKN_BASE_URL") ?? "https://www.jkkn.ai";
     const appId = Deno.env.get("MYJKKN_APP_ID") ?? "";
     const apiKey = Deno.env.get("MYJKKN_API_KEY") ?? "";
 

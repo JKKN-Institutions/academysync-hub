@@ -36,7 +36,7 @@ serve(async (req) => {
       throw new Error('MYJKKN_API_KEY not found in environment variables')
     }
 
-    const apiBaseUrl = 'https://my.jkkn.ac.in/api'
+    const apiBaseUrl = 'https://www.jkkn.ai/api'
 
     // Generic API request function
     const makeApiRequest = async <T>(endpoint: string): Promise<T> => {
