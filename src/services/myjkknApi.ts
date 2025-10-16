@@ -318,27 +318,123 @@ export const fetchStudentById = async (studentId: string): Promise<MyjkknStudent
 // Fetch staff from myjkkn API
 export const fetchStaff = async (): Promise<MyjkknStaff[]> => {
   try {
-    const response = await makeApiRequest<{data: any[]}>(
-      '/api-management/staff?limit=1000'
-    );
+    console.log('Starting to fetch staff from MyJKKN API...');
+    console.log('=== STAFF API PAGINATION FETCH ===');
+    
+    let allStaff: any[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    // Try multiple possible endpoints for staff like students does
+    const possibleEndpoints = [
+      `/api-management/staff?limit=1000`,
+      `/api-management/organizations/staff?limit=1000`,
+      `/staff?limit=1000`,
+      `/api-management/staff`
+    ];
+
+    let workingEndpoint: string = '';
+    let response: {data: any[], metadata?: any} | null = null;
+
+    // Try each endpoint until we find one that works
+    for (const baseEndpoint of possibleEndpoints) {
+      try {
+        console.log(`Trying staff endpoint: ${baseEndpoint}`);
+        response = await makeApiRequest<{data: any[], metadata?: any}>(baseEndpoint);
+        workingEndpoint = baseEndpoint;
+        console.log(`✅ Staff endpoint ${baseEndpoint} worked!`);
+        break;
+      } catch (error) {
+        console.log(`❌ Staff endpoint ${baseEndpoint} failed:`, error);
+        continue;
+      }
+    }
+
+    if (!response) {
+      throw new Error('All staff API endpoints failed. Please check API configuration.');
+    }
+
+    // Now fetch all pages using the working endpoint
+    do {
+      console.log(`Fetching staff page ${currentPage} from ${workingEndpoint}...`);
+      
+      if (currentPage > 1) {
+        // Add pagination parameters for subsequent pages
+        const separator = workingEndpoint.includes('?') ? '&' : '?';
+        const paginatedEndpoint = `${workingEndpoint}${separator}page=${currentPage}`;
+        response = await makeApiRequest<{data: any[], metadata?: any}>(paginatedEndpoint);
+      }
+
+      console.log(`Staff page ${currentPage} response:`, {
+        staffCount: response.data?.length || 0,
+        metadata: response.metadata
+      });
+
+      // Add this page's staff to our collection
+      if (response.data && Array.isArray(response.data)) {
+        allStaff = [...allStaff, ...response.data];
+      }
+
+      // Update pagination info
+      if (response.metadata) {
+        totalPages = response.metadata.totalPages || response.metadata.total_pages || 1;
+        console.log(`Pagination info: page ${currentPage} of ${totalPages}, total staff so far: ${allStaff.length}`);
+      } else {
+        console.log('No metadata found, assuming single page');
+        break;
+      }
+
+      currentPage++;
+    } while (currentPage <= totalPages);
+
+    console.log(`✅ Successfully fetched all ${allStaff.length} staff from ${totalPages} pages`);
+
+    // Debug: Log the actual API response structure
+    console.log('Sample staff data from API:', allStaff[0]);
+    console.log('All available fields in first staff:', Object.keys(allStaff[0] || {}));
 
     // The API returns {data: [...]} format
-    if (!response.data || !Array.isArray(response.data)) {
+    if (!allStaff || !Array.isArray(allStaff)) {
       throw new Error('Invalid response format from API');
     }
 
     // Transform API response to match our expected format
-    return response.data.map(staff => ({
-      id: staff.id,
-      staffId: staff.id,
-      name: staff.first_name + (staff.last_name ? ` ${staff.last_name}` : ''),
-      email: staff.email,
-      department: staff.department?.department_name || 'Unknown Department',
-      designation: staff.designation || 'Staff',
-      status: staff.status as 'active' | 'inactive',
-      mobile: staff.mobile,
-      avatar: staff.staff_photo_url || undefined
-    }));
+    const transformedStaff = allStaff.map(staff => {
+      console.log('Processing staff:', staff);
+      
+      // Try different possible name field combinations
+      let staffName = 'Unknown Staff';
+      if (staff.name) {
+        staffName = staff.name;
+      } else if (staff.staff_name) {
+        staffName = staff.staff_name;
+      } else if (staff.full_name) {
+        staffName = staff.full_name;
+      } else if (staff.first_name || staff.last_name) {
+        const firstName = staff.first_name || '';
+        const lastName = staff.last_name || '';
+        staffName = `${firstName} ${lastName}`.trim();
+      } else if (staff.firstName || staff.lastName) {
+        const firstName = staff.firstName || '';
+        const lastName = staff.lastName || '';
+        staffName = `${firstName} ${lastName}`.trim();
+      }
+      
+      return {
+        id: staff.id,
+        staffId: staff.id,
+        name: staffName || 'Unknown Staff',
+        email: staff.email || staff.staff_email || '',
+        department: staff.department?.department_name || staff.department_name || 'Unknown Department',
+        designation: staff.designation || 'Staff',
+        status: (staff.status || 'active') as 'active' | 'inactive',
+        mobile: staff.mobile || staff.phone,
+        avatar: staff.staff_photo_url || staff.avatar_url || undefined
+      };
+    });
+
+    console.log(`🎉 Successfully transformed ${transformedStaff.length} staff members`);
+    return transformedStaff;
   } catch (error) {
     console.error('Error fetching staff:', error);
     throw error;
