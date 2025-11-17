@@ -6,7 +6,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import RolesPermissions from "./pages/RolesPermissions";
 import MentorsDirectory from "./pages/MentorsDirectory";
@@ -30,11 +29,11 @@ import AllUsers from "./pages/user-management/AllUsers";
 import RolesAssignment from "./pages/user-management/RolesAssignment";
 import RoleManagement from "./pages/user-management/RoleManagement";
 import ActivityAuditLogs from "./pages/user-management/ActivityAuditLogs";
-import ProtectedRoute from "./components/ProtectedRoute";
 import Profile from "./pages/Profile";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
+import StudentDemo from "./pages/StudentDemo";
 
 const queryClient = new QueryClient();
 
@@ -46,114 +45,37 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/student-login" element={<Login />} />
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/handbook" element={<Landing />} />
-              <Route path="/mentors" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentee', 'dept_lead']}>
-                  <MentorsDirectory />
-                </ProtectedRoute>
-              } />
-              <Route path="/staff" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                  <StaffDirectory />
-                </ProtectedRoute>
-              } />
-              <Route path="/students" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                  <StudentsDirectory />
-                </ProtectedRoute>
-              } />
-              <Route path="/student360" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                  <Student360 />
-                </ProtectedRoute>
-              } />
-              <Route path="/student360/:studentId" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                  <Student360 />
-                </ProtectedRoute>
-              } />
-              <Route path="/student/:studentId" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'dept_lead']}>
-                  <Student360 />
-                </ProtectedRoute>
-              } />
-              <Route path="/roles-permissions" element={
-                <ProtectedRoute requiredRoles={['admin', 'super_admin']}>
-                  <RolesPermissions />
-                </ProtectedRoute>
-              } />
-              <Route path="/assignments" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
-                  <Assignments />
-                </ProtectedRoute>
-              } />
-              <Route path="/admin" element={
-                <ProtectedRoute requiredRoles={['admin']}>
-                  <Admin />
-                </ProtectedRoute>
-              } />
-              <Route path="/session/:sessionId" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <SessionDetail />
-                </ProtectedRoute>
-              } />
-              <Route path="/reports" element={
-                <ProtectedRoute requiredRoles={['admin', 'dept_lead']}>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              <Route path="/audit" element={
-                <ProtectedRoute requiredRoles={['admin']}>
-                  <AuditViewer />
-                </ProtectedRoute>
-              } />
+              <Route path="/mentors" element={<MentorsDirectory />} />
+              <Route path="/staff" element={<StaffDirectory />} />
+              <Route path="/students" element={<StudentsDirectory />} />
+              <Route path="/student360" element={<Student360 />} />
+              <Route path="/student360/:studentId" element={<Student360 />} />
+              <Route path="/student/:studentId" element={<Student360 />} />
+              <Route path="/roles-permissions" element={<RolesPermissions />} />
+              <Route path="/assignments" element={<Assignments />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/session/:sessionId" element={<SessionDetail />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/audit" element={<AuditViewer />} />
               <Route path="/help" element={<Help />} />
               <Route path="/faq" element={<FAQ />} />
-              {/* Main application pages */}
-              <Route path="/counseling" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <Counseling />
-                </ProtectedRoute>
-              } />
-              <Route path="/goals" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <Goals />
-                </ProtectedRoute>
-              } />
-              <Route path="/meetings" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor']}>
-                  <Meetings />
-                </ProtectedRoute>
-              } />
-              <Route path="/qna" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee']}>
-                  <QnA />
-                </ProtectedRoute>
-              } />
-              <Route path="/alerts" element={
-                <ProtectedRoute requiredRoles={['admin', 'mentor', 'mentee', 'dept_lead']}>
-                  <Alerts />
-                </ProtectedRoute>
-              } />
-              {/* User Management Module */}
-              <Route path="/user-management" element={
-                <ProtectedRoute requiredRoles={['admin']}>
-                  <UserManagement />
-                </ProtectedRoute>
-              }>
-                <Route path="analytics" element={<UserAnalyticsDashboard />} />
-                <Route path="users" element={<AllUsers />} />
-                <Route path="roles-assignment" element={<RolesAssignment />} />
-                <Route path="role-management" element={<RoleManagement />} />
-                <Route path="audit-logs" element={<ActivityAuditLogs />} />
-              </Route>
+              <Route path="/counseling" element={<Counseling />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/meetings" element={<Meetings />} />
+              <Route path="/qna" element={<QnA />} />
+              <Route path="/alerts" element={<Alerts />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/user-management" element={<UserManagement />} />
+              <Route path="/user-management/dashboard" element={<UserAnalyticsDashboard />} />
+              <Route path="/user-management/users" element={<AllUsers />} />
+              <Route path="/user-management/roles" element={<RoleManagement />} />
+              <Route path="/user-management/roles-assignment" element={<RolesAssignment />} />
+              <Route path="/user-management/activity-logs" element={<ActivityAuditLogs />} />
+              <Route path="/student-demo" element={<StudentDemo />} />
             </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

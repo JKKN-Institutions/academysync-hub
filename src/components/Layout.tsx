@@ -6,10 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import Footer from "@/components/Footer";
 
 const Layout = () => {
-  const { user } = useAuth();
-
-  if (!user) return null;
-
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex min-h-screen w-full">
