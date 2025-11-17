@@ -121,72 +121,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    let mounted = true;
-    console.log('AuthContext: Initializing auth...');
-    
-    const initAuth = async () => {
-      // Get Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user && mounted) {
-        setUser({
-          ...session.user,
-          role: 'mentee',
-          displayName: session.user.email || 'Unknown User',
-          department: undefined,
-          externalId: undefined
-        });
-        
-        // Fetch user profile
-        setTimeout(async () => {
-          if (!mounted) return;
-          try {
-            const profile = await fetchUserProfile(session.user.id);
-            if (mounted && profile) {
-              setUser(prevUser => prevUser ? {
-                ...prevUser,
-                role: profile?.role as UserRole || 'mentee',
-                displayName: profile?.display_name || session.user.email || 'Unknown User',
-                department: profile?.department,
-                externalId: profile?.external_id
-              } : null);
-            }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-          }
-        }, 0);
-      } else if (mounted) {
-        console.log('No stored auth data found');
-        setUser(null);
-      }
-      
-      if (mounted) {
-        setLoading(false);
-      }
-    };
-    
-    initAuth();
+    // Set a default mock user for demo purposes
+    setUser({
+      id: 'demo-user',
+      role: 'admin',
+      displayName: 'Demo User',
+      department: 'Computer Science',
+      email: 'demo@jkkn.ac.in'
+    } as AuthUser);
+    setLoading(false);
 
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        setUser({
-          ...session.user,
-          role: profile?.role as UserRole || 'mentee',
-          displayName: profile?.display_name || session.user.email || 'Unknown User',
-          department: profile?.department,
-          externalId: profile?.external_id
-        });
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
